@@ -1,4 +1,4 @@
-# HealSync HMS
+# MEDICORE-HMS
 
 Smart Hospital Management System — complete React frontend (Google Stitch design: Manrope + Inter, teal `#0E7490`) with a full Express + MongoDB backend.
 
