@@ -26,7 +26,7 @@ export type Gender = 'Male' | 'Female' | 'Other'
 
 export interface Patient {
   id: string
-  patientId: string // e.g. P-10432
+  patientId: string // e.g. Sarah-2026-8-8-1
   firstName: string
   lastName: string
   email: string
@@ -63,6 +63,9 @@ export interface PatientCreateInput {
 }
 
 // ---------- Doctors ----------
+export type DoctorStatus = 'Active' | 'On Leave' | 'Unavailable'
+export type AccountStatus = 'Active' | 'Disabled'
+
 export interface Doctor {
   id: string
   name: string
@@ -76,7 +79,100 @@ export interface Doctor {
   schedule: string[]
   patientsCount: number
   rating: number
-  status: 'Active' | 'On Leave' | 'Unavailable'
+  status: DoctorStatus
+  account?: {
+    id: string
+    status: AccountStatus
+    lastLoginAt?: string
+    createdAt?: string
+  } | null
+}
+
+export interface DoctorMetrics {
+  appointmentsToday: number
+  pendingAppointments: number
+  pendingOldest: string | null
+  consultationsCount: number
+  prescriptionsCount: number
+  patientsCount: number
+}
+
+export interface DoctorStats extends DoctorMetrics {
+  doctorId: string
+  appointmentsTotal: number
+  completedToday: number
+  lastConsultationAt: string
+}
+
+export interface DoctorAccount {
+  id: string
+  email: string
+  role: string
+  status: AccountStatus
+}
+
+export interface ResetPasswordResult {
+  success: boolean
+  email: string
+  tempPassword?: string
+}
+
+export interface ReassignInput {
+  doctorId: string
+  appointmentIds: string[]
+  patientIds: string[]
+  reason: string
+}
+
+export interface ReassignResult {
+  movedAppointments: number
+  movedPatients: number
+  to: { id: string; name: string }
+}
+
+export interface DoctorDependencies {
+  activeAppointments: number
+  assignedPatients: number
+  consultations: number
+  prescriptions: number
+  activeAppointmentIds: string[]
+  assignedPatientIds: string[]
+  appointments: Appointment[]
+  patients: Patient[]
+}
+
+export interface AvailabilitySlot {
+  time: string
+  end: string
+  available: boolean
+  conflict?: string
+}
+
+export interface ScheduleDay {
+  date: string
+  day: string
+  workingDay: boolean
+  status: string
+  slots: { time: string; end: string; available: boolean }[]
+}
+
+export interface DoctorCalendar {
+  doctor: { id: string; name: string; department: string; status: DoctorStatus }
+  appointments: Appointment[]
+  days: ScheduleDay[]
+}
+
+export interface AuditLogEntry {
+  id: string
+  actor: string
+  actorId?: string
+  actorRole?: string
+  action: string
+  resource: string
+  resourceId?: string
+  details?: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
 }
 
 // ---------- Appointments ----------
@@ -85,6 +181,7 @@ export type AppointmentType = 'Checkup' | 'Consultation' | 'Follow-up' | 'Emerge
 
 export interface Appointment {
   id: string
+  appointmentNo?: string
   patientId: string
   patientName: string
   patientAvatar?: string
@@ -108,6 +205,18 @@ export interface AppointmentCreateInput {
   time: string
   durationMin: number
   reason: string
+}
+
+// ---------- Online payments (eSewa) ----------
+// Response of POST /public/payment/initiate. The browser auto-submits a
+// hidden form with `fields` to `formUrl`; eSewa then redirects back to
+// /book-appointment?payment=success|failed|conflict|error.
+export interface PublicPaymentInitiation {
+  attemptId: string
+  transactionUuid: string
+  amount: number
+  formUrl: string
+  fields: Record<string, string>
 }
 
 // ---------- Departments ----------
@@ -140,15 +249,108 @@ export interface Medicine {
   batch: string
 }
 
+export interface PrescriptionMedicine {
+  name: string
+  dosage: string
+  frequency: string
+  durationDays: number
+  instructions?: string
+}
+
 export interface Prescription {
   id: string
+  prescriptionNo?: string
   patientId: string
   patientName: string
   doctorId: string
   doctorName: string
-  medicines: { name: string; dosage: string; frequency: string; durationDays: number }[]
+  medicines: PrescriptionMedicine[]
   issuedAt: string
   status: 'Active' | 'Completed'
+  appointmentId?: string
+}
+
+// ---------- Clinical / Consultations ----------
+export interface Vitals {
+  bloodPressure?: string
+  heartRate?: number
+  temperature?: number
+  respiratoryRate?: number
+  spo2?: number
+  weightKg?: number
+  heightCm?: number
+  bmi?: number
+}
+
+export interface Examination {
+  general?: string
+  cardiovascular?: string
+  respiratory?: string
+  neurological?: string
+  abdominal?: string
+  other?: string
+}
+
+export interface Diagnosis {
+  primary: string
+  additional: string
+  notes: string
+}
+
+export interface ClinicalNotes {
+  assessment: string
+  observations: string
+  reasoning: string
+  general: string
+}
+
+export interface TreatmentPlan {
+  advice: string
+  diet: string
+  lifestyle: string
+  instructions: string
+}
+
+export interface Consultation {
+  id: string
+  consultationNo?: string
+  patientId: string
+  patientName: string
+  doctorId: string
+  doctorName: string
+  appointmentId?: string
+  chiefComplaint: string
+  symptoms: string
+  vitals: Vitals
+  examination: Examination
+  diagnosis: Diagnosis
+  clinicalNotes: ClinicalNotes
+  treatmentPlan: TreatmentPlan
+  prescriptionId?: string
+  prescriptionNo?: string
+  prescription?: Prescription | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ConsultationCreateInput {
+  patientId: string
+  appointmentId?: string
+  chiefComplaint: string
+  symptoms: string
+  vitals: Vitals
+  examination: Examination
+  diagnosis: Diagnosis
+  clinicalNotes: ClinicalNotes
+  treatmentPlan: TreatmentPlan
+  prescription?: { medicines: PrescriptionMedicine[] }
+  prescriptionId?: string
+}
+
+export interface DoctorPrescriptionCreateInput {
+  patientId: string
+  appointmentId?: string
+  medicines: PrescriptionMedicine[]
 }
 
 // ---------- Billing ----------

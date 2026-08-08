@@ -8,6 +8,7 @@
 import type {
   Appointment,
   AppointmentCreateInput,
+  Consultation,
   DashboardStats,
   Department,
   Doctor,
@@ -23,12 +24,70 @@ import type {
 
 export const mockDelay = (ms = 450) => new Promise((res) => setTimeout(res, ms))
 
+// Local YYYY-MM-DD for a date offset in days from today (mock clinical data stays "current").
+export function mockDateOffset(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export const MOCK_USER: User = {
   id: 'u-1',
   name: 'Dr. Sarah Chen',
   email: 'admin@medicore.health',
   role: 'ADMIN',
   phone: '+1 (555) 010-2244',
+}
+
+// Mock login accounts. Doctors map to their Doctor profile by email —
+// same rule the real backend uses when the admin creates an account.
+export interface MockAccount {
+  id: string
+  name: string
+  email: string
+  role: User['role']
+  status: 'Active' | 'Disabled'
+  lastLoginAt?: string
+  createdAt: string
+}
+
+export const mockAccounts: MockAccount[] = [
+  { id: 'u-1', name: 'Dr. Sarah Chen', email: 'admin@medicore.health', role: 'ADMIN', status: 'Active', lastLoginAt: '2026-08-07T08:12:00Z', createdAt: '2025-01-15T09:00:00Z' },
+  { id: 'u-2', name: 'Dr. Michael Roberts', email: 'm.roberts@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T07:55:00Z', createdAt: '2025-02-01T09:00:00Z' },
+  { id: 'u-3', name: 'Dr. Priya Sharma', email: 'p.sharma@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-06T13:40:00Z', createdAt: '2025-03-10T09:00:00Z' },
+  { id: 'u-4', name: 'Dr. James Osei', email: 'j.osei@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T07:10:00Z', createdAt: '2025-04-05T09:00:00Z' },
+  { id: 'u-5', name: 'Dr. Emily Carter', email: 'e.carter@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-07-29T16:20:00Z', createdAt: '2025-02-20T09:00:00Z' },
+  { id: 'u-6', name: 'Dr. David Kim', email: 'd.kim@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T08:01:00Z', createdAt: '2025-01-22T09:00:00Z' },
+  { id: 'u-7', name: 'Dr. Amara Diallo', email: 'a.diallo@medicore.health', role: 'DOCTOR', status: 'Disabled', lastLoginAt: '2026-07-20T10:00:00Z', createdAt: '2025-05-12T09:00:00Z' },
+  { id: 'u-8', name: 'Dr. Robert Nguyen', email: 'r.nguyen@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T07:30:00Z', createdAt: '2025-03-03T09:00:00Z' },
+  { id: 'u-9', name: 'Dr. Grace Adeyemi', email: 'g.adeyemi@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-06T18:05:00Z', createdAt: '2025-06-01T09:00:00Z' },
+  { id: 'u-10', name: 'Dr. Daniel Wright', email: 'd.wright@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T07:45:00Z', createdAt: '2025-01-18T09:00:00Z' },
+  { id: 'u-11', name: 'Nurse Emma Wilson', email: 'e.wilson@medicore.health', role: 'NURSE', status: 'Active', createdAt: '2025-02-14T09:00:00Z' },
+  { id: 'u-12', name: 'Olivia Martinez', email: 'o.martinez@medicore.health', role: 'STAFF', status: 'Active', createdAt: '2025-04-22T09:00:00Z' },
+]
+
+export const mockAuditLog: AuditLogEntryMock[] = [
+  { id: 'al-1', actor: 'Dr. Sarah Chen', actorRole: 'ADMIN', action: 'create', resource: 'doctor', resourceId: 'd-9', details: { name: 'Dr. Daniel Wright' }, createdAt: '2026-08-07T09:12:00.000Z' },
+  { id: 'al-2', actor: 'Dr. Daniel Wright', actorRole: 'DOCTOR', action: 'appointment-confirmed', resource: 'appointment', resourceId: 'ad-1', details: { date: mockDateOffset(0), time: '09:00' }, createdAt: '2026-08-07T08:30:00.000Z' },
+  { id: 'al-3', actor: 'Dr. Daniel Wright', actorRole: 'DOCTOR', action: 'consultation-create', resource: 'consultation', resourceId: 'c-9', details: { patientId: 'p-1' }, createdAt: '2026-08-06T15:45:00.000Z' },
+  { id: 'al-4', actor: 'Dr. Sarah Chen', actorRole: 'ADMIN', action: 'update', resource: 'doctor', resourceId: 'd-4', details: { status: 'On Leave' }, createdAt: '2026-08-06T14:00:00.000Z' },
+  { id: 'al-5', actor: 'Dr. Amara Diallo', actorRole: 'DOCTOR', action: 'prescription-create', resource: 'prescription', resourceId: 'rx-7', createdAt: '2026-08-05T11:20:00.000Z' },
+  { id: 'al-6', actor: 'Dr. Sarah Chen', actorRole: 'ADMIN', action: 'disable', resource: 'doctor-account', resourceId: 'u-7', details: { doctorName: 'Dr. Amara Diallo' }, createdAt: '2026-08-04T10:00:00.000Z' },
+  { id: 'al-7', actor: 'Dr. Sarah Chen', actorRole: 'ADMIN', action: 'appointment-confirmed', resource: 'appointment', resourceId: 'a-1', createdAt: '2026-08-03T09:00:00.000Z' },
+]
+
+export interface AuditLogEntryMock {
+  id: string
+  actor: string
+  actorRole?: string
+  action: string
+  resource: string
+  resourceId?: string
+  details?: Record<string, unknown>
+  createdAt: string
 }
 
 export const mockDoctors: Doctor[] = [
@@ -40,6 +99,7 @@ export const mockDoctors: Doctor[] = [
   { id: 'd-6', name: 'Dr. Amara Diallo', email: 'a.diallo@medicore.health', phone: '+1 (555) 010-1006', department: 'Dermatology', specialty: 'Dermatologist', qualification: 'MD (Dermatology)', experienceYears: 8, consultationFee: 85, schedule: ['Wed', 'Thu', 'Fri'], patientsCount: 154, rating: 4.5, status: 'Active' },
   { id: 'd-7', name: 'Dr. Robert Nguyen', email: 'r.nguyen@medicore.health', phone: '+1 (555) 010-1007', department: 'Oncology', specialty: 'Medical Oncologist', qualification: 'MD, DM (Oncology)', experienceYears: 14, consultationFee: 140, schedule: ['Mon', 'Tue', 'Wed', 'Thu'], patientsCount: 129, rating: 4.8, status: 'Active' },
   { id: 'd-8', name: 'Dr. Grace Adeyemi', email: 'g.adeyemi@medicore.health', phone: '+1 (555) 010-1008', department: 'Gynecology', specialty: 'Gynecologist', qualification: 'MS (Obstetrics & Gynecology)', experienceYears: 12, consultationFee: 100, schedule: ['Mon', 'Wed', 'Fri', 'Sat'], patientsCount: 231, rating: 4.7, status: 'Active' },
+  { id: 'd-9', name: 'Dr. Daniel Wright', email: 'd.wright@medicore.health', phone: '+1 (555) 010-2248', department: 'Cardiology', specialty: 'Interventional Cardiologist', qualification: 'MD, DM (Cardiology)', experienceYears: 13, consultationFee: 120, schedule: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], patientsCount: 186, rating: 4.8, status: 'Active' },
 ]
 
 export const mockPatients: Patient[] = [
@@ -72,6 +132,20 @@ export const mockAppointments: Appointment[] = [
   { id: 'a-14', patientId: 'p-1', patientName: 'Sarah Johnson', doctorId: 'd-1', doctorName: 'Dr. Michael Roberts', department: 'Cardiology', type: 'Checkup', date: '2026-08-06', time: '09:30', durationMin: 30, status: 'Confirmed', reason: 'Post-op check', createdAt: '2026-07-30T14:00:00Z' },
 ]
 
+// Appointments for the mock doctor user (Dr. Daniel Wright, d-9). Dates are
+// generated relative to "today" so the Doctor Portal demo always has data.
+export const mockDoctorAppointments: Appointment[] = [
+  { id: 'ad-1', patientId: 'p-1', patientName: 'Sarah Johnson', doctorId: 'd-9', doctorName: 'Dr. Daniel Wright', department: 'Cardiology', type: 'Consultation', date: mockDateOffset(0), time: '09:00', durationMin: 45, status: 'Confirmed', reason: 'Chest pain follow-up', createdAt: '2026-07-27T10:00:00Z' },
+  { id: 'ad-2', patientId: 'p-10', patientName: 'Samuel Wright', doctorId: 'd-9', doctorName: 'Dr. Daniel Wright', department: 'Cardiology', type: 'Consultation', date: mockDateOffset(0), time: '10:30', durationMin: 30, status: 'Pending', reason: 'Stent recovery check', createdAt: '2026-07-30T10:25:00Z' },
+  { id: 'ad-3', patientId: 'p-4', patientName: 'Tom Brennan', doctorId: 'd-9', doctorName: 'Dr. Daniel Wright', department: 'Cardiology', type: 'Checkup', date: mockDateOffset(0), time: '11:30', durationMin: 30, status: 'Confirmed', reason: 'Pre-surgery cardiac clearance', createdAt: '2026-07-29T08:15:00Z' },
+  { id: 'ad-4', patientId: 'p-6', patientName: 'Henry Okafor', doctorId: 'd-9', doctorName: 'Dr. Daniel Wright', department: 'Cardiology', type: 'Emergency', date: mockDateOffset(0), time: '15:00', durationMin: 45, status: 'Completed', reason: 'Hypertension crisis', createdAt: '2026-07-31T19:00:00Z' },
+  { id: 'ad-5', patientId: 'p-3', patientName: 'Aisha Khan', doctorId: 'd-9', doctorName: 'Dr. Daniel Wright', department: 'Cardiology', type: 'Consultation', date: mockDateOffset(1), time: '09:30', durationMin: 30, status: 'Pending', reason: 'Palpitations review', createdAt: '2026-07-31T12:00:00Z' },
+  { id: 'ad-6', patientId: 'p-5', patientName: 'Maria Gonzalez', doctorId: 'd-9', doctorName: 'Dr. Daniel Wright', department: 'Cardiology', type: 'Checkup', date: mockDateOffset(2), time: '14:00', durationMin: 30, status: 'Confirmed', reason: 'Heart murmur screening', createdAt: '2026-08-01T09:05:00Z' },
+  { id: 'ad-7', patientId: 'p-1', patientName: 'Sarah Johnson', doctorId: 'd-9', doctorName: 'Dr. Daniel Wright', department: 'Cardiology', type: 'Consultation', date: mockDateOffset(-2), time: '09:00', durationMin: 45, status: 'Completed', reason: 'Post-angioplasty review', createdAt: '2026-07-25T11:00:00Z' },
+  { id: 'ad-8', patientId: 'p-10', patientName: 'Samuel Wright', doctorId: 'd-9', doctorName: 'Dr. Daniel Wright', department: 'Cardiology', type: 'Follow-up', date: mockDateOffset(-5), time: '11:00', durationMin: 30, status: 'Completed', reason: 'Stent recovery check', createdAt: '2026-07-22T09:30:00Z' },
+  { id: 'ad-9', patientId: 'p-4', patientName: 'Tom Brennan', doctorId: 'd-9', doctorName: 'Dr. Daniel Wright', department: 'Cardiology', type: 'Consultation', date: mockDateOffset(-9), time: '10:00', durationMin: 30, status: 'Cancelled', reason: 'Knee surgery cardiac clearance', createdAt: '2026-07-20T14:00:00Z' },
+]
+
 export const mockDepartments: Department[] = [
   { id: 'dep-1', name: 'Cardiology', headDoctorId: 'd-1', headDoctorName: 'Dr. Michael Roberts', bedCount: 60, occupiedBeds: 47, doctorsCount: 12, patientsCount: 342, color: '#2563eb', icon: 'heart-pulse', description: 'Heart and cardiovascular care' },
   { id: 'dep-2', name: 'Neurology', headDoctorId: 'd-2', headDoctorName: 'Dr. Priya Sharma', bedCount: 40, occupiedBeds: 31, doctorsCount: 8, patientsCount: 218, color: '#7c3aed', icon: 'brain', description: 'Brain, spine and nervous system' },
@@ -102,6 +176,67 @@ export const mockPrescriptions: Prescription[] = [
   { id: 'rx-3', patientId: 'p-3', patientName: 'Aisha Khan', doctorId: 'd-6', doctorName: 'Dr. Amara Diallo', medicines: [{ name: 'Hydrocortisone 1% cream', dosage: 'Apply thinly', frequency: 'Twice daily', durationDays: 21 }], issuedAt: '2026-07-29', status: 'Active' },
   { id: 'rx-4', patientId: 'p-4', patientName: 'Tom Brennan', doctorId: 'd-5', doctorName: 'Dr. David Kim', medicines: [{ name: 'Ibuprofen 400mg', dosage: '1 tablet', frequency: 'Three times daily', durationDays: 7 }], issuedAt: '2026-07-25', status: 'Completed' },
   { id: 'rx-5', patientId: 'p-5', patientName: 'Maria Gonzalez', doctorId: 'd-3', doctorName: 'Dr. James Osei', medicines: [{ name: 'Amoxicillin 250mg', dosage: '1 teaspoon', frequency: 'Three times daily', durationDays: 10 }, { name: 'Ibuprofen 100mg syrup', dosage: '5ml', frequency: 'Three times daily', durationDays: 5 }], issuedAt: '2026-07-30', status: 'Active' },
+  { id: 'rx-9', patientId: 'p-1', patientName: 'Sarah Johnson', doctorId: 'd-9', doctorName: 'Dr. Daniel Wright', medicines: [{ name: 'Losartan 50mg', dosage: '50mg', frequency: 'Once daily', durationDays: 90, instructions: 'Take in the morning with food.' }, { name: 'Aspirin 81mg', dosage: '81mg', frequency: 'Once daily', durationDays: 90, instructions: 'Take after breakfast.' }], issuedAt: mockDateOffset(-2), status: 'Active', appointmentId: 'ad-7' },
+  { id: 'rx-10', patientId: 'p-10', patientName: 'Samuel Wright', doctorId: 'd-9', doctorName: 'Dr. Daniel Wright', medicines: [{ name: 'Aspirin 81mg', dosage: '81mg', frequency: 'Once daily', durationDays: 180, instructions: 'Take with food.' }, { name: 'Omeprazole 20mg', dosage: '20mg', frequency: 'Once daily', durationDays: 30, instructions: 'Take before breakfast.' }], issuedAt: mockDateOffset(-5), status: 'Active', appointmentId: 'ad-8' },
+  { id: 'rx-11', patientId: 'p-6', patientName: 'Henry Okafor', doctorId: 'd-9', doctorName: 'Dr. Daniel Wright', medicines: [{ name: 'Losartan 50mg', dosage: '50mg', frequency: 'Twice daily', durationDays: 14, instructions: 'Monitor BP twice daily.' }], issuedAt: mockDateOffset(0), status: 'Active', appointmentId: 'ad-4' },
+]
+
+// Clinical consultations recorded by the mock doctor user (Dr. Daniel Wright).
+export const mockConsultations: Consultation[] = [
+  {
+    id: 'c-1',
+    patientId: 'p-1',
+    patientName: 'Sarah Johnson',
+    doctorId: 'd-9',
+    doctorName: 'Dr. Daniel Wright',
+    appointmentId: 'ad-7',
+    chiefComplaint: 'Patient reports intermittent chest tightness two weeks after angioplasty.',
+    symptoms: 'Mild exertional chest tightness, occasional palpitations, no breathlessness at rest.',
+    vitals: { bloodPressure: '128/82', heartRate: 74, temperature: 36.7, respiratoryRate: 16, spo2: 98, weightKg: 68, heightCm: 165, bmi: 25 },
+    examination: { general: 'Alert, comfortable at rest', cardiovascular: 'S1 S2 normal, no murmurs', respiratory: 'Clear', neurological: 'No focal deficits', abdominal: 'Soft, non-tender', other: '' },
+    diagnosis: { primary: 'Stable angina', additional: 'Post-PCI status', notes: 'Recovery on track. Continue dual therapy.' },
+    clinicalNotes: { assessment: 'Post-angioplasty recovery progressing well.', observations: 'Vitals stable, ECG sinus rhythm.', reasoning: 'Low-risk course; continuation of current medications.', general: '' },
+    treatmentPlan: { advice: 'Gradual return to normal activity; avoid heavy lifting for 4 weeks.', diet: 'Low-salt, heart-healthy diet.', lifestyle: 'Daily 30-minute walk, smoking cessation strongly advised.', instructions: 'Report immediately if chest pain returns at rest.' },
+    prescriptionId: 'rx-9',
+    createdAt: `${mockDateOffset(-2)}T09:45:00.000Z`,
+    updatedAt: `${mockDateOffset(-2)}T09:45:00.000Z`,
+  },
+  {
+    id: 'c-2',
+    patientId: 'p-10',
+    patientName: 'Samuel Wright',
+    doctorId: 'd-9',
+    doctorName: 'Dr. Daniel Wright',
+    appointmentId: 'ad-8',
+    chiefComplaint: 'Review after coronary stent placement; patient feels well.',
+    symptoms: 'No chest pain, no palpitations, good exercise tolerance.',
+    vitals: { bloodPressure: '118/76', heartRate: 68, temperature: 36.5, respiratoryRate: 15, spo2: 99, weightKg: 82, heightCm: 178, bmi: 25.9 },
+    examination: { general: 'Well appearing', cardiovascular: 'Regular rhythm, no murmur', respiratory: 'Clear', neurological: 'Intact', abdominal: 'Soft', other: 'Puncture site healed' },
+    diagnosis: { primary: 'Coronary artery disease — post-stent', additional: '', notes: 'DAPT to continue for 6 months.' },
+    clinicalNotes: { assessment: 'Doing well after stent placement.', observations: 'Stable vitals, no complications.', reasoning: 'Continue DAPT and statin therapy.', general: '' },
+    treatmentPlan: { advice: 'Light activity, cardiac rehab program recommended.', diet: 'Heart-healthy diet.', lifestyle: 'Exercise as tolerated, no smoking.', instructions: 'Return in 3 months for stress test.' },
+    prescriptionId: 'rx-10',
+    createdAt: `${mockDateOffset(-5)}T11:20:00.000Z`,
+    updatedAt: `${mockDateOffset(-5)}T11:20:00.000Z`,
+  },
+  {
+    id: 'c-3',
+    patientId: 'p-6',
+    patientName: 'Henry Okafor',
+    doctorId: 'd-9',
+    doctorName: 'Dr. Daniel Wright',
+    appointmentId: 'ad-4',
+    chiefComplaint: 'Severe headache and dizziness; elevated BP recorded at triage.',
+    symptoms: 'Throbbing occipital headache, blurred vision, mild nausea.',
+    vitals: { bloodPressure: '190/120', heartRate: 102, temperature: 37.1, respiratoryRate: 20, spo2: 96, weightKg: 92, heightCm: 172, bmi: 31.1 },
+    examination: { general: 'Anxious, in discomfort', cardiovascular: 'Tachycardia, no murmurs', respiratory: 'Clear', neurological: 'No focal deficits', abdominal: 'Soft, non-tender', other: '' },
+    diagnosis: { primary: 'Hypertensive crisis', additional: 'Essential hypertension, poorly controlled', notes: 'BP controlled with IV therapy; transitioned to oral regimen.' },
+    clinicalNotes: { assessment: 'Hypertensive urgency managed without end-organ damage.', observations: 'BP down-trending after treatment.', reasoning: 'Outpatient follow-up with home BP monitoring.', general: '' },
+    treatmentPlan: { advice: 'Rest today; avoid exertion and stress.', diet: 'Strictly low-sodium diet.', lifestyle: 'Home BP monitoring twice daily.', instructions: 'Return if BP > 180/110 or new chest pain.' },
+    prescriptionId: 'rx-11',
+    createdAt: `${mockDateOffset(0)}T15:40:00.000Z`,
+    updatedAt: `${mockDateOffset(0)}T15:40:00.000Z`,
+  },
 ]
 
 export const mockInvoices: Invoice[] = [

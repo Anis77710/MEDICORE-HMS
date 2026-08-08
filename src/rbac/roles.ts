@@ -18,6 +18,7 @@ export type AdminModule =
   | 'billing'
   | 'staff'
   | 'reports'
+  | 'consultations'
   | 'settings'
 
 export type Permission = 'view' | 'create' | 'edit' | 'delete'
@@ -32,6 +33,7 @@ export const ADMIN_MODULES: AdminModule[] = [
   'billing',
   'staff',
   'reports',
+  'consultations',
   'settings',
 ]
 
@@ -50,6 +52,7 @@ export const ROLE_CAPS: Record<Role, Partial<Record<AdminModule, Permission[]>>>
     billing: ALL_PERMS,
     staff: ALL_PERMS,
     reports: ALL_PERMS,
+    consultations: ['view'],
     settings: ALL_PERMS,
   },
   DOCTOR: {
@@ -109,6 +112,7 @@ export const MODULE_LABELS: Record<AdminModule, string> = {
   billing: 'Billing & Payments',
   staff: 'Staff',
   reports: 'Reports',
+  consultations: 'Consultations',
   settings: 'Settings',
 }
 
@@ -122,6 +126,7 @@ export const MODULE_ROUTE: Record<AdminModule, string> = {
   billing: '/billing',
   staff: '/staff',
   reports: '/reports',
+  consultations: '/consultations',
   settings: '/settings',
 }
 

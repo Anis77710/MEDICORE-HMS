@@ -19,6 +19,7 @@ export async function writeAuditLog(
   await AuditLogModel.create({
     actor: req.userName ?? req.userId,
     actorId: req.userId,
+    actorRole: req.userRole,
     action,
     resource,
     resourceId,

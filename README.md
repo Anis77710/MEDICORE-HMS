@@ -111,7 +111,14 @@ Key settings in `server/.env`:
 | `MONGO_URI` | `mongodb://127.0.0.1:27017/healsync` | MongoDB connection string |
 | `CORS_ORIGIN` | `http://localhost:5173,http://localhost:5174` | Allowed frontend origins |
 | `JWT_SECRET` | dev-only value | **Change in production** |
-| `EMAIL_CONSOLE_ONLY` | `true` | Print OTP emails to console instead of sending |
+| `EMAIL_TRANSPORT` | `smtp` | Email transport. `smtp` = real delivery (mandatory); `log` = test-only print/capture, never in production |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | empty / `587` | SMTP server credentials for authentic email delivery (OTP + appointment notifications) |
+| `EMAIL_FROM` | `Medicore HMS <no-reply@medicore.health>` | From-address used on all outbound email |
+
+> **Email policy:** all outbound email (password-reset OTPs and patient
+> appointment notifications for bookings, approvals, cancellations and
+> reschedules) is sent through real SMTP. There is no demo/console delivery
+> in normal operation, and production refuses to start without SMTP configured.
 
 ### 2. Run the frontend
 

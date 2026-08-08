@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { ApiError } from '../utils/ApiError.js'
 import { InvoiceModel, PaymentModel } from '../models/Billing.js'
 import { PatientModel } from '../models/Patient.js'
-import { nextSequence } from '../models/Counter.js'
+import { makeReadableId } from '../models/Counter.js'
 import { requireAuth } from '../middleware/auth.js'
 import { validate, queryOf } from '../middleware/validate.js'
 
@@ -83,12 +83,10 @@ billingRouter.post('/invoices', validate({ body: invoiceBody }), async (req, res
     const subtotal = items.reduce((sum, item) => sum + item.amount, 0)
     const tax = Math.round(subtotal * TAX_RATE * 100) / 100
     const total = Math.round((subtotal - discount + tax) * 100) / 100
-    const seq = await nextSequence('invoice')
-    const year = new Date().getFullYear()
 
     const invoice = await InvoiceModel.create({
       ...rest,
-      invoiceNo: `INV-${year}-${1000 + seq}`,
+      invoiceNo: await makeReadableId('invoice', patient.firstName),
       patientId,
       patientName: `${patient.firstName} ${patient.lastName}`,
       items,

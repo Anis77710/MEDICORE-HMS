@@ -48,6 +48,8 @@ export async function createAppointment(input: AppointmentCreateInput): Promise<
   if (USE_MOCK_API) {
     await mockDelay(600)
     const appt = toAppointment(input)
+    const patient = store.patients.find((p) => p.id === input.patientId)
+    if (patient) appt.patientName = `${patient.firstName} ${patient.lastName}`
     store.appointments.push(appt)
     return appt
   }

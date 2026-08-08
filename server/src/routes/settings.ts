@@ -11,7 +11,7 @@ import { DepartmentModel } from '../models/Department.js'
 import { AppointmentModel } from '../models/Appointment.js'
 import { InvoiceModel } from '../models/Billing.js'
 import { requireAuth, requireRole, type AuthedRequest } from '../middleware/auth.js'
-import { validate } from '../middleware/validate.js'
+import { validate, queryOf } from '../middleware/validate.js'
 import { writeAuditLog } from './staff.js'
 
 export const settingsRouter = Router()
@@ -104,6 +104,7 @@ settingsRouter.get('/users', requireRole('ADMIN'), async (_req, res, next) => {
         name: u.name,
         email: u.email,
         role: u.role,
+        status: u.status,
         lastLoginAt: u.lastLoginAt,
         createdAt: u.createdAt,
       })),
@@ -113,15 +114,50 @@ settingsRouter.get('/users', requireRole('ADMIN'), async (_req, res, next) => {
   }
 })
 
-// GET /settings/audit-log (admin)
-settingsRouter.get('/audit-log', requireRole('ADMIN'), async (_req, res, next) => {
-  try {
-    const entries = await AuditLogModel.find().sort({ createdAt: -1 }).limit(200)
-    res.json(entries)
-  } catch (err) {
-    next(err)
-  }
-})
+// GET /settings/audit-log (admin) — filterable audit trail
+settingsRouter.get(
+  '/audit-log',
+  requireRole('ADMIN'),
+  validate({
+    query: z.object({
+      action: z.string().optional(),
+      resource: z.string().optional(),
+      search: z.string().optional(),
+      from: z.string().optional(),
+      to: z.string().optional(),
+      limit: z.coerce.number().int().min(1).max(500).default(200),
+    }),
+  }),
+  async (req, res, next) => {
+    try {
+      const { action, resource, search, from, to, limit } = queryOf<{
+        action?: string
+        resource?: string
+        search?: string
+        from?: string
+        to?: string
+        limit: number
+      }>(req)
+      const filter: Record<string, unknown> = {}
+      if (action && action !== 'All') filter.action = action
+      if (resource && resource !== 'All') filter.resource = resource
+      if (search) {
+        const s = search.toLowerCase()
+        filter.$or = [{ actor: { $regex: s, $options: 'i' } }]
+      }
+      if (from || to) {
+        const range: Record<string, Date> = {}
+        if (from) range.$gte = new Date(`${from}T00:00:00.000Z`)
+        if (to) range.$lte = new Date(`${to}T23:59:59.999Z`)
+        filter.createdAt = range
+      }
+      const entries = await AuditLogModel.find(filter).sort({ createdAt: -1 }).limit(limit)
+      res.json(entries)
+    } catch (err) {
+      next(err)
+    }
+  },
+)
 
 // GET /settings/backup (admin) — JSON snapshot of the whole database
 settingsRouter.get('/backup', requireRole('ADMIN'), async (_req, res, next) => {

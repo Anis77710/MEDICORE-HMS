@@ -10,6 +10,7 @@ import {
   Receipt,
   UserCog,
   BarChart3,
+  ClipboardList,
   Settings,
   LogOut,
   X,
@@ -29,6 +30,7 @@ const NAV_ITEMS: { to: string; label: string; icon: React.ComponentType<{ size?:
   { to: '/billing', label: 'Billing', icon: Receipt, module: 'billing' },
   { to: '/staff', label: 'Staff', icon: UserCog, module: 'staff' },
   { to: '/reports', label: 'Reports', icon: BarChart3, module: 'reports' },
+  { to: '/consultations', label: 'Consultations', icon: ClipboardList, module: 'consultations' },
   { to: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
 ]
 

@@ -81,6 +81,7 @@ export const DocumentModel = model<PatientDocument>('Document', documentSchema)
 export interface AuditLogEntry {
   actor: string
   actorId?: string
+  actorRole?: string
   action: string
   resource: string
   resourceId?: string
@@ -91,6 +92,7 @@ const auditLogSchema = new Schema<AuditLogEntry>(
   {
     actor: { type: String, required: true },
     actorId: { type: String },
+    actorRole: { type: String },
     action: { type: String, required: true },
     resource: { type: String, required: true },
     resourceId: { type: String },
@@ -98,5 +100,10 @@ const auditLogSchema = new Schema<AuditLogEntry>(
   },
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
+
+auditLogSchema.index({ createdAt: -1 })
+auditLogSchema.index({ action: 1 })
+auditLogSchema.index({ resource: 1 })
+auditLogSchema.index({ actorId: 1 })
 
 export const AuditLogModel = model<AuditLogEntry>('AuditLog', auditLogSchema)

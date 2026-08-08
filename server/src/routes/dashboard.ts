@@ -6,6 +6,9 @@ import { AppointmentModel } from '../models/Appointment.js'
 import { InvoiceModel } from '../models/Billing.js'
 import { requireAuth } from '../middleware/auth.js'
 
+// A patient occupies a bed only while admitted or critical (inpatient).
+const OCCUPYING_STATUSES = ['Admitted', 'Critical']
+
 export const dashboardRouter = Router()
 
 dashboardRouter.use(requireAuth)
@@ -28,7 +31,18 @@ dashboardRouter.get('/stats', async (_req, res, next) => {
 
     const totalPatients = patients.length
     const bedTotal = departments.reduce((s, d) => s + d.bedCount, 0)
-    const bedOccupied = departments.reduce((s, d) => s + d.occupiedBeds, 0)
+    // Occupancy is derived from registered patients currently in a bed,
+    // never from stored/mock numbers on the department record.
+    const occupiedByDept = new Map<string, number>()
+    for (const p of patients) {
+      if (OCCUPYING_STATUSES.includes(p.status)) {
+        occupiedByDept.set(p.department, (occupiedByDept.get(p.department) ?? 0) + 1)
+      }
+    }
+    const bedOccupied = departments.reduce(
+      (s, d) => s + (occupiedByDept.get(d.name) ?? 0),
+      0,
+    )
     const revenueMonth = invoicesMonth.reduce((s, i) => s + i.total, 0)
 
     const trend = appointments.reduce<Record<string, { admissions: number; discharges: number }>>(
@@ -100,7 +114,7 @@ dashboardRouter.get('/stats', async (_req, res, next) => {
       recentActivity,
       departmentOccupancy: departments.map((d) => ({
         department: d.name,
-        occupied: d.occupiedBeds,
+        occupied: occupiedByDept.get(d.name) ?? 0,
         capacity: d.bedCount,
       })),
     })

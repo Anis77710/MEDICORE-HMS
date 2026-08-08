@@ -12,6 +12,7 @@
     "start": "node dist/index.js",
     "seed": "tsx src/seed/run.ts",
     "smoke": "tsx src/scripts/smoke.ts",
+    "ensure-doctors": "tsx src/scripts/ensure-doctor-users.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

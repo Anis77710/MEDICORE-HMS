@@ -6,7 +6,7 @@ import { useToast } from '../../context/ToastContext'
 import { Field, Input, Button } from '../../components/ui'
 import { MedicoreLogo } from '../../components/ui/MedicoreLogo'
 
-const ROLES = ['ADMIN', 'DOCTOR', 'NURSE', 'STAFF', 'PATIENT'] as const
+const ROLES = ['ADMIN', 'DOCTOR', 'NURSE', 'STAFF'] as const
 
 export default function Register() {
   const { register } = useAuth()
@@ -60,12 +60,12 @@ export default function Register() {
               <Activity size={140} strokeWidth={1} />
             </div>
             <div className="auth-brand-content">
-              <div className="auth-brand-logo">
+              <Link to="/" className="auth-brand-logo">
                 <div className="auth-logo-box">
                   <MedicoreLogo size={32} />
                 </div>
                 <h1>Medicore HMS</h1>
-              </div>
+              </Link>
               <h2>Join the network</h2>
               <p>
                 One platform for doctors, nurses, patients, administrators and hospital staff to

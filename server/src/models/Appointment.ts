@@ -5,6 +5,7 @@ export const APPOINTMENT_STATUSES = ['Confirmed', 'Pending', 'Completed', 'Cance
 export const APPOINTMENT_TYPES = ['Checkup', 'Consultation', 'Follow-up', 'Emergency', 'Procedure'] as const
 
 export interface Appointment {
+  appointmentNo: string
   patientId: string
   patientName: string
   doctorId: string
@@ -22,6 +23,7 @@ export interface Appointment {
 
 const appointmentSchema = new Schema<Appointment>(
   {
+    appointmentNo: { type: String, required: true, index: true },
     patientId: { type: String, required: true, index: true },
     patientName: { type: String, required: true, trim: true },
     doctorId: { type: String, required: true, index: true },

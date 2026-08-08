@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { CalendarPlus, CalendarDays, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { listAppointments, updateAppointmentStatus } from '../../api/services/appointments'
 import type { Appointment, AppointmentStatus } from '../../types'
@@ -99,11 +100,18 @@ export default function Appointments() {
         title="Appointments"
         subtitle={`${stats.total} total appointments`}
         actions={
-          can('appointments', 'create') ? (
-            <Button onClick={() => setBookOpen(true)}>
-              <CalendarPlus size={16} /> Book Appointment
-            </Button>
-          ) : undefined
+          <div className="flex gap-2">
+            {can('appointments', 'view') && (
+              <Link to="/appointments/calendar" className="btn btn-outline">
+                <CalendarDays size={16} /> Doctor Calendar
+              </Link>
+            )}
+            {can('appointments', 'create') ? (
+              <Button onClick={() => setBookOpen(true)}>
+                <CalendarPlus size={16} /> Book Appointment
+              </Button>
+            ) : null}
+          </div>
         }
       />
 

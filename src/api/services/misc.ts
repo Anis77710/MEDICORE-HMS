@@ -1,12 +1,12 @@
 // ============================================================
-// Medicore HMS — Staff, Dashboard & Reports services
+// Medicore HMS — Staff, Dashboard, Reports & Settings services
 // ============================================================
 
 import { ENDPOINTS, withParams } from '../endpoints'
 import { http, USE_MOCK_API } from '../client'
 import { mockDelay, mockDashboardStats, mockReports } from '../mock'
 import { store, nextId } from '../store'
-import type { DashboardStats, ReportSummary, StaffMember } from '../../types'
+import type { AuditLogEntry, DashboardStats, ReportSummary, StaffMember } from '../../types'
 
 // ---------- Staff ----------
 export interface StaffInput {
@@ -69,10 +69,37 @@ export async function deleteStaff(id: string): Promise<void> {
 }
 
 // ---------- Dashboard ----------
+const OCCUPYING_STATUSES = ['Admitted', 'Critical']
+
+export function occupancyByDepartment(): Map<string, number> {
+  const map = new Map<string, number>()
+  for (const p of store.patients) {
+    if (OCCUPYING_STATUSES.includes(p.status)) {
+      map.set(p.department, (map.get(p.department) ?? 0) + 1)
+    }
+  }
+  return map
+}
+
 export async function getDashboardStats(): Promise<DashboardStats> {
   if (USE_MOCK_API) {
     await mockDelay(650)
-    return mockDashboardStats
+    // Bed occupancy is always derived from registered patients in a bed,
+    // never from stored/mock numbers.
+    const occupiedByDept = occupancyByDepartment()
+    const departmentOccupancy = store.departments.map((d) => ({
+      department: d.name,
+      occupied: occupiedByDept.get(d.name) ?? 0,
+      capacity: d.bedCount,
+    }))
+    const capacity = departmentOccupancy.reduce((s, d) => s + d.capacity, 0)
+    const occupied = departmentOccupancy.reduce((s, d) => s + d.occupied, 0)
+    return {
+      ...mockDashboardStats,
+      bedOccupancy: capacity > 0 ? Math.round((occupied / capacity) * 100) : 0,
+      bedOccupancyChange: 0,
+      departmentOccupancy,
+    }
   }
   return http.get<DashboardStats>(ENDPOINTS.DASHBOARD_STATS)
 }
@@ -130,4 +157,67 @@ export async function updateHospitalSettings(input: HospitalSettings): Promise<H
     return input
   }
   return http.put<HospitalSettings>(ENDPOINTS.SETTINGS_HOSPITAL, input)
+}
+
+export interface OwnProfile {
+  name: string
+  email: string
+  phone: string
+  role: string
+}
+
+export async function getOwnProfile(): Promise<OwnProfile> {
+  if (USE_MOCK_API) {
+    await mockDelay(300)
+    const mockUser = localStorage.getItem('medicore_mock_user')
+    const parsed = mockUser ? (JSON.parse(mockUser) as { name?: string; email?: string; role?: string }) : null
+    return {
+      name: parsed?.name ?? 'Dr. Daniel Wright',
+      email: parsed?.email ?? 'd.wright@medicore.health',
+      phone: '+1 (555) 010-2030',
+      role: parsed?.role ?? 'DOCTOR',
+    }
+  }
+  return http.get<OwnProfile>(ENDPOINTS.SETTINGS_PROFILE)
+}
+
+export async function updateOwnProfile(input: {
+  name?: string
+  phone?: string
+}): Promise<OwnProfile> {
+  if (USE_MOCK_API) {
+    await mockDelay(500)
+    return getOwnProfile()
+  }
+  return http.put<OwnProfile>(ENDPOINTS.SETTINGS_PROFILE, input)
+}
+
+// ---------- Audit log (admin) ----------
+export interface AuditLogQuery {
+  action?: string
+  resource?: string
+  search?: string
+  from?: string
+  to?: string
+}
+
+export async function getAuditLog(q: AuditLogQuery = {}): Promise<AuditLogEntry[]> {
+  if (USE_MOCK_API) {
+    await mockDelay(450)
+    let list = [...store.auditLog]
+    if (q.action && q.action !== 'All') list = list.filter((e) => e.action === q.action)
+    if (q.resource && q.resource !== 'All') list = list.filter((e) => e.resource === q.resource)
+    if (q.search) {
+      const s = q.search.toLowerCase()
+      list = list.filter((e) => e.actor.toLowerCase().includes(s))
+    }
+    if (q.from || q.to) {
+      list = list.filter((e) => {
+        const ts = e.createdAt.slice(0, 10)
+        return (!q.from || ts >= q.from) && (!q.to || ts <= q.to)
+      })
+    }
+    return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  }
+  return http.get<AuditLogEntry[]>(ENDPOINTS.SETTINGS_AUDIT_LOG, { params: { ...q } })
 }

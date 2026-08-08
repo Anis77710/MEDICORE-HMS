@@ -20,6 +20,15 @@ export const ENDPOINTS = {
   AUTH_RESET_PASSWORD: '/auth/reset-password',
   AUTH_ME: '/auth/me',
 
+  // ---------- Public (no auth) ----------
+  PUBLIC_DOCTORS: '/public/doctors',
+  PUBLIC_DOCTOR_AVAILABILITY: '/public/doctors/:id/availability',
+  PUBLIC_PAYMENT_INITIATE: '/public/payment/initiate',
+
+  // ---------- Consultations (admin oversight) ----------
+  CONSULTATIONS: '/consultations',
+  CONSULTATION_DETAIL: '/consultations/:id',
+
   // ---------- Dashboard ----------
   DASHBOARD_STATS: '/dashboard/stats',
 
@@ -41,6 +50,15 @@ export const ENDPOINTS = {
   DOCTOR_UPDATE: '/doctors/:id',
   DOCTOR_DELETE: '/doctors/:id',
   DOCTOR_SCHEDULE: '/doctors/:id/schedule',
+  DOCTOR_METRICS: '/doctors/metrics',
+  DOCTOR_STATS: '/doctors/:id/stats',
+  DOCTOR_ACCOUNT_CREATE: '/doctors/:id/account',
+  DOCTOR_RESET_PASSWORD: '/doctors/:id/reset-password',
+  DOCTOR_DISABLE_LOGIN: '/doctors/:id/disable-login',
+  DOCTOR_ENABLE_LOGIN: '/doctors/:id/enable-login',
+  DOCTOR_DEPENDENCIES: '/doctors/:id/dependencies',
+  DOCTOR_REASSIGN: '/doctors/:id/reassign',
+  DOCTOR_CALENDAR: '/doctors/:id/calendar',
 
   // ---------- Appointments ----------
   APPOINTMENTS: '/appointments',
@@ -97,6 +115,17 @@ export const ENDPOINTS = {
   SETTINGS_USERS: '/settings/users',
   SETTINGS_BACKUP: '/settings/backup',
   SETTINGS_AUDIT_LOG: '/settings/audit-log',
+
+  // ---------- Doctor Portal ----------
+  DOCTOR_ME: '/doctor-portal/me',
+  DOCTOR_PATIENTS: '/doctor-portal/patients',
+  DOCTOR_APPOINTMENTS: '/doctor-portal/appointments',
+  DOCTOR_APPOINTMENT_CONFIRM: '/doctor-portal/appointments/:id/confirm',
+  DOCTOR_APPOINTMENT_CANCEL: '/doctor-portal/appointments/:id/cancel',
+  DOCTOR_APPOINTMENT_COMPLETE: '/doctor-portal/appointments/:id/complete',
+  DOCTOR_CONSULTATIONS: '/doctor-portal/consultations',
+  DOCTOR_CONSULTATION: '/doctor-portal/consultations/:id',
+  DOCTOR_PRESCRIPTIONS: '/doctor-portal/prescriptions',
 
   // ---------- Patient Portal ----------
   PORTAL_ME: '/portal/me',

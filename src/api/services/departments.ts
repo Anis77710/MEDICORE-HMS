@@ -7,11 +7,13 @@ import { http, USE_MOCK_API } from '../client'
 import { mockDelay } from '../mock'
 import { store, nextId } from '../store'
 import type { Department } from '../../types'
+import { occupancyByDepartment } from './misc'
 
 export async function listDepartments(): Promise<Department[]> {
   if (USE_MOCK_API) {
     await mockDelay()
-    return [...store.departments]
+    const occ = occupancyByDepartment()
+    return store.departments.map((d) => ({ ...d, occupiedBeds: occ.get(d.name) ?? 0 }))
   }
   return http.get<Department[]>(ENDPOINTS.DEPARTMENTS)
 }
@@ -21,7 +23,8 @@ export async function getDepartment(id: string): Promise<Department> {
     await mockDelay(300)
     const d = store.departments.find((x) => x.id === id)
     if (!d) throw new Error('Department not found')
-    return d
+    const occ = occupancyByDepartment()
+    return { ...d, occupiedBeds: occ.get(d.name) ?? 0 }
   }
   return http.get<Department>(withParams(ENDPOINTS.DEPARTMENT_DETAIL, { id }))
 }

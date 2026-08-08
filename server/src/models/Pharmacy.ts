@@ -35,9 +35,11 @@ export interface PrescriptionMedicine {
   dosage: string
   frequency: string
   durationDays: number
+  instructions?: string
 }
 
 export interface Prescription {
+  prescriptionNo: string
   patientId: string
   patientName: string
   doctorId: string
@@ -45,10 +47,12 @@ export interface Prescription {
   medicines: PrescriptionMedicine[]
   issuedAt: string
   status: 'Active' | 'Completed'
+  appointmentId?: string
 }
 
 const prescriptionSchema = new Schema<Prescription>(
   {
+    prescriptionNo: { type: String, required: true, index: true },
     patientId: { type: String, required: true, index: true },
     patientName: { type: String, required: true },
     doctorId: { type: String, required: true },
@@ -60,12 +64,14 @@ const prescriptionSchema = new Schema<Prescription>(
           dosage: { type: String, default: '' },
           frequency: { type: String, default: '' },
           durationDays: { type: Number, default: 7 },
+          instructions: { type: String, default: '' },
         },
       ],
       default: [],
     },
     issuedAt: { type: String, default: '' },
     status: { type: String, enum: ['Active', 'Completed'], default: 'Active' },
+    appointmentId: { type: String },
   },
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )

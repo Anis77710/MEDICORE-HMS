@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto'
 import { env } from '../config/env.js'
 import { ApiError } from '../utils/ApiError.js'
 import { RefreshTokenModel } from '../models/RefreshToken.js'
+import { UserModel } from '../models/User.js'
 import type { UserRole } from '../models/User.js'
 
 export const REFRESH_COOKIE = 'hs_refresh'
@@ -13,12 +14,14 @@ export interface JwtPayload {
   sub: string
   role: UserRole
   name?: string
+  ver?: number
 }
 
 export interface AuthedRequest extends Request {
   userId: string
   userRole: UserRole
   userName: string
+  userStatus: 'Active' | 'Disabled'
 }
 
 function sha256(value: string): string {
@@ -26,10 +29,12 @@ function sha256(value: string): string {
 }
 
 // ---------- Access tokens ----------
-export function signAccessToken(user: { id: string; role: UserRole; name?: string }): string {
-  return jwt.sign({ sub: user.id, role: user.role, name: user.name }, env.JWT_SECRET, {
-    expiresIn: `${env.ACCESS_TOKEN_TTL_MIN}m`,
-  })
+export function signAccessToken(user: { id: string; role: UserRole; name?: string; ver?: number }): string {
+  return jwt.sign(
+    { sub: user.id, role: user.role, name: user.name, ver: user.ver ?? 0 },
+    env.JWT_SECRET,
+    { expiresIn: `${env.ACCESS_TOKEN_TTL_MIN}m` },
+  )
 }
 
 export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
@@ -38,15 +43,33 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
     next(new ApiError('Authentication required', 401))
     return
   }
+  let payload: JwtPayload
   try {
-    const payload = jwt.verify(header.slice(7), env.JWT_SECRET) as JwtPayload
-    ;(req as AuthedRequest).userId = payload.sub
-    ;(req as AuthedRequest).userRole = payload.role
-    ;(req as AuthedRequest).userName = payload.name ?? ''
-    next()
+    payload = jwt.verify(header.slice(7), env.JWT_SECRET) as JwtPayload
   } catch {
     next(new ApiError('Session expired — please sign in again', 401))
+    return
   }
+  // Load the account so status changes and password resets take effect
+  // immediately (a token is only valid while its version matches).
+  UserModel.findById(payload.sub)
+    .then((user) => {
+      if (!user || user.status === 'Disabled') {
+        next(new ApiError('This account has been disabled — contact an administrator', 403))
+        return
+      }
+      if ((payload.ver ?? 0) !== user.tokenVersion) {
+        next(new ApiError('Session expired — please sign in again', 401))
+        return
+      }
+      const authed = req as AuthedRequest
+      authed.userId = String(user._id)
+      authed.userRole = user.role
+      authed.userName = user.name
+      authed.userStatus = user.status
+      next()
+    })
+    .catch(() => next(new ApiError('Authentication failed', 500)))
 }
 
 export function requireRole(...roles: UserRole[]) {

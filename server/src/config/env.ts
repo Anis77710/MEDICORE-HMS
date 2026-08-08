@@ -25,12 +25,25 @@ export const env = {
   JWT_SECRET: str('JWT_SECRET', 'dev-only-secret-change-me'),
   ACCESS_TOKEN_TTL_MIN: num('ACCESS_TOKEN_TTL_MIN', 15),
   REFRESH_TOKEN_TTL_DAYS: num('REFRESH_TOKEN_TTL_DAYS', 7),
-  EMAIL_CONSOLE_ONLY: str('EMAIL_CONSOLE_ONLY', 'true') === 'true',
+  // Email delivery. Default 'smtp' — all emails go through a real SMTP
+  // server. 'log' is an explicit test-only escape hatch (captures messages
+  // in memory and prints them); it must never be used in production.
+  EMAIL_TRANSPORT: str('EMAIL_TRANSPORT', 'smtp') === 'log' ? 'log' : 'smtp',
   SMTP_HOST: str('SMTP_HOST', ''),
   SMTP_PORT: num('SMTP_PORT', 587),
   SMTP_USER: str('SMTP_USER', ''),
   SMTP_PASS: str('SMTP_PASS', ''),
-  EMAIL_FROM: str('EMAIL_FROM', 'HealSync HMS <no-reply@healsync.health>'),
+  EMAIL_FROM: str('EMAIL_FROM', 'Medicore HMS <no-reply@medicore.health>'),
+  // eSewa online payments. Empty PRODUCT_CODE/SECRET_KEY means payments
+  // are not configured — the payment endpoint refuses to start (503) so
+  // a public booking can never be created without a verified payment.
+  ESEWA_ENV: str('ESEWA_ENV', 'test') === 'live' ? 'live' : 'test',
+  ESEWA_PRODUCT_CODE: str('ESEWA_PRODUCT_CODE', ''),
+  ESEWA_SECRET_KEY: str('ESEWA_SECRET_KEY', ''),
+  // Public frontend origin (success/failure redirect target) and API
+  // origin (eSewa callback URLs). Same value in production.
+  APP_BASE_URL: str('APP_BASE_URL', 'http://localhost:5173'),
+  APP_API_URL: str('APP_API_URL', 'http://localhost:8080'),
 } as const
 
 export const isProd = env.NODE_ENV === 'production'

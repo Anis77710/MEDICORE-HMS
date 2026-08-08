@@ -8,6 +8,8 @@ import { env, isProd } from './config/env.js'
 import { ApiError } from './utils/ApiError.js'
 import { requireErrorHandler } from './middleware/errorHandler.js'
 import { authRouter } from './routes/auth.js'
+import { publicRouter } from './routes/public.js'
+import { esewaRouter } from './routes/esewa.js'
 import { patientsRouter } from './routes/patients.js'
 import { doctorsRouter } from './routes/doctors.js'
 import { appointmentsRouter } from './routes/appointments.js'
@@ -18,6 +20,8 @@ import { staffRouter } from './routes/staff.js'
 import { dashboardRouter } from './routes/dashboard.js'
 import { reportsRouter } from './routes/reports.js'
 import { settingsRouter } from './routes/settings.js'
+import { doctorPortalRouter } from './routes/doctorPortal.js'
+import { consultationsRouter } from './routes/consultations.js'
 
 export const app = express()
 
@@ -66,7 +70,7 @@ const globalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 30,
+  limit: 120,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
 })
@@ -78,6 +82,8 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.use('/api/auth', authLimiter, authRouter)
+app.use('/api/public', publicRouter)
+app.use('/api/public', esewaRouter)
 app.use('/api/patients', patientsRouter)
 app.use('/api/doctors', doctorsRouter)
 app.use('/api/appointments', appointmentsRouter)
@@ -88,6 +94,8 @@ app.use('/api/staff', staffRouter)
 app.use('/api/dashboard', dashboardRouter)
 app.use('/api/reports', reportsRouter)
 app.use('/api/settings', settingsRouter)
+app.use('/api/doctor-portal', doctorPortalRouter)
+app.use('/api/consultations', consultationsRouter)
 
 app.use((_req, res) => {
   res.status(404).json({ message: 'Not found' })

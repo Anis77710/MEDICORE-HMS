@@ -11,6 +11,8 @@ export interface User {
   phone: string
   role: UserRole
   passwordHash: string
+  status: 'Active' | 'Disabled'
+  tokenVersion: number
   avatarUrl?: string
   lastLoginAt?: Date
   createdAt?: Date
@@ -24,6 +26,8 @@ const userSchema = new Schema<User>(
     phone: { type: String, default: '' },
     role: { type: String, enum: USER_ROLES, default: 'STAFF', index: true },
     passwordHash: { type: String, required: true },
+    status: { type: String, enum: ['Active', 'Disabled'], default: 'Active', index: true },
+    tokenVersion: { type: Number, default: 0 },
     avatarUrl: { type: String },
     lastLoginAt: { type: Date },
   },

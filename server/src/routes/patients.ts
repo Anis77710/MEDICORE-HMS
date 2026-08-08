@@ -5,7 +5,7 @@ import { PatientModel } from '../models/Patient.js'
 import { MedicalRecordModel, DocumentModel } from '../models/Staff.js'
 import { PrescriptionModel } from '../models/Pharmacy.js'
 import { InvoiceModel } from '../models/Billing.js'
-import { nextSequence } from '../models/Counter.js'
+import { makeReadableId } from '../models/Counter.js'
 import { requireAuth } from '../middleware/auth.js'
 import { validate, queryOf } from '../middleware/validate.js'
 
@@ -99,10 +99,10 @@ patientsRouter.get(
 // POST /patients
 patientsRouter.post('/', validate({ body: patientBody }), async (req, res, next) => {
   try {
-    const seq = await nextSequence('patient')
+    const patientId = await makeReadableId('patient', req.body.firstName)
     const patient = await PatientModel.create({
       ...req.body,
-      patientId: `P-${10400 + seq}`,
+      patientId,
       lastVisit: req.body.lastVisit || new Date().toISOString().slice(0, 10),
     })
     res.status(201).json(patient)

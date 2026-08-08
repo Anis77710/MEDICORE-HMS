@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { ReactNode, ButtonHTMLAttributes, InputHTMLAttributes } from 'react'
 import { X, Search, ChevronLeft, ChevronRight, Inbox } from 'lucide-react'
 
@@ -139,16 +140,25 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  backTo,
 }: {
   title: ReactNode
   subtitle?: string
   actions?: ReactNode
+  backTo?: string
 }) {
   return (
     <div className="page-header">
-      <div>
-        <h1 className="page-title">{title}</h1>
-        {subtitle && <p className="page-subtitle">{subtitle}</p>}
+      <div className="flex gap-2 align-center" style={{ gap: 10 }}>
+        {backTo && (
+          <Link to={backTo} className="btn btn-outline btn-sm" aria-label="Go back">
+            <ChevronLeft size={16} />
+          </Link>
+        )}
+        <div>
+          <h1 className="page-title">{title}</h1>
+          {subtitle && <p className="page-subtitle">{subtitle}</p>}
+        </div>
       </div>
       {actions && <div className="page-actions">{actions}</div>}
     </div>
@@ -313,14 +323,16 @@ export function ConfirmDialog({
   danger = true,
   onConfirm,
   onCancel,
+  children,
 }: {
   open: boolean
   title: string
-  message: string
+  message?: string
   confirmLabel?: string
   danger?: boolean
   onConfirm: () => void
   onCancel: () => void
+  children?: ReactNode
 }) {
   const [busy, setBusy] = useState(false)
   return (
@@ -351,7 +363,8 @@ export function ConfirmDialog({
         </>
       }
     >
-      <p className="confirm-message">{message}</p>
+      {message && <p className="confirm-message">{message}</p>}
+      {children}
     </Modal>
   )
 }

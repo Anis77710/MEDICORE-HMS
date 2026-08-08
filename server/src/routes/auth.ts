@@ -59,12 +59,18 @@ authRouter.post(
       if (!user || !(await user.comparePassword(password))) {
         throw new ApiError('Invalid email or password', 401)
       }
+      if (user.status === 'Disabled') {
+        throw new ApiError('This account has been disabled — contact an administrator', 403)
+      }
       await UserModel.updateOne({ _id: user._id }, { lastLoginAt: new Date() })
       const familyId = randomUUID()
       const { token, jti } = signRefreshToken(String(user._id), familyId)
       await storeRefreshToken(String(user._id), jti, token, familyId, req)
       setRefreshCookie(res, token)
-      res.json({ user: publicUser(user), token: signAccessToken({ id: String(user._id), role: user.role, name: user.name }) })
+      res.json({
+        user: publicUser(user),
+        token: signAccessToken({ id: String(user._id), role: user.role, name: user.name, ver: user.tokenVersion }),
+      })
     } catch (err) {
       next(err)
     }
@@ -104,7 +110,10 @@ authRouter.post(
       const { token, jti } = signRefreshToken(String(user._id), familyId)
       await storeRefreshToken(String(user._id), jti, token, familyId, req)
       setRefreshCookie(res, token)
-      res.status(201).json({ user: publicUser(user), token: signAccessToken({ id: String(user._id), role: user.role, name: user.name }) })
+      res.status(201).json({
+        user: publicUser(user),
+        token: signAccessToken({ id: String(user._id), role: user.role, name: user.name, ver: user.tokenVersion }),
+      })
     } catch (err) {
       next(err)
     }
@@ -118,10 +127,16 @@ authRouter.post('/refresh', async (req, res, next) => {
     if (!oldToken) throw new ApiError('No refresh token', 401)
     const rotated = await rotateRefreshToken(oldToken, req)
     if (!rotated) throw new ApiError('Session expired — please sign in again', 401)
-    const user = await UserModel.findById(rotated.userId)
-    if (!user) throw new ApiError('Session expired — please sign in again', 401)
-    setRefreshCookie(res, rotated.token)
-    res.json({ user: publicUser(user), token: signAccessToken({ id: String(user._id), role: user.role, name: user.name }) })
+      const user = await UserModel.findById(rotated.userId)
+      if (!user) throw new ApiError('Session expired — please sign in again', 401)
+      if (user.status === 'Disabled') {
+        throw new ApiError('This account has been disabled — contact an administrator', 403)
+      }
+      setRefreshCookie(res, rotated.token)
+      res.json({
+        user: publicUser(user),
+        token: signAccessToken({ id: String(user._id), role: user.role, name: user.name, ver: user.tokenVersion }),
+      })
   } catch (err) {
     next(err)
   }
@@ -244,6 +259,7 @@ authRouter.post(
       const user = await UserModel.findOne({ email: email.toLowerCase() })
       if (!user) throw new ApiError('Account not found', 404)
       user.passwordHash = password
+      user.tokenVersion += 1
       await user.save()
       await OtpModel.deleteMany({ email: user.email, purpose: 'password-reset' })
       // Password changed: revoke every active session.

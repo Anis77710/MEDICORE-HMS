@@ -41,12 +41,12 @@ export default function Login() {
               <Activity size={140} strokeWidth={1} />
             </div>
             <div className="auth-brand-content">
-              <div className="auth-brand-logo">
+              <Link to="/" className="auth-brand-logo">
                 <div className="auth-logo-box">
                   <MedicoreLogo size={32} />
                 </div>
                 <h1>Medicore HMS</h1>
-              </div>
+              </Link>
               <h2>Smart Hospital Management</h2>
               <p>
                 Streamlining healthcare excellence through intuitive data management and

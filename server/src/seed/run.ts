@@ -15,7 +15,8 @@ import { MedicineModel, PrescriptionModel } from '../models/Pharmacy.js'
 import { InvoiceModel, PaymentModel } from '../models/Billing.js'
 import { StaffModel, MedicalRecordModel, DocumentModel } from '../models/Staff.js'
 import { HospitalSettingsModel } from '../models/Settings.js'
-import { CounterModel } from '../models/Counter.js'
+import { dateTag, parseDay } from '../models/Counter.js'
+import { ConsultationModel } from '../models/Consultation.js'
 
 function today(offsetDays = 0): string {
   const d = new Date()
@@ -45,6 +46,7 @@ export async function seedData(): Promise<void> {
     MedicalRecordModel.deleteMany({}),
     DocumentModel.deleteMany({}),
     HospitalSettingsModel.deleteMany({}),
+    ConsultationModel.deleteMany({}),
   ])
 
   // ----- Admin -----
@@ -76,6 +78,19 @@ export async function seedData(): Promise<void> {
   )
   console.log(`Seeded ${doctors.length} doctors`)
 
+  // ----- Doctor portal logins: every seeded doctor gets an account -----
+  // A doctor signs in here and is matched to their Doctor profile by email.
+  await UserModel.create(
+    doctorData.map((d) => ({
+      name: d.name,
+      email: d.email,
+      phone: d.phone,
+      role: 'DOCTOR' as const,
+      passwordHash: 'doctor123',
+    })),
+  )
+  console.log('Seeded doctor accounts (password: doctor123)')
+
   // ----- Departments -----
   const departments = await DepartmentModel.insertMany([
     { name: 'Cardiology', headDoctorId: doctors[0]!._id, headDoctorName: doctors[0]!.name, bedCount: 24, occupiedBeds: 19, doctorsCount: 6, patientsCount: 42, color: '#0e7490', icon: 'HeartPulse', description: 'Diagnosis and treatment of heart conditions.' },
@@ -101,7 +116,11 @@ export async function seedData(): Promise<void> {
     { firstName: 'Samuel', lastName: 'Wright', email: 'samuel.wright@email.com', phone: '+1 (555) 020-2110', dob: '1972-10-05', gender: 'Male', bloodGroup: 'B+', address: '56 Harbor Blvd, Bayport', emergencyContact: '+1 (555) 020-2190', status: 'Admitted', department: 'Cardiology', admittedAt: daysAgo(4), lastVisit: daysAgo(4), allergies: ['Iodine'], insurance: 'United Health' },
   ]
   const patients = await PatientModel.insertMany(
-    patientData.map((p, i) => ({ ...p, patientId: `P-${10432 - i}`, createdAt: new Date(Date.now() - 2 * 86400000) })),
+    patientData.map((p, i) => ({
+      ...p,
+      patientId: `${p.firstName}-${dateTag(new Date(Date.now() - 2 * 86400000))}-${1000 - i}`,
+      createdAt: new Date(Date.now() - 2 * 86400000),
+    })),
   )
   console.log(`Seeded ${patients.length} patients`)
 
@@ -122,7 +141,8 @@ export async function seedData(): Promise<void> {
     { patientId: patients[5]!, doctorId: doctors[3]!, date: today(-6), time: '10:00', type: 'Checkup', status: 'Cancelled', reason: 'Patient rescheduled', durationMin: 30 },
   ]
   await AppointmentModel.create(
-    appointmentData.map((a) => ({
+    appointmentData.map((a, i) => ({
+      appointmentNo: `${a.patientId.firstName}-${dateTag(parseDay(a.date))}-${1000 + i}`,
       patientId: a.patientId._id,
       patientName: `${a.patientId.firstName} ${a.patientId.lastName}`,
       doctorId: a.doctorId._id,
@@ -158,11 +178,89 @@ export async function seedData(): Promise<void> {
 
   // ----- Prescriptions -----
   await PrescriptionModel.create([
-    { patientId: patients[0]!._id, patientName: 'Sarah Johnson', doctorId: doctors[0]!._id, doctorName: 'Dr. Michael Roberts', medicines: [{ name: 'Aspirin 75mg', dosage: '75mg', frequency: 'Once daily', durationDays: 30 }, { name: 'Atorvastatin 20mg', dosage: '20mg', frequency: 'Once daily at night', durationDays: 90 }], issuedAt: daysAgo(5), status: 'Active' },
-    { patientId: patients[1]!._id, patientName: 'John Miller', doctorId: doctors[6]!._id, doctorName: 'Dr. Robert Nguyen', medicines: [{ name: 'Paracetamol 500mg', dosage: '500mg', frequency: 'Every 6 hours as needed', durationDays: 14 }], issuedAt: daysAgo(3), status: 'Active' },
-    { patientId: patients[4]!._id, patientName: 'Maria Gonzalez', doctorId: doctors[2]!._id, doctorName: 'Dr. James Osei', medicines: [{ name: 'Amoxicillin 250mg', dosage: '250mg', frequency: 'Three times daily after meals', durationDays: 7 }], issuedAt: daysAgo(2), status: 'Active' },
-    { patientId: patients[2]!._id, patientName: 'Aisha Khan', doctorId: doctors[5]!._id, doctorName: 'Dr. Amara Diallo', medicines: [{ name: 'Cetirizine 10mg', dosage: '10mg', frequency: 'Once daily', durationDays: 10 }], issuedAt: daysAgo(4), status: 'Completed' },
+    { patientId: patients[0]!._id, patientName: 'Sarah Johnson', doctorId: doctors[0]!._id, doctorName: 'Dr. Michael Roberts', prescriptionNo: `Sarah-${dateTag(parseDay(daysAgo(5)))}-1000`, medicines: [{ name: 'Aspirin 75mg', dosage: '75mg', frequency: 'Once daily', durationDays: 30 }, { name: 'Atorvastatin 20mg', dosage: '20mg', frequency: 'Once daily at night', durationDays: 90 }], issuedAt: daysAgo(5), status: 'Active' },
+    { patientId: patients[1]!._id, patientName: 'John Miller', doctorId: doctors[6]!._id, doctorName: 'Dr. Robert Nguyen', prescriptionNo: `John-${dateTag(parseDay(daysAgo(3)))}-1001`, medicines: [{ name: 'Paracetamol 500mg', dosage: '500mg', frequency: 'Every 6 hours as needed', durationDays: 14 }], issuedAt: daysAgo(3), status: 'Active' },
+    { patientId: patients[4]!._id, patientName: 'Maria Gonzalez', doctorId: doctors[2]!._id, doctorName: 'Dr. James Osei', prescriptionNo: `Maria-${dateTag(parseDay(daysAgo(2)))}-1002`, medicines: [{ name: 'Amoxicillin 250mg', dosage: '250mg', frequency: 'Three times daily after meals', durationDays: 7 }], issuedAt: daysAgo(2), status: 'Active' },
+    { patientId: patients[2]!._id, patientName: 'Aisha Khan', doctorId: doctors[5]!._id, doctorName: 'Dr. Amara Diallo', prescriptionNo: `Aisha-${dateTag(parseDay(daysAgo(4)))}-1003`, medicines: [{ name: 'Cetirizine 10mg', dosage: '10mg', frequency: 'Once daily', durationDays: 10 }], issuedAt: daysAgo(4), status: 'Completed' },
   ])
+
+  // ----- Consultations (doctor portal history) -----
+  const sarahAppt = await AppointmentModel.findOne({
+    patientId: patients[0]!._id,
+    doctorId: doctors[0]!._id,
+    date: today(-2),
+  })
+  const johnAppt = await AppointmentModel.findOne({
+    patientId: patients[1]!._id,
+    doctorId: doctors[6]!._id,
+    date: today(-4),
+  })
+  const consultRx1 = await PrescriptionModel.create({
+    patientId: patients[0]!._id,
+    patientName: 'Sarah Johnson',
+    doctorId: doctors[0]!._id,
+    doctorName: 'Dr. Michael Roberts',
+    prescriptionNo: `Sarah-${dateTag(parseDay(daysAgo(2)))}-1004`,
+    medicines: [
+      { name: 'Aspirin 75mg', dosage: '75mg', frequency: 'Once daily', durationDays: 90, instructions: 'Take with food.' },
+      { name: 'Atorvastatin 20mg', dosage: '20mg', frequency: 'Once daily at night', durationDays: 90, instructions: '' },
+    ],
+    issuedAt: daysAgo(2),
+    status: 'Active',
+  })
+  const consultRx2 = await PrescriptionModel.create({
+    patientId: patients[1]!._id,
+    patientName: 'John Miller',
+    doctorId: doctors[6]!._id,
+    doctorName: 'Dr. Robert Nguyen',
+    prescriptionNo: `John-${dateTag(parseDay(daysAgo(4)))}-1005`,
+    medicines: [
+      { name: 'Paracetamol 500mg', dosage: '500mg', frequency: 'Every 6 hours as needed', durationDays: 14, instructions: '' },
+    ],
+    issuedAt: daysAgo(4),
+    status: 'Active',
+  })
+  await ConsultationModel.create([
+    {
+      consultationNo: `Sarah-${dateTag(new Date(Date.now() - 2 * 86400000))}-1000`,
+      patientId: patients[0]!._id,
+      patientName: 'Sarah Johnson',
+      doctorId: doctors[0]!._id,
+      doctorName: 'Dr. Michael Roberts',
+      appointmentId: sarahAppt?._id,
+      chiefComplaint: 'Mild chest discomfort on exertion, improving since discharge.',
+      symptoms: 'Occasional exertional tightness, no resting symptoms.',
+      vitals: { bloodPressure: '126/80', heartRate: 72, temperature: 36.6, respiratoryRate: 16, spo2: 98, weightKg: 67, heightCm: 165, bmi: 24.6 },
+      examination: { general: 'Alert and comfortable', cardiovascular: 'S1 S2 normal, no murmur', respiratory: 'Clear', neurological: 'No deficits', abdominal: 'Soft', other: '' },
+      diagnosis: { primary: 'Stable angina', additional: 'Post-angioplasty status', notes: 'Recovery on track.' },
+      clinicalNotes: { assessment: 'Post-PCI recovery progressing well.', observations: 'Vitals stable.', reasoning: 'Continue medical therapy.', general: '' },
+      treatmentPlan: { advice: 'Gradual activity resumption.', diet: 'Low-salt diet.', lifestyle: 'Daily walks, quit smoking.', instructions: 'Report any resting chest pain.' },
+      prescriptionId: consultRx1._id,
+      prescriptionNo: consultRx1.prescriptionNo,
+      createdAt: new Date(Date.now() - 2 * 86400000),
+      updatedAt: new Date(Date.now() - 2 * 86400000),
+    },
+    {
+      consultationNo: `John-${dateTag(new Date(Date.now() - 4 * 86400000))}-1001`,
+      patientId: patients[1]!._id,
+      patientName: 'John Miller',
+      doctorId: doctors[6]!._id,
+      doctorName: 'Dr. Robert Nguyen',
+      appointmentId: johnAppt?._id,
+      chiefComplaint: 'Chemotherapy cycle review; patient reports fatigue.',
+      symptoms: 'Mild fatigue, decreased appetite, no fever.',
+      vitals: { bloodPressure: '118/74', heartRate: 76, temperature: 36.8, respiratoryRate: 17, spo2: 97, weightKg: 71, heightCm: 175, bmi: 23.2 },
+      examination: { general: 'Pale but oriented', cardiovascular: 'Regular rhythm', respiratory: 'Clear', neurological: 'Intact', abdominal: 'Soft, mild epigastric tenderness', other: '' },
+      diagnosis: { primary: 'Hodgkin lymphoma (stage II)', additional: 'Chemotherapy-related fatigue', notes: 'Continue cycle 3 with supportive care.' },
+      clinicalNotes: { assessment: 'Tolerating chemotherapy with manageable side effects.', observations: 'CBC within acceptable range.', reasoning: 'Continue current protocol.', general: '' },
+      treatmentPlan: { advice: 'Adequate rest between sessions.', diet: 'High-protein, small frequent meals.', lifestyle: 'Light activity as tolerated.', instructions: 'Report fever > 38°C immediately.' },
+      prescriptionId: consultRx2._id,
+      prescriptionNo: consultRx2.prescriptionNo,
+      createdAt: new Date(Date.now() - 4 * 86400000),
+      updatedAt: new Date(Date.now() - 4 * 86400000),
+    },
+  ])
+  console.log('Seeded 2 consultations')
 
   // ----- Invoices & payments -----
   const invoiceData = [
@@ -177,9 +275,8 @@ export async function seedData(): Promise<void> {
       const subtotal = inv.items.reduce((s, it) => s + it.amount, 0)
       const tax = Math.round(subtotal * 0.05 * 100) / 100
       const total = Math.round((subtotal - inv.discount + tax) * 100) / 100
-      const year = new Date().getFullYear()
       return {
-        invoiceNo: `INV-${year}-${1001 + i}`,
+        invoiceNo: `${inv.patient.firstName}-${dateTag(parseDay(daysAgo(i + 1)))}-${1000 + i}`,
         patientId: inv.patient._id,
         patientName: `${inv.patient.firstName} ${inv.patient.lastName}`,
         description: inv.description,
@@ -229,11 +326,6 @@ export async function seedData(): Promise<void> {
     { patientId: patients[1]!._id, name: 'Pathology_Report.pdf', type: 'PDF', size: '480 KB', date: daysAgo(6), uploadedBy: 'Lab' },
     { patientId: patients[3]!._id, name: 'Knee_Xray.jpg', type: 'Image', size: '3.4 MB', date: daysAgo(8), uploadedBy: 'Radiology' },
   ])
-
-  // Reset counters for future auto-generated IDs so they never collide
-  // with seeded records (patients P-10432..10423, invoices INV-<year>-1001..1005).
-  await CounterModel.updateOne({ _id: 'patient' }, { $set: { seq: 33 } }, { upsert: true })
-  await CounterModel.updateOne({ _id: 'invoice' }, { $set: { seq: 1000 + invoices.length } }, { upsert: true })
 
   console.log('\nSeed complete.')
   console.log('Login: admin@healsync.health / admin123')

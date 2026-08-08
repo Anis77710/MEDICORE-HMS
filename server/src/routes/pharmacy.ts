@@ -2,6 +2,8 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { ApiError } from '../utils/ApiError.js'
 import { MedicineModel, PrescriptionModel } from '../models/Pharmacy.js'
+import { PatientModel } from '../models/Patient.js'
+import { makeReadableId } from '../models/Counter.js'
 import { requireAuth } from '../middleware/auth.js'
 import { validate, queryOf } from '../middleware/validate.js'
 
@@ -103,6 +105,7 @@ const prescriptionBody = z.object({
   patientName: z.string().min(1, 'patient name required'),
   doctorId: z.string().min(1, 'doctor required'),
   doctorName: z.string().min(1, 'doctor name required'),
+  appointmentId: z.string().optional(),
   medicines: z
     .array(
       z.object({
@@ -110,6 +113,7 @@ const prescriptionBody = z.object({
         dosage: z.string().default(''),
         frequency: z.string().default(''),
         durationDays: z.coerce.number().int().min(1).default(7),
+        instructions: z.string().default(''),
       }),
     )
     .min(1, 'at least one medicine required'),
@@ -137,8 +141,11 @@ pharmacyRouter.get('/prescriptions', validate({ query: prescriptionListQuery }),
 
 pharmacyRouter.post('/prescriptions', validate({ body: prescriptionBody }), async (req, res, next) => {
   try {
+    const patient = await PatientModel.findById(req.body.patientId)
+    if (!patient) throw new ApiError('Patient not found', 404)
     const prescription = await PrescriptionModel.create({
       ...req.body,
+      prescriptionNo: await makeReadableId('prescription', patient.firstName),
       issuedAt: new Date().toISOString().slice(0, 10),
       status: 'Active',
     })
