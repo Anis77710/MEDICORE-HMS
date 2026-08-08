@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Medicore HMS
+=======
+# MEDICORE-HMS
+>>>>>>> 764dc1ca539691970980275d6cdbc85b05974265
 
 Smart Hospital Management System — complete React frontend (Google Stitch design: Manrope + Inter, teal `#0E7490`) with a full Express + MongoDB backend.
 
