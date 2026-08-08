@@ -1,2 +1,0 @@
-{"t":0,"type":"page.health","sessionId":"s7b12c90e-8813-4976-adb8-c3d3ea0f11f3","seq":0,"data":{"hidden":true,"focused":false,"reason":"initial"}}
-{"t":0,"type":"state.change","sessionId":"s7b12c90e-8813-4976-adb8-c3d3ea0f11f3","seq":1,"data":{"name":"auth","path":"isLoading","value":false,"old":true}}
