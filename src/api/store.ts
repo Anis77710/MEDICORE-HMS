@@ -1,5 +1,5 @@
 // ============================================================
-// HealSync HMS — In-memory mock store
+// Medicore HMS — In-memory mock store
 // Mutations (create/update/delete) apply here while the mock
 // API is active, so the whole frontend is fully usable before
 // the backend joins.

@@ -201,34 +201,36 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <Card padded>
-        <div className="card-header" style={{ padding: 0, marginBottom: 16, border: 'none' }}>
-          <div>
-            <h3 className="card-title">Department Bed Occupancy</h3>
-            <p className="card-subtitle">Current utilization vs capacity</p>
+      {(user?.role === 'ADMIN' || user?.role === 'NURSE' || user?.role === 'STAFF') && (
+        <Card padded>
+          <div className="card-header" style={{ padding: 0, marginBottom: 16, border: 'none' }}>
+            <div>
+              <h3 className="card-title">Department Bed Occupancy</h3>
+              <p className="card-subtitle">Current utilization vs capacity</p>
+            </div>
           </div>
-        </div>
-        <div className="dept-occ-grid">
-          {stats.departmentOccupancy.map((d) => {
-            const pct = Math.round((d.occupied / d.capacity) * 100)
-            const color =
-              pct >= 90 ? 'var(--danger)' : pct >= 75 ? 'var(--warning)' : 'var(--primary)'
-            return (
-              <div key={d.department} className="dept-occ">
-                <div className="flex justify-between mb-2">
-                  <span className="font-semibold text-sm">{d.department}</span>
-                  <span className="text-sm muted">
-                    {d.occupied}/{d.capacity} beds
-                  </span>
+          <div className="dept-occ-grid">
+            {stats.departmentOccupancy.map((d) => {
+              const pct = Math.round((d.occupied / d.capacity) * 100)
+              const color =
+                pct >= 90 ? 'var(--danger)' : pct >= 75 ? 'var(--warning)' : 'var(--primary)'
+              return (
+                <div key={d.department} className="dept-occ">
+                  <div className="flex justify-between mb-2">
+                    <span className="font-semibold text-sm">{d.department}</span>
+                    <span className="text-sm muted">
+                      {d.occupied}/{d.capacity} beds
+                    </span>
+                  </div>
+                  <div className="progress">
+                    <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
+                  </div>
                 </div>
-                <div className="progress">
-                  <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </Card>
+              )
+            })}
+          </div>
+        </Card>
+      )}
     </>
   )
 }

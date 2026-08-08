@@ -4,6 +4,7 @@ import { Activity, Eye, EyeOff, Mail, Lock, ShieldCheck, KeyRound } from 'lucide
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { Field, Input, Button } from '../../components/ui'
+import { MedicoreLogo } from '../../components/ui/MedicoreLogo'
 
 export default function Login() {
   const { login } = useAuth()
@@ -22,7 +23,7 @@ export default function Login() {
     setBusy(true)
     try {
       await login(email, password, remember)
-      push('Welcome back to HealSync')
+      push('Welcome back to Medicore HMS')
       navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
@@ -42,9 +43,9 @@ export default function Login() {
             <div className="auth-brand-content">
               <div className="auth-brand-logo">
                 <div className="auth-logo-box">
-                  <Activity size={26} strokeWidth={2.4} />
+                  <MedicoreLogo size={32} />
                 </div>
-                <h1>HealSync</h1>
+                <h1>Medicore HMS</h1>
               </div>
               <h2>Smart Hospital Management</h2>
               <p>

@@ -132,7 +132,7 @@ export function PatientForm({
             <option value="">Select a doctor…</option>
             {doctors.map((d) => (
               <option key={d.id} value={d.id}>
-                {d.name} — {d.specialty}
+                {d.name} · {d.specialty}
               </option>
             ))}
           </select>

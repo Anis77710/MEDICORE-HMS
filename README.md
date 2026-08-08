@@ -1,4 +1,4 @@
-# HealSync HMS
+# Medicore HMS
 
 Smart Hospital Management System — complete React frontend (Google Stitch design: Manrope + Inter, teal `#0E7490`) with a full Express + MongoDB backend.
 
@@ -27,7 +27,7 @@ npm install
 npm run dev      # http://localhost:5174
 ```
 
-Log in with the seeded admin: `admin@healsync.health` / `admin123`.
+Log in with the seeded admin: `admin@Medicore HMS.health` / `admin123`.
 
 ### Tests
 
@@ -56,7 +56,7 @@ npm run smoke    # boots an in-memory MongoDB, seeds, and runs 65 integration te
 
 ## Endpoint contract
 
-All frontend endpoints live in `src/api/endpoints.ts` (`ENDPOINTS` registry). Services in `src/api/services/*.ts` call them through the `http` client in `src/api/client.ts`, which attaches a `Bearer` token from `localStorage` (`healsync_token`) and rotates refresh tokens via the httpOnly cookie (`hs_refresh`). The mock implementations return the exact same JSON shapes, so switching between mock and real backend only requires `.env` changes.
+All frontend endpoints live in `src/api/endpoints.ts` (`ENDPOINTS` registry). Services in `src/api/services/*.ts` call them through the `http` client in `src/api/client.ts`, which attaches a `Bearer` token from `localStorage` (`Medicore HMS_token`) and rotates refresh tokens via the httpOnly cookie (`mc_refresh`). The mock implementations return the exact same JSON shapes, so switching between mock and real backend only requires `.env` changes.
 
 | Method | Endpoint | Service |
 | --- | --- | --- |

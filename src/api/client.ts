@@ -1,12 +1,12 @@
 // ============================================================
-// HealSync HMS — API client
+// Medicore HMS — API client
 // Thin fetch wrapper with Bearer auth, single-flight refresh
 // (httpOnly cookie rotation) and auth-expiry signalling.
 // ============================================================
 
 import { ENDPOINTS } from './endpoints'
 
-const TOKEN_KEY = 'healsync_token'
+const TOKEN_KEY = 'medicore_token'
 
 export const API_BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''

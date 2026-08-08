@@ -97,7 +97,7 @@ export function DoctorForm({
           <Input value={form.name} onChange={set('name')} required placeholder="Dr. John Smith" />
         </Field>
         <Field label="Email">
-          <Input type="email" value={form.email} onChange={set('email')} required placeholder="doctor@healsync.health" />
+          <Input type="email" value={form.email} onChange={set('email')} required placeholder="doctor@Medicore HMS.health" />
         </Field>
         <Field label="Phone">
           <Input value={form.phone} onChange={set('phone')} required placeholder="+1 (555) 000-0000" />

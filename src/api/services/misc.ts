@@ -1,5 +1,5 @@
 // ============================================================
-// HealSync HMS — Staff, Dashboard & Reports services
+// Medicore HMS — Staff, Dashboard & Reports services
 // ============================================================
 
 import { ENDPOINTS, withParams } from '../endpoints'
@@ -111,9 +111,9 @@ export async function getHospitalSettings(): Promise<HospitalSettings> {
   if (USE_MOCK_API) {
     await mockDelay(400)
     return {
-      name: 'HealSync General Hospital',
+      name: 'Medicore General Hospital',
       tagline: 'Smart Hospital Management',
-      email: 'info@healsync.health',
+      email: 'info@medicore.health',
       phone: '+1 (555) 010-0000',
       address: '120 Wellness Boulevard, Springfield, IL 62701',
       license: 'HS-2026-04821',

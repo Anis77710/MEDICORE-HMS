@@ -87,7 +87,7 @@ export function StaffForm({
           <Input value={form.name} onChange={set('name')} required placeholder="Jane Smith" />
         </Field>
         <Field label="Email">
-          <Input type="email" value={form.email} onChange={set('email')} required placeholder="j.smith@healsync.health" />
+          <Input type="email" value={form.email} onChange={set('email')} required placeholder="j.smith@Medicore HMS.health" />
         </Field>
         <Field label="Phone">
           <Input value={form.phone} onChange={set('phone')} required placeholder="+1 (555) 000-0000" />

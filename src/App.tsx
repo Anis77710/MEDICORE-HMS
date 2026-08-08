@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider, ToastViewport } from './context/ToastContext'
 import { AppLayout } from './components/layout/AppLayout'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import ForgotPassword from './pages/auth/ForgotPassword'
@@ -19,21 +20,9 @@ import Staff from './pages/staff/Staff'
 import Reports from './pages/reports/Reports'
 import Settings from './pages/settings/Settings'
 import NotFound from './pages/NotFound'
-import PortalLayout from './portal/layout/PortalLayout'
-import PortalDashboard from './portal/pages/Dashboard'
-import PortalDoctors from './portal/pages/Doctors'
-import DoctorProfile from './portal/pages/DoctorProfile'
-import BookAppointment from './portal/pages/BookAppointment'
-import MyAppointments from './portal/pages/Appointments'
-import MedicalRecords from './portal/pages/Records'
-import Prescriptions from './portal/pages/Prescriptions'
-import Notifications from './portal/pages/Notifications'
-import PortalProfile from './portal/pages/Profile'
-import MyReviews from './portal/pages/Reviews'
-import BillingPage from './portal/pages/Billing'
-import HealthTimeline from './portal/pages/Timeline'
-import SearchPage from './portal/pages/SearchPage'
 import StaffRoleDashboard from './pages/StaffRoleDashboard'
+import LandingPage from './pages/landing/LandingPage'
+import BookAppointmentPage from './pages/landing/BookAppointmentPage'
 import { canAccessModule, type AdminModule } from './rbac/roles'
 
 function ScrollToTop() {
@@ -65,30 +54,8 @@ function ProtectedLayout() {
 function PublicOnly({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
   if (isLoading) return null
-  if (isAuthenticated) return <Navigate to="/" replace />
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />
   return <>{children}</>
-}
-
-function PortalProtected() {
-  const { user, isAuthenticated, isLoading } = useAuth()
-
-  if (isLoading) {
-    return (
-      <div className="auth-page">
-        <div className="spinner" />
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
-
-  if (user?.role !== 'PATIENT') {
-    return <Navigate to="/" replace />
-  }
-
-  return <PortalLayout />
 }
 
 function RequireModule({ module, children }: { module: AdminModule; children: React.ReactNode }) {
@@ -128,10 +95,6 @@ function RoleHome() {
     return <Navigate to="/login" replace />
   }
 
-  if (user?.role === 'PATIENT') {
-    return <Navigate to="/portal" replace />
-  }
-
   if (user?.role === 'ADMIN') {
     return <Dashboard />
   }
@@ -139,44 +102,28 @@ function RoleHome() {
   return <StaffRoleDashboard />
 }
 
+// Show landing for guests, redirect authenticated users to /dashboard
+function LandingRoute() {
+  const { isAuthenticated, isLoading } = useAuth()
+  if (isLoading) return null
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />
+  return <LandingPage />
+}
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={
-          <PublicOnly>
-            <Login />
-          </PublicOnly>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PublicOnly>
-            <Register />
-          </PublicOnly>
-        }
-      />
-      <Route
-        path="/forgot-password"
-        element={
-          <PublicOnly>
-            <ForgotPassword />
-          </PublicOnly>
-        }
-      />
-      <Route
-        path="/verify-otp"
-        element={
-          <PublicOnly>
-            <VerifyOtp />
-          </PublicOnly>
-        }
-      />
+      {/* Public landing page */}
+      <Route path="/" element={<LandingRoute />} />
+      <Route path="/book-appointment" element={<PublicOnly><BookAppointmentPage /></PublicOnly>} />
+
+      <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
+      <Route path="/register" element={<PublicOnly><Register /></PublicOnly>} />
+      <Route path="/forgot-password" element={<PublicOnly><ForgotPassword /></PublicOnly>} />
+      <Route path="/verify-otp" element={<PublicOnly><VerifyOtp /></PublicOnly>} />
 
       <Route element={<ProtectedLayout />}>
-        <Route path="/" element={<RoleHome />} />
+        <Route path="/dashboard" element={<RoleHome />} />
         <Route path="/patients" element={<RequireModule module="patients"><Patients /></RequireModule>} />
         <Route path="/patients/:id" element={<RequireModule module="patients"><PatientDetail /></RequireModule>} />
         <Route path="/doctors" element={<RequireModule module="doctors"><Doctors /></RequireModule>} />
@@ -189,22 +136,6 @@ function AppRoutes() {
         <Route path="/settings" element={<RequireModule module="settings"><Settings /></RequireModule>} />
       </Route>
 
-      <Route path="/portal" element={<PortalProtected />}>
-        <Route index element={<PortalDashboard />} />
-        <Route path="doctors" element={<PortalDoctors />} />
-        <Route path="doctors/:id" element={<DoctorProfile />} />
-        <Route path="book" element={<BookAppointment />} />
-        <Route path="appointments" element={<MyAppointments />} />
-        <Route path="records" element={<MedicalRecords />} />
-        <Route path="prescriptions" element={<Prescriptions />} />
-        <Route path="billing" element={<BillingPage />} />
-        <Route path="timeline" element={<HealthTimeline />} />
-        <Route path="reviews" element={<MyReviews />} />
-        <Route path="notifications" element={<Notifications />} />
-        <Route path="profile" element={<PortalProfile />} />
-        <Route path="search" element={<SearchPage />} />
-      </Route>
-
       <Route path="*" element={<NotFound />} />
     </Routes>
   )
@@ -212,15 +143,17 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <ScrollToTop />
-          <AppRoutes />
-          <ToastViewport />
-        </ToastProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <ToastProvider>
+            <ScrollToTop />
+            <AppRoutes />
+            <ToastViewport />
+          </ToastProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
 

@@ -11,16 +11,16 @@ import {
   UserCog,
   BarChart3,
   Settings,
-  Activity,
   LogOut,
   X,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { canAccessModule, type AdminModule } from '../../rbac/roles'
 import { Avatar } from '../ui'
+import { MedicoreLogo } from '../ui/MedicoreLogo'
 
 const NAV_ITEMS: { to: string; label: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; end?: boolean; module: AdminModule }[] = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true, module: 'dashboard' },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true, module: 'dashboard' },
   { to: '/patients', label: 'Patients', icon: Users, module: 'patients' },
   { to: '/doctors', label: 'Doctors', icon: Stethoscope, module: 'doctors' },
   { to: '/appointments', label: 'Appointments', icon: CalendarDays, module: 'appointments' },
@@ -38,11 +38,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <div className="sidebar-logo">
-          <Activity size={22} strokeWidth={2.4} />
+        <div className="sidebar-logo" style={{display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+          <MedicoreLogo size={32} />
         </div>
         <div>
-          <h1>HealSync</h1>
+          <h1>Medicore HMS</h1>
           <p>HMS Admin</p>
         </div>
         <button className="sidebar-mobile-close" onClick={onNavigate} aria-label="Close menu">
@@ -75,7 +75,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <Avatar name={user?.name ?? 'User'} size="md" />
           <div className="sidebar-user-info">
             <strong>{user?.name}</strong>
-            <span>{user?.department ?? 'HealSync'}</span>
+            <span>{user?.department ?? 'Medicore HMS'}</span>
           </div>
           <button className="sidebar-logout" onClick={() => void logout()} title="Log out" data-testid="logout-btn">
             <LogOut size={17} />

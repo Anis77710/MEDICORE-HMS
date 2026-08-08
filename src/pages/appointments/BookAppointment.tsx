@@ -73,7 +73,7 @@ export function BookAppointment({
           <option value="">Select a doctor…</option>
           {doctors.map((d) => (
             <option key={d.id} value={d.id}>
-              {d.name} — {d.department}
+              {d.name} · {d.department}
             </option>
           ))}
         </select>

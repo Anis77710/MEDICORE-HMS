@@ -1,5 +1,5 @@
 // ============================================================
-// HealSync HMS — Domain types
+// Medicore HMS — Domain types
 // These mirror the backend API contract (REST/JSON).
 // ============================================================
 

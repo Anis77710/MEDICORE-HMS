@@ -1,5 +1,5 @@
 // ============================================================
-// HealSync HMS — Role-Based Access Control (RBAC)
+// Medicore HMS — Role-Based Access Control (RBAC)
 // Every user belongs to exactly one role. Each role has a fixed
 // set of modules it can open and, per module, the actions it can
 // perform. ADMIN has full access; all other roles are granted
@@ -113,7 +113,7 @@ export const MODULE_LABELS: Record<AdminModule, string> = {
 }
 
 export const MODULE_ROUTE: Record<AdminModule, string> = {
-  dashboard: '/',
+  dashboard: '/dashboard',
   patients: '/patients',
   doctors: '/doctors',
   appointments: '/appointments',
@@ -147,7 +147,7 @@ export const ROLE_META: Record<Role, RoleMeta> = {
     title: 'System Administrator',
     short: 'Administrator',
     description:
-      'Full operational control of HealSync. Administrators oversee every department, manage staff and accounts, and own financial, clinical and system-level decisions.',
+      'Full operational control of Medicore HMS. Administrators oversee every department, manage staff and accounts, and own financial, clinical and system-level decisions.',
     duties: [
       'Manage patients, doctors, departments and staff accounts',
       'Oversee hospital operations, admissions and bed allocation',
@@ -224,18 +224,15 @@ export const ROLE_META: Record<Role, RoleMeta> = {
     title: 'Patient',
     short: 'Patient',
     description:
-      'Self-service access to personal healthcare. Patients manage their own appointments, records, prescriptions and billing through the patient portal.',
+      'Registered patient with view-only access to their own records within the hospital system.',
     duties: [
-      'Book, reschedule and cancel own appointments',
-      'View personal medical records and reports',
-      'Track prescriptions and download them',
-      'Review and pay invoices',
-      'Rate doctors and manage profile',
-      'Follow up on notifications and health timeline',
+      'View personal appointments and visit history',
+      'Access medical records and prescriptions',
+      'Review invoices and payment status',
     ],
     controls: [
-      'Patient portal only — no access to hospital modules',
-      'Manage own profile, password and notifications',
+      'Read-only access to own data',
+      'No access to hospital administration modules',
     ],
   },
 }
@@ -243,9 +240,9 @@ export const ROLE_META: Record<Role, RoleMeta> = {
 // ---------- Login helpers (demo credentials per role) ----------
 
 export const ROLE_DEMO_LOGINS: { role: Role; email: string; password: string; label: string }[] = [
-  { role: 'ADMIN', email: 'admin@healsync.health', password: 'admin123', label: 'Administrator' },
-  { role: 'DOCTOR', email: 'd.wright@healsync.health', password: 'doctor123', label: 'Doctor' },
-  { role: 'NURSE', email: 'e.wilson@healsync.health', password: 'nurse123', label: 'Nurse' },
-  { role: 'STAFF', email: 'o.martinez@healsync.health', password: 'staff123', label: 'Front Desk' },
+  { role: 'ADMIN', email: 'admin@medicore.health', password: 'admin123', label: 'Administrator' },
+  { role: 'DOCTOR', email: 'd.wright@medicore.health', password: 'doctor123', label: 'Doctor' },
+  { role: 'NURSE', email: 'e.wilson@medicore.health', password: 'nurse123', label: 'Nurse' },
+  { role: 'STAFF', email: 'o.martinez@medicore.health', password: 'staff123', label: 'Front Desk' },
   { role: 'PATIENT', email: 'sarah.johnson@email.com', password: 'patient123', label: 'Patient' },
 ]

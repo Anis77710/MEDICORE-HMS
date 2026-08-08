@@ -72,13 +72,15 @@ export default function StaffRoleDashboard() {
               icon={<Users size={20} />}
               tone="teal"
             />
-            <StatCard
-              label="Bed Occupancy"
-              value={`${stats.bedOccupancy}%`}
-              change={stats.bedOccupancyChange}
-              icon={<Building2 size={20} />}
-              tone="indigo"
-            />
+            {(role === 'ADMIN' || role === 'NURSE' || role === 'STAFF') && (
+              <StatCard
+                label="Bed Occupancy"
+                value={`${stats.bedOccupancy}%`}
+                change={stats.bedOccupancyChange}
+                icon={<Building2 size={20} />}
+                tone="indigo"
+              />
+            )}
           </div>
 
           <Card padded>

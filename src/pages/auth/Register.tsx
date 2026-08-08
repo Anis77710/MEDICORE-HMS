@@ -4,6 +4,7 @@ import { Activity, User, Mail, Phone, Lock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { Field, Input, Button } from '../../components/ui'
+import { MedicoreLogo } from '../../components/ui/MedicoreLogo'
 
 const ROLES = ['ADMIN', 'DOCTOR', 'NURSE', 'STAFF', 'PATIENT'] as const
 
@@ -41,7 +42,7 @@ export default function Register() {
         role: form.role,
         password: form.password,
       })
-      push('Account created — welcome to HealSync')
+      push('Account created. Welcome to Medicore HMS')
       navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
@@ -61,9 +62,9 @@ export default function Register() {
             <div className="auth-brand-content">
               <div className="auth-brand-logo">
                 <div className="auth-logo-box">
-                  <Activity size={26} strokeWidth={2.4} />
+                  <MedicoreLogo size={32} />
                 </div>
-                <h1>HealSync</h1>
+                <h1>Medicore HMS</h1>
               </div>
               <h2>Join the network</h2>
               <p>

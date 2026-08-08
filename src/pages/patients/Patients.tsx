@@ -171,7 +171,7 @@ export default function Patients() {
                       <td className="muted">
                         {p.assignedDoctorId
                           ? `Dr. ${p.assignedDoctorId.replace('d-', '')}`
-                          : '—'}
+                          : ''}
                       </td>
                       <td>
                         <StatusBadge status={p.status} />

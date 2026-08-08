@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Activity, ShieldCheck } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import * as authApi from '../../api/services/auth'
 import { useToast } from '../../context/ToastContext'
 import { Button } from '../../components/ui'
+import { MedicoreLogo } from '../../components/ui/MedicoreLogo'
 
 const OTP_LENGTH = 6
 
@@ -51,7 +52,7 @@ export default function VerifyOtp() {
         return
       }
       setStep('reset')
-      push('Code verified — set your new password', 'info')
+      push('Code verified. Set your new password', 'info')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed')
     } finally {
@@ -69,7 +70,7 @@ export default function VerifyOtp() {
     setBusy(true)
     try {
       await authApi.resetPassword(email, otp.join(''), password)
-      push('Password updated — you can now log in')
+      push('Password updated. You can now log in')
       navigate('/login')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Reset failed')
@@ -86,9 +87,9 @@ export default function VerifyOtp() {
             <div className="auth-form-inner">
               <div className="auth-brand-logo auth-brand-logo-center">
                 <div className="auth-logo-box">
-                  <Activity size={26} strokeWidth={2.4} />
+                  <MedicoreLogo size={32} />
                 </div>
-                <h1>HealSync</h1>
+                <h1>Medicore HMS</h1>
               </div>
 
               {step === 'verify' ? (

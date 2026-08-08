@@ -194,7 +194,7 @@ export default function Appointments() {
                         <span>{date.getDate()}</span>
                       </div>
                       <div className="cal-slots">
-                        {dayAppts.length === 0 && <div className="cal-empty">—</div>}
+                        {dayAppts.length === 0 && <div className="cal-empty">·</div>}
                         {dayAppts.slice(0, 4).map((a) => (
                           <div
                             key={a.id}

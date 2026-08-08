@@ -64,7 +64,7 @@ export default function Reports() {
       await generateReport(form.name, form.type, form.period)
       setGenOpen(false)
       setForm({ name: '', type: 'Revenue', period: 'August 2026' })
-      push('Report generated — it will appear in the list shortly')
+      push('Report generated. It will appear in the list shortly')
       getReports().then(setData).catch(() => undefined)
     } catch (err) {
       push(err instanceof Error ? err.message : 'Generation failed', 'error')

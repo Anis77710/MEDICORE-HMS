@@ -1,0 +1,79 @@
+{"t":0,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":0,"data":{"hidden":false,"focused":true,"reason":"initial"}}
+{"t":1,"type":"state.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":1,"data":{"name":"auth","path":"isLoading","value":false,"old":true}}
+{"t":1,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":2,"data":{"metric":"longtask","value":51,"at":212}}
+{"t":1,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":3,"data":{"metric":"lcp","value":216,"at":216}}
+{"t":1,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":4,"data":{"metric":"lcp","value":316,"at":316}}
+{"t":2731,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":5,"data":{"hidden":false,"focused":false,"reason":"blur"}}
+{"t":4698,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":6,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":7788,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":7,"data":{"hidden":false,"focused":true,"reason":"focus"}}
+{"t":9050,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":8,"data":{"to":"button \"Minimise the panel\"","toBody":false}}
+{"t":9282,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":9,"data":{"from":"button \"Minimise the panel\"","toBody":true}}
+{"t":9701,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":10,"data":{"hidden":false,"focused":true,"reason":"heartbeat"}}
+{"t":11048,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":11,"data":{"hidden":false,"focused":false,"reason":"blur"}}
+{"t":14711,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":12,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":19303,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":13,"data":{"hidden":false,"focused":true,"reason":"focus"}}
+{"t":19716,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":14,"data":{"hidden":false,"focused":true,"reason":"heartbeat"}}
+{"t":21249,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":15,"data":{"to":"button \"Flag a bug for the agent\"","toBody":false}}
+{"t":22865,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":16,"data":{"from":"button \"Flag a bug for the agent\"","toBody":true}}
+{"t":23092,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":17,"data":{"to":"textbox \"What's wrong here? The agent will read this and fix it.\"","toBody":false}}
+{"t":24669,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":18,"data":{"from":"textbox \"What's wrong here? The agent will read this and fix it.\"","toBody":true}}
+{"t":24728,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":19,"data":{"hidden":false,"focused":true,"reason":"heartbeat"}}
+{"t":24900,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":20,"data":{"to":"textbox \"What's wrong here? The agent will read this and fix it.\"","toBody":false}}
+{"t":26287,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":21,"data":{"from":"textbox \"What's wrong here? The agent will read this and fix it.\"","toBody":true}}
+{"t":26448,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":22,"data":{"to":"textbox \"What's wrong here? The agent will read this and fix it.\"","toBody":false}}
+{"t":26498,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":23,"data":{"from":"textbox \"What's wrong here? The agent will read this and fix it.\"","toBody":true}}
+{"t":26666,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":24,"data":{"to":"textbox \"What's wrong here? The agent will read this and fix it.\"","toBody":false}}
+{"t":29731,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":25,"data":{"hidden":false,"focused":true,"reason":"heartbeat"}}
+{"t":34731,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":26,"data":{"hidden":false,"focused":true,"reason":"heartbeat"}}
+{"t":37486,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":27,"data":{"to":"button \"Send to agent\"","from":"textbox \"What's wrong here? The agent will read this and fix it.\"","toBody":false}}
+{"t":37698,"type":"human.mark","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":28,"data":{"note":"remove this em dash","anchor":"Hero@src\\\\pages\\\\landing\\\\LandingPage.tsx:87","strategy":"component","label":"generic","route":"/","source":{"file":"src\\\\pages\\\\landing\\\\LandingPage.tsx","line":87}}}
+{"t":37699,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":29,"data":{"from":"button \"Send to agent\"","toBody":true}}
+{"t":38731,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":30,"data":{"metric":"cls","value":0.007684332056665179,"at":39232}}
+{"t":38748,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":31,"data":{"metric":"cls","value":0.011389583485352866,"at":39249}}
+{"t":38764,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":32,"data":{"metric":"cls","value":0.013092200727836775,"at":39265}}
+{"t":38781,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":33,"data":{"metric":"cls","value":0.013919075407965123,"at":39282}}
+{"t":38797,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":34,"data":{"metric":"cls","value":0.014294928086550975,"at":39298}}
+{"t":38813,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":35,"data":{"metric":"cls","value":0.014510025112680736,"at":39315}}
+{"t":38875,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":36,"data":{"hidden":false,"focused":false,"reason":"blur"}}
+{"t":39746,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":37,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":44747,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":38,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":49762,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":39,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":54764,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":40,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":59778,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":41,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":62821,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":42,"data":{"hidden":false,"focused":true,"reason":"focus"}}
+{"t":63381,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":43,"data":{"metric":"cls","value":0.04244368324559787,"at":63881}}
+{"t":63398,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":44,"data":{"metric":"cls","value":0.08037300884004434,"at":63897}}
+{"t":63414,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":45,"data":{"metric":"cls","value":0.11215529640852032,"at":63914}}
+{"t":63431,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":46,"data":{"metric":"cls","value":0.13377468411541885,"at":63930}}
+{"t":63447,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":47,"data":{"metric":"cls","value":0.14754518210894538,"at":63947}}
+{"t":63465,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":48,"data":{"metric":"cls","value":0.15626317633993086,"at":63964}}
+{"t":63481,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":49,"data":{"metric":"cls","value":0.1612738601780447,"at":63981}}
+{"t":63497,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":50,"data":{"metric":"cls","value":0.16429197847103633,"at":63997}}
+{"t":63514,"type":"perf","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":51,"data":{"metric":"cls","value":0.16605513247434378,"at":64014}}
+{"t":64781,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":52,"data":{"hidden":false,"focused":true,"reason":"heartbeat"}}
+{"t":64847,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":53,"data":{"name":"background-color","kind":"transition"}}
+{"t":64848,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":54,"data":{"name":"border-bottom-color","kind":"transition"}}
+{"t":64848,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":55,"data":{"name":"border-left-color","kind":"transition"}}
+{"t":64848,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":56,"data":{"name":"border-right-color","kind":"transition"}}
+{"t":64848,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":57,"data":{"name":"border-top-color","kind":"transition"}}
+{"t":64848,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":58,"data":{"name":"box-shadow","kind":"transition"}}
+{"t":65096,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":59,"data":{"name":"background-color","kind":"transition"}}
+{"t":65096,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":60,"data":{"name":"border-bottom-color","kind":"transition"}}
+{"t":65096,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":61,"data":{"name":"border-left-color","kind":"transition"}}
+{"t":65096,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":62,"data":{"name":"border-right-color","kind":"transition"}}
+{"t":65096,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":63,"data":{"name":"border-top-color","kind":"transition"}}
+{"t":65096,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":64,"data":{"name":"box-shadow","kind":"transition"}}
+{"t":65409,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":65,"data":{"to":"button \"Flag a bug for the agent\"","toBody":false}}
+{"t":66280,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":66,"data":{"name":"background-color","kind":"transition"}}
+{"t":66280,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":67,"data":{"name":"border-bottom-color","kind":"transition"}}
+{"t":66280,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":68,"data":{"name":"border-left-color","kind":"transition"}}
+{"t":66281,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":69,"data":{"name":"border-right-color","kind":"transition"}}
+{"t":66281,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":70,"data":{"name":"border-top-color","kind":"transition"}}
+{"t":66281,"type":"anim.end","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","ref":"e1","seq":71,"data":{"name":"box-shadow","kind":"transition"}}
+{"t":66843,"type":"focus.change","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":72,"data":{"from":"button \"Flag a bug for the agent\"","toBody":true}}
+{"t":66844,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":73,"data":{"hidden":false,"focused":false,"reason":"blur"}}
+{"t":69797,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":74,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":74814,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":75,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":79814,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":76,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":84829,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":77,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":86823,"type":"page.health","sessionId":"s701bbea8-3f9a-496b-9112-c73c1b53a7a0","seq":78,"data":{"hidden":true,"focused":false,"reason":"visibilitychange"}}

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Activity, Mail, ArrowLeft } from 'lucide-react'
+import { Mail, ArrowLeft } from 'lucide-react'
 import * as authApi from '../../api/services/auth'
 import { useToast } from '../../context/ToastContext'
 import { Field, Input, Button } from '../../components/ui'
+import { MedicoreLogo } from '../../components/ui/MedicoreLogo'
 
 export default function ForgotPassword() {
   const { push } = useToast()
@@ -35,9 +36,9 @@ export default function ForgotPassword() {
             <div className="auth-form-inner">
               <div className="auth-brand-logo auth-brand-logo-center">
                 <div className="auth-logo-box">
-                  <Activity size={26} strokeWidth={2.4} />
+                  <MedicoreLogo size={32} />
                 </div>
-                <h1>HealSync</h1>
+                <h1>Medicore HMS</h1>
               </div>
               <h2 className="auth-title">Forgot Password?</h2>
               <p className="auth-subtitle">

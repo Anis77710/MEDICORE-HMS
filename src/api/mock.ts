@@ -1,5 +1,5 @@
 // ============================================================
-// HealSync HMS — Mock data layer
+// Medicore HMS — Mock data layer
 // Used while VITE_USE_MOCK_API=true (default) so the frontend is
 // fully functional before the backend is built. Shapes mirror the
 // types in `src/types` — the backend must return the same JSON.
@@ -26,20 +26,20 @@ export const mockDelay = (ms = 450) => new Promise((res) => setTimeout(res, ms))
 export const MOCK_USER: User = {
   id: 'u-1',
   name: 'Dr. Sarah Chen',
-  email: 'admin@healsync.health',
+  email: 'admin@medicore.health',
   role: 'ADMIN',
   phone: '+1 (555) 010-2244',
 }
 
 export const mockDoctors: Doctor[] = [
-  { id: 'd-1', name: 'Dr. Michael Roberts', email: 'm.roberts@healsync.health', phone: '+1 (555) 010-1001', department: 'Cardiology', specialty: 'Interventional Cardiologist', qualification: 'MD, DM (Cardiology)', experienceYears: 15, consultationFee: 120, schedule: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], patientsCount: 342, rating: 4.9, status: 'Active' },
-  { id: 'd-2', name: 'Dr. Priya Sharma', email: 'p.sharma@healsync.health', phone: '+1 (555) 010-1002', department: 'Neurology', specialty: 'Neurologist', qualification: 'MD, DM (Neurology)', experienceYears: 11, consultationFee: 110, schedule: ['Mon', 'Wed', 'Fri'], patientsCount: 218, rating: 4.8, status: 'Active' },
-  { id: 'd-3', name: 'Dr. James Osei', email: 'j.osei@healsync.health', phone: '+1 (555) 010-1003', department: 'Pediatrics', specialty: 'Pediatrician', qualification: 'MBBS, MD (Pediatrics)', experienceYears: 9, consultationFee: 90, schedule: ['Tue', 'Thu', 'Sat'], patientsCount: 296, rating: 4.7, status: 'Active' },
-  { id: 'd-4', name: 'Dr. Emily Carter', email: 'e.carter@healsync.health', phone: '+1 (555) 010-1004', department: 'General Medicine', specialty: 'Internal Medicine', qualification: 'MD (Internal Medicine)', experienceYears: 13, consultationFee: 80, schedule: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], patientsCount: 412, rating: 4.6, status: 'On Leave' },
-  { id: 'd-5', name: 'Dr. David Kim', email: 'd.kim@healsync.health', phone: '+1 (555) 010-1005', department: 'Orthopedics', specialty: 'Orthopedic Surgeon', qualification: 'MS (Orthopedics)', experienceYears: 17, consultationFee: 130, schedule: ['Mon', 'Tue', 'Fri'], patientsCount: 187, rating: 4.9, status: 'Active' },
-  { id: 'd-6', name: 'Dr. Amara Diallo', email: 'a.diallo@healsync.health', phone: '+1 (555) 010-1006', department: 'Dermatology', specialty: 'Dermatologist', qualification: 'MD (Dermatology)', experienceYears: 8, consultationFee: 85, schedule: ['Wed', 'Thu', 'Fri'], patientsCount: 154, rating: 4.5, status: 'Active' },
-  { id: 'd-7', name: 'Dr. Robert Nguyen', email: 'r.nguyen@healsync.health', phone: '+1 (555) 010-1007', department: 'Oncology', specialty: 'Medical Oncologist', qualification: 'MD, DM (Oncology)', experienceYears: 14, consultationFee: 140, schedule: ['Mon', 'Tue', 'Wed', 'Thu'], patientsCount: 129, rating: 4.8, status: 'Active' },
-  { id: 'd-8', name: 'Dr. Grace Adeyemi', email: 'g.adeyemi@healsync.health', phone: '+1 (555) 010-1008', department: 'Gynecology', specialty: 'Gynecologist', qualification: 'MS (Obstetrics & Gynecology)', experienceYears: 12, consultationFee: 100, schedule: ['Mon', 'Wed', 'Fri', 'Sat'], patientsCount: 231, rating: 4.7, status: 'Active' },
+  { id: 'd-1', name: 'Dr. Michael Roberts', email: 'm.roberts@medicore.health', phone: '+1 (555) 010-1001', department: 'Cardiology', specialty: 'Interventional Cardiologist', qualification: 'MD, DM (Cardiology)', experienceYears: 15, consultationFee: 120, schedule: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], patientsCount: 342, rating: 4.9, status: 'Active' },
+  { id: 'd-2', name: 'Dr. Priya Sharma', email: 'p.sharma@medicore.health', phone: '+1 (555) 010-1002', department: 'Neurology', specialty: 'Neurologist', qualification: 'MD, DM (Neurology)', experienceYears: 11, consultationFee: 110, schedule: ['Mon', 'Wed', 'Fri'], patientsCount: 218, rating: 4.8, status: 'Active' },
+  { id: 'd-3', name: 'Dr. James Osei', email: 'j.osei@medicore.health', phone: '+1 (555) 010-1003', department: 'Pediatrics', specialty: 'Pediatrician', qualification: 'MBBS, MD (Pediatrics)', experienceYears: 9, consultationFee: 90, schedule: ['Tue', 'Thu', 'Sat'], patientsCount: 296, rating: 4.7, status: 'Active' },
+  { id: 'd-4', name: 'Dr. Emily Carter', email: 'e.carter@medicore.health', phone: '+1 (555) 010-1004', department: 'General Medicine', specialty: 'Internal Medicine', qualification: 'MD (Internal Medicine)', experienceYears: 13, consultationFee: 80, schedule: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], patientsCount: 412, rating: 4.6, status: 'On Leave' },
+  { id: 'd-5', name: 'Dr. David Kim', email: 'd.kim@medicore.health', phone: '+1 (555) 010-1005', department: 'Orthopedics', specialty: 'Orthopedic Surgeon', qualification: 'MS (Orthopedics)', experienceYears: 17, consultationFee: 130, schedule: ['Mon', 'Tue', 'Fri'], patientsCount: 187, rating: 4.9, status: 'Active' },
+  { id: 'd-6', name: 'Dr. Amara Diallo', email: 'a.diallo@medicore.health', phone: '+1 (555) 010-1006', department: 'Dermatology', specialty: 'Dermatologist', qualification: 'MD (Dermatology)', experienceYears: 8, consultationFee: 85, schedule: ['Wed', 'Thu', 'Fri'], patientsCount: 154, rating: 4.5, status: 'Active' },
+  { id: 'd-7', name: 'Dr. Robert Nguyen', email: 'r.nguyen@medicore.health', phone: '+1 (555) 010-1007', department: 'Oncology', specialty: 'Medical Oncologist', qualification: 'MD, DM (Oncology)', experienceYears: 14, consultationFee: 140, schedule: ['Mon', 'Tue', 'Wed', 'Thu'], patientsCount: 129, rating: 4.8, status: 'Active' },
+  { id: 'd-8', name: 'Dr. Grace Adeyemi', email: 'g.adeyemi@medicore.health', phone: '+1 (555) 010-1008', department: 'Gynecology', specialty: 'Gynecologist', qualification: 'MS (Obstetrics & Gynecology)', experienceYears: 12, consultationFee: 100, schedule: ['Mon', 'Wed', 'Fri', 'Sat'], patientsCount: 231, rating: 4.7, status: 'Active' },
 ]
 
 export const mockPatients: Patient[] = [
@@ -122,14 +122,14 @@ export const mockPayments = [
 ]
 
 export const mockStaff: StaffMember[] = [
-  { id: 's-1', name: 'Dr. Sarah Chen', email: 'admin@healsync.health', phone: '+1 (555) 010-2244', role: 'ADMIN', department: 'Administration', shift: 'Morning', joinedAt: '2019-03-15', salary: 145000, status: 'Active' },
-  { id: 's-2', name: 'Nurse Emma Wilson', email: 'e.wilson@healsync.health', phone: '+1 (555) 010-2245', role: 'NURSE', department: 'Cardiology', shift: 'Morning', joinedAt: '2021-06-01', salary: 72000, status: 'Active' },
-  { id: 's-3', name: 'Nurse James Park', email: 'j.park@healsync.health', phone: '+1 (555) 010-2246', role: 'NURSE', department: 'Emergency', shift: 'Night', joinedAt: '2020-11-20', salary: 68500, status: 'Active' },
-  { id: 's-4', name: 'Olivia Martinez', email: 'o.martinez@healsync.health', phone: '+1 (555) 010-2247', role: 'STAFF', department: 'Billing', shift: 'Morning', joinedAt: '2022-02-14', salary: 54000, status: 'Active' },
-  { id: 's-5', name: 'Dr. Daniel Wright', email: 'd.wright@healsync.health', phone: '+1 (555) 010-2248', role: 'DOCTOR', department: 'Cardiology', shift: 'Morning', joinedAt: '2018-08-05', salary: 168000, status: 'On Leave' },
-  { id: 's-6', name: 'Rachel Adams', email: 'r.adams@healsync.health', phone: '+1 (555) 010-2249', role: 'STAFF', department: 'Front Desk', shift: 'Rotating', joinedAt: '2023-04-10', salary: 42000, status: 'Active' },
-  { id: 's-7', name: 'Nurse Sofia Reyes', email: 's.reyes@healsync.health', phone: '+1 (555) 010-2250', role: 'NURSE', department: 'Pediatrics', shift: 'Evening', joinedAt: '2021-09-27', salary: 70000, status: 'Active' },
-  { id: 's-8', name: 'Michael Oduya', email: 'm.oduya@healsync.health', phone: '+1 (555) 010-2251', role: 'STAFF', department: 'Pharmacy', shift: 'Rotating', joinedAt: '2022-07-18', salary: 58000, status: 'Active' },
+  { id: 's-1', name: 'Dr. Sarah Chen', email: 'admin@medicore.health', phone: '+1 (555) 010-2244', role: 'ADMIN', department: 'Administration', shift: 'Morning', joinedAt: '2019-03-15', salary: 145000, status: 'Active' },
+  { id: 's-2', name: 'Nurse Emma Wilson', email: 'e.wilson@medicore.health', phone: '+1 (555) 010-2245', role: 'NURSE', department: 'Cardiology', shift: 'Morning', joinedAt: '2021-06-01', salary: 72000, status: 'Active' },
+  { id: 's-3', name: 'Nurse James Park', email: 'j.park@medicore.health', phone: '+1 (555) 010-2246', role: 'NURSE', department: 'Emergency', shift: 'Night', joinedAt: '2020-11-20', salary: 68500, status: 'Active' },
+  { id: 's-4', name: 'Olivia Martinez', email: 'o.martinez@medicore.health', phone: '+1 (555) 010-2247', role: 'STAFF', department: 'Billing', shift: 'Morning', joinedAt: '2022-02-14', salary: 54000, status: 'Active' },
+  { id: 's-5', name: 'Dr. Daniel Wright', email: 'd.wright@medicore.health', phone: '+1 (555) 010-2248', role: 'DOCTOR', department: 'Cardiology', shift: 'Morning', joinedAt: '2018-08-05', salary: 168000, status: 'On Leave' },
+  { id: 's-6', name: 'Rachel Adams', email: 'r.adams@medicore.health', phone: '+1 (555) 010-2249', role: 'STAFF', department: 'Front Desk', shift: 'Rotating', joinedAt: '2023-04-10', salary: 42000, status: 'Active' },
+  { id: 's-7', name: 'Nurse Sofia Reyes', email: 's.reyes@medicore.health', phone: '+1 (555) 010-2250', role: 'NURSE', department: 'Pediatrics', shift: 'Evening', joinedAt: '2021-09-27', salary: 70000, status: 'Active' },
+  { id: 's-8', name: 'Michael Oduya', email: 'm.oduya@medicore.health', phone: '+1 (555) 010-2251', role: 'STAFF', department: 'Pharmacy', shift: 'Rotating', joinedAt: '2022-07-18', salary: 58000, status: 'Active' },
 ]
 
 export const mockDashboardStats: DashboardStats = {

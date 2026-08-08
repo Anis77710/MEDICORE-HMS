@@ -1,0 +1,5 @@
+{"t":1,"type":"page.health","sessionId":"sff9cd2ee-1794-4a1d-b6f3-57daea79602c","seq":0,"data":{"hidden":true,"focused":false,"reason":"initial"}}
+{"t":1,"type":"state.change","sessionId":"sff9cd2ee-1794-4a1d-b6f3-57daea79602c","seq":1,"data":{"name":"auth","path":"isLoading","value":false,"old":true}}
+{"t":21,"type":"page.health","sessionId":"sff9cd2ee-1794-4a1d-b6f3-57daea79602c","seq":2,"data":{"hidden":true,"focused":true,"reason":"focus"}}
+{"t":29,"type":"page.health","sessionId":"sff9cd2ee-1794-4a1d-b6f3-57daea79602c","seq":3,"data":{"hidden":false,"focused":true,"reason":"visibilitychange"}}
+{"t":62,"type":"page.health","sessionId":"sff9cd2ee-1794-4a1d-b6f3-57daea79602c","seq":4,"data":{"hidden":true,"focused":true,"reason":"visibilitychange"}}

@@ -1,0 +1,126 @@
+{"t":0,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":0,"data":{"hidden":false,"focused":false,"reason":"initial"}}
+{"t":0,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":1,"data":{"metric":"longtask","value":99,"at":175}}
+{"t":0,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":2,"data":{"metric":"longtask","value":74,"at":288}}
+{"t":0,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":3,"data":{"metric":"longtask","value":74,"at":369}}
+{"t":0,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":4,"data":{"metric":"longtask","value":50,"at":459}}
+{"t":0,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":5,"data":{"metric":"longtask","value":90,"at":563}}
+{"t":1,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":6,"data":{"metric":"longtask","value":285,"at":807}}
+{"t":1,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":7,"data":{"metric":"longtask","value":124,"at":1092}}
+{"t":1,"type":"net.pending","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":8,"data":{"id":"n1","method":"GET","url":"http://localhost:8080/api/auth/me","initiator":"fetch","initiatorStack":"at initiatorFrame (http://localhost:5173/node_modules/.vite/deps/dist-DWAfpTl6.js?v=ac691f1f:19266:40)"}}
+{"t":1,"type":"net.pending","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":9,"data":{"id":"n2","method":"GET","url":"http://localhost:8080/api/auth/me","initiator":"fetch","initiatorStack":"at initiatorFrame (http://localhost:5173/node_modules/.vite/deps/dist-DWAfpTl6.js?v=ac691f1f:19266:40)"}}
+{"t":1,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":10,"data":{"metric":"lcp","value":1304,"at":1304}}
+{"t":1,"type":"anim.start","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e1","seq":11,"data":{"name":"spin"}}
+{"t":1,"type":"net.request","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":12,"data":{"id":"n1","method":"GET","url":"http://localhost:8080/api/auth/me","status":200,"ok":true,"durationMs":105,"initiator":"fetch","initiatorStack":"at initiatorFrame (http://localhost:5173/node_modules/.vite/deps/dist-DWAfpTl6.js?v=ac691f1f:19266:40)","statusText":"OK","contentType":"application/json; charset=utf-8","responseSize":132}}
+{"t":1,"type":"net.request","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":13,"data":{"id":"n2","method":"GET","url":"http://localhost:8080/api/auth/me","status":200,"ok":true,"durationMs":155,"initiator":"fetch","initiatorStack":"at initiatorFrame (http://localhost:5173/node_modules/.vite/deps/dist-DWAfpTl6.js?v=ac691f1f:19266:40)","statusText":"OK","contentType":"application/json; charset=utf-8","responseSize":132}}
+{"t":1,"type":"net.pending","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":14,"data":{"id":"n3","method":"GET","url":"http://localhost:8080/api/patients?status=All&page=1&limit=10","initiator":"fetch","initiatorStack":"at initiatorFrame (http://localhost:5173/node_modules/.vite/deps/dist-DWAfpTl6.js?v=ac691f1f:19266:40)"}}
+{"t":1,"type":"state.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":15,"data":{"name":"auth","path":"user","old":null,"value":{"id":"6a6f47d9fda5d5e66c8bdec1","name":"Dr. Sarah Chen","email":"admin@healsync.health","phone":"+1 (555) 010-2244","role":"ADMIN"}}}
+{"t":1,"type":"state.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":16,"data":{"name":"auth","path":"isAuthenticated","value":true,"old":false}}
+{"t":1,"type":"state.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":17,"data":{"name":"auth","path":"isLoading","value":false,"old":true}}
+{"t":1,"type":"net.pending","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":18,"data":{"id":"n4","method":"GET","url":"http://localhost:8080/api/patients?status=All&page=1&limit=10","initiator":"fetch","initiatorStack":"at initiatorFrame (http://localhost:5173/node_modules/.vite/deps/dist-DWAfpTl6.js?v=ac691f1f:19266:40)"}}
+{"t":1,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":19,"data":{"metric":"longtask","value":86,"at":1455}}
+{"t":3,"type":"anim.start","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e2","seq":20,"data":{"name":"spin"}}
+{"t":39,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":21,"data":{"metric":"lcp","value":1588,"at":1588}}
+{"t":66,"type":"net.request","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":22,"data":{"id":"n3","method":"GET","url":"http://localhost:8080/api/patients?status=All&page=1&limit=10","status":200,"ok":true,"durationMs":79,"initiator":"fetch","initiatorStack":"at initiatorFrame (http://localhost:5173/node_modules/.vite/deps/dist-DWAfpTl6.js?v=ac691f1f:19266:40)","statusText":"OK","contentType":"application/json; charset=utf-8","responseSize":5383}}
+{"t":123,"type":"net.request","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":23,"data":{"id":"n4","method":"GET","url":"http://localhost:8080/api/patients?status=All&page=1&limit=10","status":200,"ok":true,"durationMs":131,"initiator":"fetch","initiatorStack":"at initiatorFrame (http://localhost:5173/node_modules/.vite/deps/dist-DWAfpTl6.js?v=ac691f1f:19266:40)","statusText":"OK","contentType":"application/json; charset=utf-8","responseSize":5383}}
+{"t":267,"type":"dom.text","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e3","seq":24,"data":{"text":"15 registered patients","old":"0 registered patients"}}
+{"t":267,"type":"dom.text","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e4","seq":25,"data":{"text":"1","old":"0"}}
+{"t":267,"type":"dom.text","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e5","seq":26,"data":{"text":"3","old":"0"}}
+{"t":268,"type":"dom.text","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e6","seq":27,"data":{"text":"6","old":"0"}}
+{"t":287,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":28,"data":{"metric":"longtask","value":143,"at":1695}}
+{"t":339,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":29,"data":{"metric":"lcp","value":1888,"at":1888}}
+{"t":4668,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":30,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":9669,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":31,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":14670,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":32,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":19671,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":33,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":24681,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":34,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":29688,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":35,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":34700,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":36,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":39705,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":37,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":44715,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":38,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":49719,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":39,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":54729,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":40,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":59734,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":41,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":64737,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":42,"data":{"hidden":false,"focused":false,"reason":"heartbeat"}}
+{"t":67448,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":43,"data":{"hidden":false,"focused":true,"reason":"focus"}}
+{"t":68826,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":44,"data":{"to":"button \"Minimise the panel\"","toBody":false}}
+{"t":68839,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":45,"data":{"from":"button \"Minimise the panel\"","toBody":true}}
+{"t":69700,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":46,"data":{"x":0,"y":1.3333333730697632,"percent":0,"direction":"down"}}
+{"t":69748,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":47,"data":{"hidden":false,"focused":true,"reason":"heartbeat"}}
+{"t":69802,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":48,"data":{"x":0,"y":52,"percent":11,"direction":"down"}}
+{"t":69909,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":49,"data":{"x":0,"y":57.33333206176758,"percent":12,"direction":"down"}}
+{"t":71306,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":50,"data":{"to":"button \"Flag a bug for the agent\"","toBody":false}}
+{"t":72402,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":51,"data":{"x":0,"y":47.33333206176758,"percent":10,"direction":"up"}}
+{"t":72502,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":52,"data":{"x":0,"y":16,"percent":3,"direction":"up"}}
+{"t":72602,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":53,"data":{"x":0,"y":6,"percent":1,"direction":"up"}}
+{"t":72701,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":54,"data":{"x":0,"y":4,"percent":1,"direction":"up"}}
+{"t":73842,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":55,"data":{"to":"button \"Add Patient\"","from":"button \"Flag a bug for the agent\"","toBody":false}}
+{"t":73892,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":56,"data":{"to":"textbox \"What's wrong here? The agent will read this and fix it.\"","from":"button \"Add Patient\"","toBody":false}}
+{"t":73904,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":57,"data":{"metric":"longtask","value":55,"at":75408}}
+{"t":73983,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e7","seq":58,"data":{"name":"background-color","kind":"transition"}}
+{"t":73983,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e7","seq":59,"data":{"name":"transform","kind":"transition"}}
+{"t":74753,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":60,"data":{"hidden":false,"focused":true,"reason":"heartbeat"}}
+{"t":77872,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":61,"data":{"to":"button \"Cancel\"","from":"textbox \"What's wrong here? The agent will read this and fix it.\"","toBody":false}}
+{"t":77873,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":62,"data":{"from":"button \"Cancel\"","toBody":true}}
+{"t":78017,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e7","seq":63,"data":{"name":"background-color","kind":"transition"}}
+{"t":78018,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e7","seq":64,"data":{"name":"transform","kind":"transition"}}
+{"t":78835,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":65,"data":{"x":0,"y":77.33333587646484,"percent":16,"direction":"down"}}
+{"t":78935,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":66,"data":{"x":0,"y":470.6666564941406,"percent":100,"direction":"down"}}
+{"t":79501,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":67,"data":{"x":0,"y":414,"percent":88,"direction":"up"}}
+{"t":79602,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":68,"data":{"x":0,"y":6,"percent":1,"direction":"up"}}
+{"t":79707,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":69,"data":{"x":0,"y":0,"percent":0,"direction":"up"}}
+{"t":79757,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":70,"data":{"hidden":false,"focused":true,"reason":"heartbeat"}}
+{"t":79835,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":71,"data":{"x":0,"y":150,"percent":32,"direction":"down"}}
+{"t":79935,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":72,"data":{"x":0,"y":470.6666564941406,"percent":100,"direction":"down"}}
+{"t":81737,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":73,"data":{"to":"button \"2\"","toBody":false}}
+{"t":81741,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":74,"data":{"to":"textbox \"What's wrong here? The agent will read this and fix it.\"","from":"button \"2\"","toBody":false}}
+{"t":81849,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":75,"data":{"name":"border-bottom-color","kind":"transition"}}
+{"t":81850,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":76,"data":{"name":"border-left-color","kind":"transition"}}
+{"t":81850,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":77,"data":{"name":"border-right-color","kind":"transition"}}
+{"t":81850,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":78,"data":{"name":"border-top-color","kind":"transition"}}
+{"t":81850,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":79,"data":{"name":"color","kind":"transition"}}
+{"t":83646,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":80,"data":{"from":"textbox \"What's wrong here? The agent will read this and fix it.\"","toBody":true}}
+{"t":83652,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":81,"data":{"to":"textbox \"What's wrong here? The agent will read this and fix it.\"","toBody":false}}
+{"t":83748,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":82,"data":{"name":"border-bottom-color","kind":"transition"}}
+{"t":83748,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":83,"data":{"name":"border-left-color","kind":"transition"}}
+{"t":83748,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":84,"data":{"name":"border-right-color","kind":"transition"}}
+{"t":83749,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":85,"data":{"name":"border-top-color","kind":"transition"}}
+{"t":83749,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":86,"data":{"name":"color","kind":"transition"}}
+{"t":84768,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":87,"data":{"hidden":false,"focused":true,"reason":"heartbeat"}}
+{"t":84985,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":88,"data":{"to":"button \"Cancel\"","from":"textbox \"What's wrong here? The agent will read this and fix it.\"","toBody":false}}
+{"t":84986,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":89,"data":{"from":"button \"Cancel\"","toBody":true}}
+{"t":86014,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":90,"data":{"to":"button \"Flag a bug for the agent\"","toBody":false}}
+{"t":87621,"type":"focus.change","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":91,"data":{"to":"button \"2\"","from":"button \"Flag a bug for the agent\"","toBody":false}}
+{"t":87701,"type":"net.pending","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":92,"data":{"id":"n5","method":"GET","url":"http://localhost:8080/api/patients?status=All&page=2&limit=10","initiator":"fetch","initiatorStack":"at initiatorFrame (http://localhost:5173/node_modules/.vite/deps/dist-DWAfpTl6.js?v=ac691f1f:19266:40)"}}
+{"t":87703,"type":"dom.text","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e9","seq":93,"data":{"text":"11","old":"1"}}
+{"t":87703,"type":"dom.text","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e9","seq":94,"data":{"text":"15","old":"10"}}
+{"t":87703,"type":"dom.attr","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e10","seq":95,"data":{"attr":"disabled","old":""}}
+{"t":87703,"type":"dom.attr","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e11","seq":96,"data":{"attr":"class","value":"btn btn-sm btn-outline","old":"btn btn-sm btn-primary"}}
+{"t":87703,"type":"dom.attr","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":97,"data":{"attr":"class","value":"btn btn-sm btn-primary","old":"btn btn-sm btn-outline"}}
+{"t":87703,"type":"dom.attr","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e12","seq":98,"data":{"attr":"disabled","value":""}}
+{"t":87734,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":99,"data":{"metric":"longtask","value":86,"at":89189}}
+{"t":87751,"type":"scroll.position","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":100,"data":{"x":0,"y":0,"percent":0,"direction":"up"}}
+{"t":87767,"type":"anim.start","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e13","seq":101,"data":{"name":"spin"}}
+{"t":87797,"type":"net.request","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":102,"data":{"id":"n5","method":"GET","url":"http://localhost:8080/api/patients?status=All&page=2&limit=10","status":200,"ok":true,"durationMs":95,"initiator":"fetch","initiatorStack":"at initiatorFrame (http://localhost:5173/node_modules/.vite/deps/dist-DWAfpTl6.js?v=ac691f1f:19266:40)","statusText":"OK","contentType":"application/json; charset=utf-8","responseSize":2556}}
+{"t":87871,"type":"dom.text","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e4","seq":103,"data":{"text":"0","old":"1"}}
+{"t":87871,"type":"dom.text","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e14","seq":104,"data":{"text":"1","old":"0"}}
+{"t":87871,"type":"dom.text","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e15","seq":105,"data":{"text":"1","old":"0"}}
+{"t":87871,"type":"dom.text","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e6","seq":106,"data":{"text":"0","old":"6"}}
+{"t":87875,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e10","seq":107,"data":{"name":"opacity","kind":"transition"}}
+{"t":87875,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e11","seq":108,"data":{"name":"background-color","kind":"transition"}}
+{"t":87875,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":109,"data":{"name":"background-color","kind":"transition"}}
+{"t":87875,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":110,"data":{"name":"transform","kind":"transition"}}
+{"t":87875,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e12","seq":111,"data":{"name":"opacity","kind":"transition"}}
+{"t":87879,"type":"perf","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":112,"data":{"metric":"longtask","value":67,"at":89373}}
+{"t":87882,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e11","seq":113,"data":{"name":"border-bottom-color","kind":"transition"}}
+{"t":87882,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e11","seq":114,"data":{"name":"border-left-color","kind":"transition"}}
+{"t":87882,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e11","seq":115,"data":{"name":"border-right-color","kind":"transition"}}
+{"t":87882,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e11","seq":116,"data":{"name":"border-top-color","kind":"transition"}}
+{"t":87882,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e11","seq":117,"data":{"name":"box-shadow","kind":"transition"}}
+{"t":87882,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e11","seq":118,"data":{"name":"color","kind":"transition"}}
+{"t":87882,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":119,"data":{"name":"border-bottom-color","kind":"transition"}}
+{"t":87882,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":120,"data":{"name":"border-left-color","kind":"transition"}}
+{"t":87882,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":121,"data":{"name":"border-right-color","kind":"transition"}}
+{"t":87882,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":122,"data":{"name":"border-top-color","kind":"transition"}}
+{"t":87882,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":123,"data":{"name":"box-shadow","kind":"transition"}}
+{"t":87882,"type":"anim.end","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","ref":"e8","seq":124,"data":{"name":"color","kind":"transition"}}
+{"t":87968,"type":"page.health","sessionId":"s0b9dd230-4bbb-432a-804d-5bbd21fbc369","seq":125,"data":{"hidden":true,"focused":true,"reason":"visibilitychange"}}

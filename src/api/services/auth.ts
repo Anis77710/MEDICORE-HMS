@@ -1,5 +1,5 @@
 // ============================================================
-// HealSync HMS — Auth service
+// Medicore HMS — Auth service
 // Real API: POST {base}/auth/* (see ENDPOINTS)
 // Mock:     simulates the same contract
 // ============================================================
@@ -9,7 +9,7 @@ import { http, setToken, USE_MOCK_API, ApiError } from '../client'
 import { MOCK_USER, mockDelay, mockPatients, mockStaff } from '../mock'
 import type { AuthResponse, User } from '../../types'
 
-const MOCK_USER_KEY = 'healsync_mock_user'
+const MOCK_USER_KEY = 'medicore_mock_user'
 
 function saveMockUser(user: User): void {
   localStorage.setItem(MOCK_USER_KEY, JSON.stringify(user))

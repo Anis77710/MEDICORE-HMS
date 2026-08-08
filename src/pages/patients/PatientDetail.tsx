@@ -178,7 +178,7 @@ export default function PatientDetail() {
         <div className="allergy-banner">
           <AlertTriangle size={17} />
           <div>
-            <strong>Allergy alert:</strong> {patient.allergies.join(', ')} — risk of severe reaction.
+            <strong>Allergy alert:</strong> {patient.allergies.join(', ')}. Risk of severe reaction.
           </div>
         </div>
       )}
@@ -363,7 +363,7 @@ export default function PatientDetail() {
                         <td>
                           {r.medicines.map((m) => (
                             <div key={m.name} className="text-sm">
-                              <strong>{m.name}</strong> — {m.dosage}, {m.frequency}
+                              <strong>{m.name}</strong> · {m.dosage}, {m.frequency}
                             </div>
                           ))}
                         </td>
