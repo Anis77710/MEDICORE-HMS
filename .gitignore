@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Reticle
+.reticle/
+
 # Environment files (backend credentials live here)
 .env
 .env.*
