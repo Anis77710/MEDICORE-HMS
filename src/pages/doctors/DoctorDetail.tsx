@@ -267,7 +267,7 @@ export default function DoctorDetail() {
                 <div className="info-row"><span className="muted">Phone</span><strong>{doctor.phone || '—'}</strong></div>
                 <div className="info-row"><span className="muted">Qualification</span><strong>{doctor.qualification || '—'}</strong></div>
                 <div className="info-row"><span className="muted">Experience</span><strong>{doctor.experienceYears} years</strong></div>
-                <div className="info-row"><span className="muted">Consultation fee</span><strong>${doctor.consultationFee}</strong></div>
+                <div className="info-row"><span className="muted">Consultation fee</span><strong>Rs. {doctor.consultationFee}</strong></div>
                 <div className="info-row"><span className="muted">Working days</span><strong>{doctor.schedule.join(', ') || '—'}</strong></div>
               </div>
             </Card>

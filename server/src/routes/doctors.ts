@@ -13,6 +13,7 @@ import { requireAuth, requireRole, type AuthedRequest } from '../middleware/auth
 import { validate, queryOf } from '../middleware/validate.js'
 import { writeAuditLog } from './staff.js'
 import { getAvailabilitySlots, isWorkingDay } from '../domain/availability.js'
+import { loginUsername, defaultPassword, sendCredentialsEmail } from '../utils/credentials.js'
 
 export const doctorsRouter = Router()
 
@@ -26,6 +27,7 @@ const doctorBody = z.object({
   specialty: z.string().default(''),
   qualification: z.string().default(''),
   experienceYears: z.coerce.number().min(0).default(0),
+  birthYear: z.coerce.number().int().min(1900).max(2100),
   consultationFee: z.coerce.number().min(0).default(0),
   schedule: z.array(z.string()).default([]),
   status: z.enum(['Active', 'On Leave', 'Unavailable']).default('Active'),
@@ -142,18 +144,41 @@ doctorsRouter.get(
 )
 
 // ---------- POST /doctors (admin) ----------
+// Adding a doctor also creates their login account automatically:
+// username = firstname@medicore.hms, password = firstname@birthYear.
+// The credentials are emailed to the doctor's Gmail address.
 doctorsRouter.post(
   '/',
   requireRole('ADMIN'),
   validate({ body: doctorBody }),
   async (req, res, next) => {
     try {
+      const email = String(req.body.email).toLowerCase()
+      const username = loginUsername(String(req.body.name))
+      if (await UserModel.findOne({ username })) {
+        throw new ApiError(`The login username ${username} is already taken — the first name may need to differ`, 409)
+      }
       const doctor = await DoctorModel.create(req.body)
+      let credentials: { username: string; password: string } | null = null
+      if (!(await UserModel.findOne({ email }))) {
+        const password = defaultPassword(doctor.name, (req.body as { birthYear: number }).birthYear)
+        await UserModel.create({
+          name: doctor.name,
+          email,
+          username,
+          phone: doctor.phone,
+          role: 'DOCTOR',
+          passwordHash: password,
+        })
+        await sendCredentialsEmail(email, { name: doctor.name, username, password })
+        credentials = { username, password }
+      }
       await writeAuditLog(req as AuthedRequest, 'create', 'doctor', String(doctor._id), {
         name: doctor.name,
         department: doctor.department,
+        accountCreated: credentials !== null,
       })
-      res.status(201).json(doctor)
+      res.status(201).json({ ...doctor.toJSON(), credentials })
     } catch (err) {
       next(err)
     }
@@ -217,6 +242,8 @@ doctorsRouter.delete(
 // ============================================================
 
 // ---------- POST /doctors/:id/account — create the login account ----------
+// Username is always firstname@medicore.hms; password is
+// firstname@birthYear unless an explicit password is provided.
 doctorsRouter.post(
   '/:id/account',
   requireRole('ADMIN'),
@@ -224,7 +251,8 @@ doctorsRouter.post(
     params: z.object({ id: z.string() }),
     body: z.object({
       email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'valid email required'),
-      password: z.string().min(8, 'password must be at least 8 characters'),
+      password: z.string().min(8, 'password must be at least 8 characters').optional(),
+      birthYear: z.coerce.number().int().min(1900).max(2100).optional(),
     }),
   }),
   async (req, res, next) => {
@@ -235,20 +263,30 @@ doctorsRouter.post(
       if (await UserModel.findOne({ email })) {
         throw new ApiError('An account with this email already exists', 409)
       }
+      const username = loginUsername(doctor.name)
+      if (await UserModel.findOne({ username })) {
+        throw new ApiError(`The login username ${username} is already taken`, 409)
+      }
+      const body = req.body as { email: string; password?: string; birthYear?: number }
+      const password = body.password ?? defaultPassword(doctor.name, body.birthYear ?? doctor.birthYear)
       const user = await UserModel.create({
         name: doctor.name,
         email,
+        username,
         phone: doctor.phone,
         role: 'DOCTOR',
-        passwordHash: (req.body as { password: string }).password,
+        passwordHash: password,
       })
+      await sendCredentialsEmail(email, { name: doctor.name, username, password })
       await writeAuditLog(req as AuthedRequest, 'create', 'doctor-account', String(user._id), {
         doctorId: String(doctor._id),
         doctorName: doctor.name,
+        generated: !body.password,
       })
       res.status(201).json({
         id: String(user._id),
         email: user.email,
+        username,
         role: user.role,
         status: user.status,
       })

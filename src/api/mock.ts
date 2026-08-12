@@ -38,35 +38,40 @@ export const MOCK_USER: User = {
   id: 'u-1',
   name: 'Dr. Sarah Chen',
   email: 'admin@medicore.health',
+  username: 'sarah@medicore.hms',
   role: 'ADMIN',
   phone: '+1 (555) 010-2244',
 }
 
 // Mock login accounts. Doctors map to their Doctor profile by email —
 // same rule the real backend uses when the admin creates an account.
+// `username` follows the firstname@medicore.hms convention.
 export interface MockAccount {
   id: string
   name: string
   email: string
+  username: string
   role: User['role']
   status: 'Active' | 'Disabled'
   lastLoginAt?: string
   createdAt: string
+  department?: string
+  phone?: string
 }
 
 export const mockAccounts: MockAccount[] = [
-  { id: 'u-1', name: 'Dr. Sarah Chen', email: 'admin@medicore.health', role: 'ADMIN', status: 'Active', lastLoginAt: '2026-08-07T08:12:00Z', createdAt: '2025-01-15T09:00:00Z' },
-  { id: 'u-2', name: 'Dr. Michael Roberts', email: 'm.roberts@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T07:55:00Z', createdAt: '2025-02-01T09:00:00Z' },
-  { id: 'u-3', name: 'Dr. Priya Sharma', email: 'p.sharma@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-06T13:40:00Z', createdAt: '2025-03-10T09:00:00Z' },
-  { id: 'u-4', name: 'Dr. James Osei', email: 'j.osei@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T07:10:00Z', createdAt: '2025-04-05T09:00:00Z' },
-  { id: 'u-5', name: 'Dr. Emily Carter', email: 'e.carter@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-07-29T16:20:00Z', createdAt: '2025-02-20T09:00:00Z' },
-  { id: 'u-6', name: 'Dr. David Kim', email: 'd.kim@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T08:01:00Z', createdAt: '2025-01-22T09:00:00Z' },
-  { id: 'u-7', name: 'Dr. Amara Diallo', email: 'a.diallo@medicore.health', role: 'DOCTOR', status: 'Disabled', lastLoginAt: '2026-07-20T10:00:00Z', createdAt: '2025-05-12T09:00:00Z' },
-  { id: 'u-8', name: 'Dr. Robert Nguyen', email: 'r.nguyen@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T07:30:00Z', createdAt: '2025-03-03T09:00:00Z' },
-  { id: 'u-9', name: 'Dr. Grace Adeyemi', email: 'g.adeyemi@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-06T18:05:00Z', createdAt: '2025-06-01T09:00:00Z' },
-  { id: 'u-10', name: 'Dr. Daniel Wright', email: 'd.wright@medicore.health', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T07:45:00Z', createdAt: '2025-01-18T09:00:00Z' },
-  { id: 'u-11', name: 'Nurse Emma Wilson', email: 'e.wilson@medicore.health', role: 'NURSE', status: 'Active', createdAt: '2025-02-14T09:00:00Z' },
-  { id: 'u-12', name: 'Olivia Martinez', email: 'o.martinez@medicore.health', role: 'STAFF', status: 'Active', createdAt: '2025-04-22T09:00:00Z' },
+  { id: 'u-1', name: 'Dr. Sarah Chen', email: 'admin@medicore.health', username: 'sarah@medicore.hms', role: 'ADMIN', status: 'Active', lastLoginAt: '2026-08-07T08:12:00Z', createdAt: '2025-01-15T09:00:00Z' },
+  { id: 'u-2', name: 'Dr. Michael Roberts', email: 'm.roberts@medicore.health', username: 'michael@medicore.hms', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T07:55:00Z', createdAt: '2025-02-01T09:00:00Z' },
+  { id: 'u-3', name: 'Dr. Priya Sharma', email: 'p.sharma@medicore.health', username: 'priya@medicore.hms', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-06T13:40:00Z', createdAt: '2025-03-10T09:00:00Z' },
+  { id: 'u-4', name: 'Dr. James Osei', email: 'j.osei@medicore.health', username: 'james@medicore.hms', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T07:10:00Z', createdAt: '2025-04-05T09:00:00Z' },
+  { id: 'u-5', name: 'Dr. Emily Carter', email: 'e.carter@medicore.health', username: 'emily@medicore.hms', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-07-29T16:20:00Z', createdAt: '2025-02-20T09:00:00Z' },
+  { id: 'u-6', name: 'Dr. David Kim', email: 'd.kim@medicore.health', username: 'david@medicore.hms', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T08:01:00Z', createdAt: '2025-01-22T09:00:00Z' },
+  { id: 'u-7', name: 'Dr. Amara Diallo', email: 'a.diallo@medicore.health', username: 'amara@medicore.hms', role: 'DOCTOR', status: 'Disabled', lastLoginAt: '2026-07-20T10:00:00Z', createdAt: '2025-05-12T09:00:00Z' },
+  { id: 'u-8', name: 'Dr. Robert Nguyen', email: 'r.nguyen@medicore.health', username: 'robert@medicore.hms', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T07:30:00Z', createdAt: '2025-03-03T09:00:00Z' },
+  { id: 'u-9', name: 'Dr. Grace Adeyemi', email: 'g.adeyemi@medicore.health', username: 'grace@medicore.hms', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-06T18:05:00Z', createdAt: '2025-06-01T09:00:00Z' },
+  { id: 'u-10', name: 'Dr. Daniel Wright', email: 'd.wright@medicore.health', username: 'daniel@medicore.hms', role: 'DOCTOR', status: 'Active', lastLoginAt: '2026-08-07T07:45:00Z', createdAt: '2025-01-18T09:00:00Z' },
+  { id: 'u-11', name: 'Nurse Emma Wilson', email: 'e.wilson@medicore.health', username: 'emma@medicore.hms', role: 'NURSE', status: 'Active', createdAt: '2025-02-14T09:00:00Z' },
+  { id: 'u-12', name: 'Olivia Martinez', email: 'o.martinez@medicore.health', username: 'olivia@medicore.hms', role: 'STAFF', status: 'Active', createdAt: '2025-04-22T09:00:00Z' },
 ]
 
 export const mockAuditLog: AuditLogEntryMock[] = [

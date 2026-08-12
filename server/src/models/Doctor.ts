@@ -1,5 +1,6 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
 import { jsonTransform } from './helpers.js'
+import { registerSchema, proxyModel } from './registry.js'
 
 export interface Doctor {
   name: string
@@ -9,6 +10,7 @@ export interface Doctor {
   specialty: string
   qualification: string
   experienceYears: number
+  birthYear?: number
   consultationFee: number
   schedule: string[]
   patientsCount: number
@@ -25,6 +27,7 @@ const doctorSchema = new Schema<Doctor>(
     specialty: { type: String, required: true },
     qualification: { type: String, default: '' },
     experienceYears: { type: Number, default: 0 },
+    birthYear: { type: Number },
     consultationFee: { type: Number, default: 0 },
     schedule: { type: [String], default: [] },
     patientsCount: { type: Number, default: 0 },
@@ -34,4 +37,5 @@ const doctorSchema = new Schema<Doctor>(
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
 
-export const DoctorModel = model<Doctor>('Doctor', doctorSchema)
+registerSchema('Doctor', doctorSchema)
+export const DoctorModel = proxyModel<Doctor>('Doctor')

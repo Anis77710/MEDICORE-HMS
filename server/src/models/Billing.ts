@@ -1,5 +1,6 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
 import { jsonTransform } from './helpers.js'
+import { registerSchema, proxyModel } from './registry.js'
 
 export const INVOICE_STATUSES = ['Paid', 'Pending', 'Overdue', 'Refunded'] as const
 export const PAYMENT_METHODS = ['Card', 'Cash', 'Bank Transfer', 'Insurance', 'UPI'] as const
@@ -52,7 +53,8 @@ const invoiceSchema = new Schema<Invoice>(
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
 
-export const InvoiceModel = model<Invoice>('Invoice', invoiceSchema)
+registerSchema('Invoice', invoiceSchema)
+export const InvoiceModel = proxyModel<Invoice>('Invoice')
 
 export interface Payment {
   invoiceId: string
@@ -73,4 +75,5 @@ const paymentSchema = new Schema<Payment>(
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
 
-export const PaymentModel = model<Payment>('Payment', paymentSchema)
+registerSchema('Payment', paymentSchema)
+export const PaymentModel = proxyModel<Payment>('Payment')

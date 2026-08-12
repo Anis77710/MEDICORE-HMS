@@ -7,6 +7,7 @@
 import { ENDPOINTS } from './endpoints'
 
 const TOKEN_KEY = 'medicore_token'
+const HOSPITAL_KEY = 'medicore_hospital'
 
 export const API_BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''
@@ -35,6 +36,18 @@ export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }
 
+// The hospital slug routes every API call to that hospital's database
+// (x-hospital-slug header). Set on login/registration; switching
+// hospitals replaces this value.
+export function setHospital(slug: string | null): void {
+  if (slug) localStorage.setItem(HOSPITAL_KEY, slug)
+  else localStorage.removeItem(HOSPITAL_KEY)
+}
+
+export function getHospital(): string | null {
+  return localStorage.getItem(HOSPITAL_KEY)
+}
+
 let authExpiredHandler: (() => void) | null = null
 
 export function setAuthExpiredHandler(handler: (() => void) | null): void {
@@ -47,9 +60,11 @@ async function refreshSession(): Promise<boolean> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {
+        const hospital = getHospital()
         const res = await fetch(`${API_BASE_URL}${ENDPOINTS.AUTH_REFRESH}`, {
           method: 'POST',
           credentials: 'include',
+          headers: hospital ? { 'x-hospital-slug': hospital } : {},
         })
         if (!res.ok) return false
         const body = (await res.json()) as { token?: string }
@@ -109,6 +124,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   const token = getToken()
   if (auth && token) headers.Authorization = `Bearer ${token}`
+  const hospital = getHospital()
+  if (hospital) headers['x-hospital-slug'] = hospital
 
   let response = await doFetch(path, options, headers)
 

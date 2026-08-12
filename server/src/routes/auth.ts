@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type Request } from 'express'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { ApiError } from '../utils/ApiError.js'
@@ -6,6 +6,8 @@ import { sendOtpEmail } from '../utils/email.js'
 import { UserModel } from '../models/User.js'
 import { OtpModel } from '../models/Otp.js'
 import { RefreshTokenModel } from '../models/RefreshToken.js'
+import { HospitalSettingsModel } from '../models/Settings.js'
+import { withTenant } from '../models/registry.js'
 import {
   requireAuth,
   signAccessToken,
@@ -18,6 +20,14 @@ import {
   REFRESH_COOKIE,
   type AuthedRequest,
 } from '../middleware/auth.js'
+import { hospitalOf } from '../middleware/tenant.js'
+import {
+  cachedHospital,
+  findHospitalByAdminEmail,
+  getTenantConnection,
+  isValidSlug,
+  type HospitalInfo,
+} from '../config/tenants.js'
 import { validate } from '../middleware/validate.js'
 
 export const authRouter = Router()
@@ -35,42 +45,110 @@ function publicUser(u: {
   _id: unknown
   name: string
   email: string
+  username?: string
   phone: string
   role: string
   avatarUrl?: string
 }) {
-  return { id: String(u._id), name: u.name, email: u.email, phone: u.phone, role: u.role, avatarUrl: u.avatarUrl }
+  return { id: String(u._id), name: u.name, email: u.email, username: u.username, phone: u.phone, role: u.role, avatarUrl: u.avatarUrl }
+}
+
+/**
+ * Decides which hospital database a login attempt belongs to.
+ * Priority: explicit `hospital` body field -> admin-email registry ->
+ * the header-resolved hospital (set by the tenant middleware) -> default.
+ */
+async function resolveLoginHospital(
+  req: { body?: { hospital?: string }; headers: Record<string, unknown> },
+  identifier: string,
+): Promise<HospitalInfo> {
+  const raw = req.body?.hospital
+  const explicit = typeof raw === 'string' ? raw.trim() : ''
+  if (explicit) {
+    if (!isValidSlug(explicit)) throw new ApiError('Invalid hospital code', 400)
+    const rec = cachedHospital(explicit)
+    if (!rec) throw new ApiError('Hospital not found — check the hospital code', 404)
+    if (rec.status === 'suspended') {
+      throw new ApiError('This hospital has been suspended — contact the platform administrator', 403)
+    }
+    return { slug: rec.slug, name: rec.name }
+  }
+
+  const matches = await findHospitalByAdminEmail(identifier)
+  if (matches.length > 1) {
+    throw new ApiError(
+      'This email is registered to more than one hospital — enter the hospital code to sign in',
+      409,
+    )
+  }
+  const first = matches[0]
+  if (first) {
+    if (first.status === 'suspended') {
+      throw new ApiError('This hospital has been suspended — contact the platform administrator', 403)
+    }
+    return { slug: first.slug, name: first.name }
+  }
+
+  return hospitalOf(req as Request)
 }
 
 // ---------- POST /auth/login ----------
+// The `email` field accepts either the user's Gmail address or the
+// synthetic username (firstname@medicore.hms). The `hospital` field
+// is optional: when omitted, the hospital is resolved from the
+// x-hospital-slug header, the admin email registry, or the default
+// hospital (the MONGO_URI database).
 authRouter.post(
   '/login',
   validate({
     body: z.object({
-      email: z.string().regex(EMAIL_RE, 'valid email required'),
+      email: z.string().min(1, 'username or email required'),
       password: z.string().min(1, 'password required'),
       remember: z.boolean().optional(),
+      hospital: z.string().max(60).optional(),
     }),
   }),
   async (req, res, next) => {
     try {
-      const { email, password } = req.body as { email: string; password: string }
-      const user = await UserModel.findOne({ email: email.toLowerCase() })
-      if (!user || !(await user.comparePassword(password))) {
-        throw new ApiError('Invalid email or password', 401)
+      const { email, password } = req.body as {
+        email: string
+        password: string
+        hospital?: string
       }
-      if (user.status === 'Disabled') {
-        throw new ApiError('This account has been disabled — contact an administrator', 403)
+      const identifier = email.toLowerCase()
+
+      const target = await resolveLoginHospital(req, identifier)
+      const run = async (): Promise<void> => {
+        const user = await UserModel.findOne({ $or: [{ email: identifier }, { username: identifier }] })
+        if (!user || !(await user.comparePassword(password))) {
+          throw new ApiError('Invalid email or password', 401)
+        }
+        if (user.status === 'Disabled') {
+          throw new ApiError('This account has been disabled — contact an administrator', 403)
+        }
+        await UserModel.updateOne({ _id: user._id }, { lastLoginAt: new Date() })
+        const familyId = randomUUID()
+        const { token, jti } = signRefreshToken(String(user._id), familyId)
+        await storeRefreshToken(String(user._id), jti, token, familyId, req)
+        setRefreshCookie(res, token)
+        const settings = await HospitalSettingsModel.findById('hospital')
+        res.json({
+          user: publicUser(user),
+          token: signAccessToken({
+            id: String(user._id),
+            role: user.role,
+            name: user.name,
+            ver: user.tokenVersion,
+            hospital: target.slug,
+          }),
+          hospital: { slug: target.slug, name: target.name || settings?.name || '' },
+        })
       }
-      await UserModel.updateOne({ _id: user._id }, { lastLoginAt: new Date() })
-      const familyId = randomUUID()
-      const { token, jti } = signRefreshToken(String(user._id), familyId)
-      await storeRefreshToken(String(user._id), jti, token, familyId, req)
-      setRefreshCookie(res, token)
-      res.json({
-        user: publicUser(user),
-        token: signAccessToken({ id: String(user._id), role: user.role, name: user.name, ver: user.tokenVersion }),
-      })
+      if (target.slug === hospitalOf(req).slug) {
+        await run()
+      } else {
+        await withTenant(getTenantConnection(target.slug), target.slug, run)
+      }
     } catch (err) {
       next(err)
     }
@@ -78,45 +156,28 @@ authRouter.post(
 )
 
 // ---------- POST /auth/register ----------
+// Removed: hospital registration is now a PAID flow managed by the master
+// admin panel (eSewa registration fee + approval). See /api/master/register.
 authRouter.post(
   '/register',
   validate({
     body: z.object({
+      hospitalName: z.string().min(2, 'hospital name required'),
       name: z.string().min(2, 'name required'),
       email: z.string().regex(EMAIL_RE, 'valid email required'),
       phone: z.string().default(''),
-      role: z.enum(['ADMIN', 'DOCTOR', 'NURSE', 'STAFF', 'PATIENT']),
-      password: z.string().min(PASSWORD_MIN, `password must be at least ${PASSWORD_MIN} characters`),
+      birthYear: z.coerce.number().int().min(1900).max(2100),
     }),
   }),
-  async (req, res, next) => {
-    try {
-      const { name, email, phone, role, password } = req.body as {
-        name: string
-        email: string
-        phone: string
-        role: 'ADMIN' | 'DOCTOR' | 'NURSE' | 'STAFF' | 'PATIENT'
-        password: string
-      }
-      const normalized = email.toLowerCase()
-      if (await UserModel.findOne({ email: normalized })) {
-        throw new ApiError('An account with this email already exists', 409)
-      }
-      if (role === 'ADMIN' && (await UserModel.countDocuments({ role: 'ADMIN' })) > 0) {
-        throw new ApiError('An administrator already exists — ask them to create your account', 403)
-      }
-      const user = await UserModel.create({ name, email: normalized, phone, role, passwordHash: password })
-      const familyId = randomUUID()
-      const { token, jti } = signRefreshToken(String(user._id), familyId)
-      await storeRefreshToken(String(user._id), jti, token, familyId, req)
-      setRefreshCookie(res, token)
-      res.status(201).json({
-        user: publicUser(user),
-        token: signAccessToken({ id: String(user._id), role: user.role, name: user.name, ver: user.tokenVersion }),
-      })
-    } catch (err) {
-      next(err)
-    }
+  (_req, _res, next) => {
+    next(
+      new ApiError(
+        'Hospital registration now requires a one-time eSewa payment (NPR 2,000). ' +
+          'Register through the paid flow at /master/register — your request will be ' +
+          'reviewed by the platform team and your login credentials will be emailed to you.',
+        410,
+      ),
+    )
   },
 )
 
@@ -136,6 +197,7 @@ authRouter.post('/refresh', async (req, res, next) => {
       res.json({
         user: publicUser(user),
         token: signAccessToken({ id: String(user._id), role: user.role, name: user.name, ver: user.tokenVersion }),
+        hospital: { slug: hospitalOf(req).slug, name: '' },
       })
   } catch (err) {
     next(err)

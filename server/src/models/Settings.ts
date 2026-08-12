@@ -1,5 +1,6 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
 import { jsonTransform } from './helpers.js'
+import { registerSchema, proxyModel } from './registry.js'
 
 export interface HospitalSettings {
   _id?: string
@@ -24,13 +25,14 @@ const hospitalSettingsSchema = new Schema<HospitalSettings>(
     address: { type: String, default: '' },
     license: { type: String, default: '' },
     timezone: { type: String, default: 'UTC-5 (Eastern)' },
-    currency: { type: String, default: 'USD ($)' },
+    currency: { type: String, default: 'NPR (Rs.)' },
     logoUrl: { type: String },
   },
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
 
-export const HospitalSettingsModel = model<HospitalSettings>('HospitalSettings', hospitalSettingsSchema)
+registerSchema('HospitalSettings', hospitalSettingsSchema)
+export const HospitalSettingsModel = proxyModel<HospitalSettings>('HospitalSettings')
 
 export interface Report {
   name: string
@@ -53,4 +55,5 @@ const reportSchema = new Schema<Report>(
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
 
-export const ReportModel = model<Report>('Report', reportSchema)
+registerSchema('Report', reportSchema)
+export const ReportModel = proxyModel<Report>('Report')

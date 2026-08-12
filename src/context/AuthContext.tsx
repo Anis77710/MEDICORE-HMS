@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useReticleStore } from '@reticlehq/react/store'
-import type { User } from '../types'
+import type { AuthResponse, User } from '../types'
 import * as authApi from '../api/services/auth'
 import { getToken, setToken, setAuthExpiredHandler } from '../api/client'
 import { signal } from '../reticle'
@@ -11,7 +11,7 @@ interface AuthContextValue {
   isAuthenticated: boolean
   isLoading: boolean
   login: (email: string, password: string, remember?: boolean) => Promise<void>
-  register: (input: authApi.RegisterInput) => Promise<void>
+  register: (input: authApi.HospitalRegisterInput) => Promise<AuthResponse>
   logout: () => Promise<void>
 }
 
@@ -69,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(res.token)
         setUser(res.user)
         signal('auth:register', { email: input.email })
+        return res
       },
       logout: async () => {
         await authApi.logout()

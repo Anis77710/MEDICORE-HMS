@@ -1,12 +1,12 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { MasterAuthProvider, useMasterAuth } from './context/MasterAuthContext'
 import { ToastProvider, ToastViewport } from './context/ToastContext'
 import { AppLayout } from './components/layout/AppLayout'
 import { DoctorPortalLayout } from './components/layout/DoctorPortalLayout'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import Login from './pages/auth/Login'
-import Register from './pages/auth/Register'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import VerifyOtp from './pages/auth/VerifyOtp'
 import Dashboard from './pages/Dashboard'
@@ -40,6 +40,15 @@ import DoctorMedicalRecords from './pages/doctor/MedicalRecords'
 import LabPage from './pages/doctor/LabPage'
 import ProfilePage from './pages/doctor/ProfilePage'
 import DoctorSettings from './pages/doctor/SettingsPage'
+import MasterLogin from './pages/master/MasterLogin'
+import RegisterHospital from './pages/master/RegisterHospital'
+import RegisterStatus from './pages/master/RegisterStatus'
+import { MasterLayout } from './pages/master/MasterLayout'
+import MasterDashboard from './pages/master/MasterDashboard'
+import MasterHospitals from './pages/master/MasterHospitals'
+import MasterRequests from './pages/master/MasterRequests'
+import MasterReceipts from './pages/master/MasterReceipts'
+import MasterSettings from './pages/master/MasterSettings'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -152,6 +161,31 @@ function LandingRoute() {
   return <LandingPage />
 }
 
+function MasterProtected({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useMasterAuth()
+
+  if (isLoading) {
+    return (
+      <div className="auth-page">
+        <div className="spinner" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/master/login" replace />
+  }
+
+  return <>{children}</>
+}
+
+function MasterPublicOnly({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useMasterAuth()
+  if (isLoading) return null
+  if (isAuthenticated) return <Navigate to="/master" replace />
+  return <>{children}</>
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -160,9 +194,21 @@ function AppRoutes() {
       <Route path="/book-appointment" element={<PublicOnly><BookAppointmentPage /></PublicOnly>} />
 
       <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
-      <Route path="/register" element={<PublicOnly><Register /></PublicOnly>} />
+      <Route path="/register" element={<Navigate to="/master/register" replace />} />
       <Route path="/forgot-password" element={<PublicOnly><ForgotPassword /></PublicOnly>} />
       <Route path="/verify-otp" element={<PublicOnly><VerifyOtp /></PublicOnly>} />
+
+      {/* Master platform */}
+      <Route path="/master/login" element={<MasterPublicOnly><MasterLogin /></MasterPublicOnly>} />
+      <Route path="/master/register" element={<RegisterHospital />} />
+      <Route path="/master/register/status" element={<RegisterStatus />} />
+      <Route path="/master" element={<MasterProtected><MasterLayout /></MasterProtected>}>
+        <Route index element={<MasterDashboard />} />
+        <Route path="hospitals" element={<MasterHospitals />} />
+        <Route path="requests" element={<MasterRequests />} />
+        <Route path="receipts" element={<MasterReceipts />} />
+        <Route path="settings" element={<MasterSettings />} />
+      </Route>
 
       <Route element={<ProtectedLayout />}>
         <Route path="/dashboard" element={<RoleHome />} />
@@ -206,13 +252,15 @@ function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <AuthProvider>
-          <ToastProvider>
-            <ScrollToTop />
-            <AppRoutes />
-            <ToastViewport />
-          </ToastProvider>
-        </AuthProvider>
+        <MasterAuthProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <ScrollToTop />
+              <AppRoutes />
+              <ToastViewport />
+            </ToastProvider>
+          </AuthProvider>
+        </MasterAuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
   )

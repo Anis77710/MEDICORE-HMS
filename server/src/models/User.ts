@@ -1,6 +1,7 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
 import bcrypt from 'bcryptjs'
 import { jsonTransform } from './helpers.js'
+import { registerSchema, proxyModel } from './registry.js'
 
 export const USER_ROLES = ['ADMIN', 'DOCTOR', 'NURSE', 'STAFF', 'PATIENT'] as const
 export type UserRole = (typeof USER_ROLES)[number]
@@ -8,6 +9,7 @@ export type UserRole = (typeof USER_ROLES)[number]
 export interface User {
   name: string
   email: string
+  username?: string
   phone: string
   role: UserRole
   passwordHash: string
@@ -23,6 +25,7 @@ const userSchema = new Schema<User>(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
+    username: { type: String, unique: true, sparse: true, lowercase: true, trim: true, index: true },
     phone: { type: String, default: '' },
     role: { type: String, enum: USER_ROLES, default: 'STAFF', index: true },
     passwordHash: { type: String, required: true },
@@ -45,4 +48,5 @@ userSchema.pre('save', async function (next) {
   next()
 })
 
-export const UserModel = model<User>('User', userSchema)
+registerSchema('User', userSchema)
+export const UserModel = proxyModel<User>('User')

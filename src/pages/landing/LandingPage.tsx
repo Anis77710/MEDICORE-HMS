@@ -50,7 +50,7 @@ function Navbar() {
 
           <div className="lp-nav-cta">
             <Link to="/login" className="lp-btn lp-btn-outline lp-btn-sm">Log In</Link>
-            <Link to="/register" className="lp-btn lp-btn-primary lp-btn-sm">Get Started</Link>
+            <Link to="/master/register" className="lp-btn lp-btn-primary lp-btn-sm">Get Started</Link>
           </div>
 
           <button className="lp-nav-mobile-btn" onClick={() => setMenuOpen((v) => !v)} aria-label="Menu">
@@ -65,7 +65,7 @@ function Navbar() {
             <a key={l} href={`#${l.toLowerCase()}`} onClick={(e) => { e.preventDefault(); scrollTo(l) }}>{l}</a>
           ))}
           <Link to="/login" className="lp-btn lp-btn-outline">Log In</Link>
-          <Link to="/register" className="lp-btn lp-btn-primary">Get Started Free</Link>
+          <Link to="/master/register" className="lp-btn lp-btn-primary">Get Started</Link>
         </div>
       )}
     </>
@@ -108,9 +108,9 @@ function Hero() {
             <Link to="/book-appointment" className="lp-btn lp-btn-primary">
               Book an Appointment
             </Link>
-            <Link to="/register" className="lp-btn lp-btn-outline">
-              Get started free
-            </Link>
+<Link to="/master/register" className="lp-btn lp-btn-outline">
+        Register your hospital
+      </Link>
           </div>
 
           <div className="lp-hero-proof">
@@ -530,7 +530,7 @@ function About() {
                 </span>
               ))}
             </div>
-            <Link to="/register" className="lp-btn lp-btn-primary">
+            <Link to="/master/register" className="lp-btn lp-btn-primary">
               See it in action <ChevronRight size={16} />
             </Link>
           </div>
@@ -704,9 +704,9 @@ function CTABanner() {
           <h2 className="lp-cta-title">Ready to modernize<br />your hospital?</h2>
           <p className="lp-cta-sub">Join 1,200+ hospitals already running on Medicore HMS.</p>
           <div className="lp-cta-actions">
-            <Link to="/register" className="lp-btn lp-btn-white">
-              Start Free Trial <ChevronRight size={16} />
-            </Link>
+<Link to="/master/register" className="lp-btn lp-btn-white">
+        Register your hospital <ChevronRight size={16} />
+      </Link>
             <Link to="/login" className="lp-btn-ghost-white">
               Log In to Dashboard →
             </Link>

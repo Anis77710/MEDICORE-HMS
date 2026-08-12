@@ -2,8 +2,10 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { ApiError } from '../utils/ApiError.js'
 import { StaffModel, AuditLogModel } from '../models/Staff.js'
+import { UserModel } from '../models/User.js'
 import { requireAuth, requireRole, type AuthedRequest } from '../middleware/auth.js'
 import { validate, queryOf } from '../middleware/validate.js'
+import { loginUsername, defaultPassword, sendCredentialsEmail } from '../utils/credentials.js'
 
 export const staffRouter = Router()
 
@@ -36,6 +38,7 @@ const staffBody = z.object({
   shift: z.enum(['Morning', 'Evening', 'Night', 'Rotating']).default('Morning'),
   joinedAt: z.string().default(''),
   salary: z.coerce.number().min(0).default(0),
+  birthYear: z.coerce.number().int().min(1900).max(2100),
   status: z.enum(['Active', 'On Leave', 'Resigned']).default('Active'),
 })
 
@@ -65,11 +68,35 @@ staffRouter.get('/', validate({ query: staffListQuery }), async (req, res, next)
 })
 
 // Mutations are admin-only.
+// Adding a staff member also creates their login account automatically:
+// username = firstname@medicore.hms, password = firstname@birthYear.
+// Credentials are emailed to the member's Gmail address.
 staffRouter.post('/', requireRole('ADMIN'), validate({ body: staffBody }), async (req, res, next) => {
   try {
+    const username = loginUsername(String(req.body.name))
+    if ((req.body as { role: string }).role !== 'PATIENT' && (await UserModel.findOne({ username }))) {
+      throw new ApiError(`The login username ${username} is already taken — the first name may need to differ`, 409)
+    }
     const member = await StaffModel.create(req.body)
+    let credentials: { username: string; password: string } | null = null
+    if (member.role !== 'PATIENT') {
+      const email = member.email.toLowerCase()
+      if (!(await UserModel.findOne({ email }))) {
+        const password = defaultPassword(member.name, (req.body as { birthYear: number }).birthYear)
+        await UserModel.create({
+          name: member.name,
+          email,
+          username,
+          phone: member.phone,
+          role: member.role,
+          passwordHash: password,
+        })
+        await sendCredentialsEmail(email, { name: member.name, username, password })
+        credentials = { username, password }
+      }
+    }
     await writeAuditLog(req as AuthedRequest, 'create', 'staff', String(member._id))
-    res.status(201).json(member)
+    res.status(201).json({ ...member.toJSON(), credentials })
   } catch (err) {
     next(err)
   }

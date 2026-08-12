@@ -1,5 +1,6 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
 import { jsonTransform } from './helpers.js'
+import { registerSchema, proxyModel } from './registry.js'
 
 export const PATIENT_STATUSES = ['Admitted', 'Outpatient', 'Critical', 'Recovered', 'Pending'] as const
 
@@ -50,4 +51,5 @@ const patientSchema = new Schema<Patient>(
 
 patientSchema.index({ firstName: 'text', lastName: 'text', patientId: 'text', email: 'text' })
 
-export const PatientModel = model<Patient>('Patient', patientSchema)
+registerSchema('Patient', patientSchema)
+export const PatientModel = proxyModel<Patient>('Patient')

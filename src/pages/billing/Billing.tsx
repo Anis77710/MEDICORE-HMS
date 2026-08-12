@@ -116,7 +116,7 @@ export default function Billing() {
       push(
         invoice.status === 'Paid'
           ? 'Invoice fully paid'
-          : `Payment recorded ($${payForm.amount.toLocaleString()})`,
+          : `Payment recorded (Rs. ${payForm.amount.toLocaleString()})`,
       )
     } catch (err) {
       push(err instanceof Error ? err.message : 'Payment failed', 'error')
@@ -143,19 +143,19 @@ export default function Billing() {
       <div className="grid-stats mb-4">
         <StatCard
           label="Total Billed"
-          value={`$${totals.billed.toLocaleString()}`}
+          value={`Rs. ${totals.billed.toLocaleString()}`}
           icon={<Receipt size={20} />}
           tone="teal"
         />
         <StatCard
           label="Collected"
-          value={`$${totals.collected.toLocaleString()}`}
+          value={`Rs. ${totals.collected.toLocaleString()}`}
           icon={<Wallet size={20} />}
           tone="green"
         />
         <StatCard
           label="Outstanding"
-          value={`$${totals.outstanding.toLocaleString()}`}
+          value={`Rs. ${totals.outstanding.toLocaleString()}`}
           icon={<CreditCard size={20} />}
           tone="amber"
         />
@@ -164,7 +164,7 @@ export default function Billing() {
       <Card>
         <div className="table-toolbar">
           <div className="table-toolbar-left">
-            <SearchInput value={search} onChange={setSearch} placeholder="Search invoice or patientâ€¦" />
+            <SearchInput value={search} onChange={setSearch} placeholder="Search invoice or patient…" />
           </div>
           <div className="chips">
             {FILTERS.map((f) => (
@@ -180,7 +180,7 @@ export default function Billing() {
         </div>
 
         {loading ? (
-          <Spinner label="Loading invoicesâ€¦" />
+          <Spinner label="Loading invoices…" />
         ) : error ? (
           <div className="empty-state">{error}</div>
         ) : items.length === 0 ? (
@@ -214,8 +214,8 @@ export default function Billing() {
                       <td className="muted">{i.description}</td>
                       <td className="muted">{i.issuedAt}</td>
                       <td className="muted">{i.dueDate}</td>
-                      <td className="font-semibold">${i.total.toLocaleString()}</td>
-                      <td>${i.amountPaid.toLocaleString()}</td>
+                      <td className="font-semibold">Rs. {i.total.toLocaleString()}</td>
+                      <td>Rs. {i.amountPaid.toLocaleString()}</td>
                       <td className={balance > 0 ? 'text-danger font-semibold' : 'muted'}>
                         ${balance.toLocaleString()}
                       </td>
@@ -256,7 +256,7 @@ export default function Billing() {
               onChange={(e) => setForm((f) => ({ ...f, patientId: e.target.value }))}
               required
             >
-              <option value="">Select a patientâ€¦</option>
+              <option value="">Select a patient…</option>
               {patients.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -286,7 +286,7 @@ export default function Billing() {
             />
           </Field>
           <div className="form-grid">
-            <Field label="Discount (USD)">
+            <Field label="Discount (NPR)">
               <Input
                 type="number"
                 min={0}
@@ -315,7 +315,7 @@ export default function Billing() {
       {/* Record payment */}
       <Modal
         open={!!paying}
-        title={`Record Payment â€” ${paying?.invoiceNo ?? ''}`}
+        title={`Record Payment — ${paying?.invoiceNo ?? ''}`}
         size="sm"
         onClose={() => setPaying(null)}
       >
@@ -324,11 +324,11 @@ export default function Billing() {
             <div className="pay-summary">
               <div>
                 <span className="muted text-sm">Total</span>
-                <strong>${paying.total.toLocaleString()}</strong>
+                <strong>Rs. {paying.total.toLocaleString()}</strong>
               </div>
               <div>
                 <span className="muted text-sm">Paid so far</span>
-                <strong>${paying.amountPaid.toLocaleString()}</strong>
+                <strong>Rs. {paying.amountPaid.toLocaleString()}</strong>
               </div>
               <div>
                 <span className="muted text-sm">Balance</span>
@@ -337,7 +337,7 @@ export default function Billing() {
                 </strong>
               </div>
             </div>
-            <Field label="Amount (USD)">
+            <Field label="Amount (NPR)">
               <Input
                 type="number"
                 min={0}

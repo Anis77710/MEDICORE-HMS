@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { generateReport, getReports } from '../../api/services/misc'
 import type { ReportSummary } from '../../types'
 import {
@@ -94,7 +94,7 @@ export default function Reports() {
       <div className="grid-stats mb-4">
         <StatCard
           label="Revenue (Period)"
-          value={`$${data.totalRevenue.toLocaleString()}`}
+          value={`Rs. ${data.totalRevenue.toLocaleString()}`}
           icon={<FileBarChart size={20} />}
           tone="teal"
         />

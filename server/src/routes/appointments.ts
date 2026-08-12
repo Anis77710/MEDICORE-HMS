@@ -3,10 +3,10 @@ import { z } from 'zod'
 import { ApiError } from '../utils/ApiError.js'
 import { AppointmentModel } from '../models/Appointment.js'
 import { PatientModel } from '../models/Patient.js'
-import { DoctorModel } from '../models/Doctor.js'
+import { DoctorModel, type Doctor } from '../models/Doctor.js'
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js'
 import { validate, queryOf } from '../middleware/validate.js'
-import { isSlotFree } from '../domain/availability.js'
+import { isSlotFree, isWorkingDay, isPastSlot, dayFullName } from '../domain/availability.js'
 import { makeReadableId, parseDay } from '../models/Counter.js'
 import { writeAuditLog } from './staff.js'
 import { notifyAppointmentEvent } from '../utils/appointmentMailer.js'
@@ -134,19 +134,29 @@ appointmentsRouter.put(
       if (rescheduled) {
         const doctor = await DoctorModel.findById(targetDoctorId)
         if (!doctor) throw new ApiError('Doctor not found', 404)
+        if (doctor.status !== 'Active') {
+          throw new ApiError(
+            `Cannot schedule — ${doctor.name} is ${doctor.status.toLowerCase()}`,
+            409,
+          )
+        }
+        if (!isWorkingDay(doctor, targetDate)) {
+          throw new ApiError(
+            `${doctor.name} does not work on ${dayFullName(targetDate)} — choose a working day`,
+            409,
+          )
+        }
+        if (isPastSlot(targetDate, targetTime)) {
+          throw new ApiError('Cannot schedule an appointment in the past — choose a future date and time', 400)
+        }
         const clashes = await AppointmentModel.find({
           doctorId: targetDoctorId,
           date: targetDate,
           status: { $ne: 'Cancelled' },
         }).select('date time durationMin status')
-        if (
-          !isSlotFree(clashes, targetDate, targetTime, targetDuration, existing.id) ||
-          doctor.status !== 'Active'
-        ) {
+        if (!isSlotFree(clashes, targetDate, targetTime, targetDuration, existing.id)) {
           throw new ApiError(
-            doctor.status !== 'Active'
-              ? `Cannot schedule — ${doctor.name} is ${doctor.status.toLowerCase()}`
-              : 'This time slot is already booked for the doctor — choose a different time',
+            'This time slot is already booked for the doctor — choose a different time',
             409,
           )
         }
@@ -175,10 +185,10 @@ appointmentsRouter.put(
   },
 )
 
-// A doctor must be Active to accept new bookings, and the requested
-// time must be free (centralized slot rules).
+// A doctor must be Active, the date must be a working day in the
+// future, and the requested time must be free (centralized slot rules).
 async function assertBookable(
-  doctor: { _id: unknown; name: string; status: string },
+  doctor: { _id: unknown; name: string; status: Doctor['status']; schedule: string[] },
   date: string,
   time: string,
   durationMin: number,
@@ -188,6 +198,15 @@ async function assertBookable(
       `Cannot book — ${doctor.name} is currently ${doctor.status.toLowerCase()}. Choose another doctor or date.`,
       409,
     )
+  }
+  if (!isWorkingDay(doctor, date)) {
+    throw new ApiError(
+      `${doctor.name} does not work on ${dayFullName(date)} — choose a working day`,
+      409,
+    )
+  }
+  if (isPastSlot(date, time)) {
+    throw new ApiError('Cannot book an appointment in the past — choose a future date and time', 400)
   }
   const clashes = await AppointmentModel.find({
     doctorId: String(doctor._id),

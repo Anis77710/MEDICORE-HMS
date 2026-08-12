@@ -1,5 +1,6 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
 import { jsonTransform } from './helpers.js'
+import { registerSchema, proxyModel } from './registry.js'
 
 export interface OtpRecord {
   email: string
@@ -22,4 +23,5 @@ const otpSchema = new Schema<OtpRecord>(
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
 
-export const OtpModel = model<OtpRecord>('Otp', otpSchema)
+registerSchema('Otp', otpSchema)
+export const OtpModel = proxyModel<OtpRecord>('Otp')

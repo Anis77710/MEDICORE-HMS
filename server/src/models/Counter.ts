@@ -1,4 +1,5 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
+import { registerSchema, proxyModel } from './registry.js'
 
 // Sequential counters for human-friendly identifiers.
 // A single per-day counter per kind keeps IDs readable and collision-free:
@@ -13,7 +14,8 @@ const counterSchema = new Schema<Counter>({
   seq: { type: Number, default: 0 },
 })
 
-export const CounterModel = model<Counter>('Counter', counterSchema)
+registerSchema('Counter', counterSchema)
+export const CounterModel = proxyModel<Counter>('Counter')
 
 // Non-padded date tag, e.g. "2026-8-8" for August 8, 2026.
 export function dateTag(d: Date = new Date()): string {

@@ -69,15 +69,15 @@ export default function Login() {
               <p className="auth-subtitle">Please enter your details to access the dashboard.</p>
 
               <form onSubmit={submit} noValidate>
-                <Field label="Email Address">
+                <Field label="Username or Email">
                   <div className="auth-input-wrap">
                     <Mail size={18} className="auth-input-icon" />
                     <Input
-                      type="email"
+                      type="text"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@hospital.com"
-                      autoComplete="email"
+                      placeholder="Enter your username or email"
+                      autoComplete="username"
                       required
                       className="auth-input"
                       data-testid="login-email"
@@ -155,9 +155,9 @@ export default function Login() {
               </div>
 
               <p className="auth-foot">
-                Don't have an account?{' '}
-                <Link to="/register" className="auth-link-strong">
-                  Sign up for a demo
+                Registering a new hospital?{' '}
+                <Link to="/master/register" className="auth-link-strong">
+                  Register your hospital (NPR 2,000)
                 </Link>
               </p>
             </div>

@@ -207,7 +207,7 @@ export default function Doctors() {
                   <div className="doctor-card-foot">
                     <div className="text-sm">
                       <span className="muted">Fee</span>{' '}
-                      <strong>${d.consultationFee}</strong>
+                      <strong>Rs. {d.consultationFee}</strong>
                     </div>
                     <div className="text-sm">
                       <span className="muted">Schedule</span>{' '}
@@ -277,7 +277,8 @@ export default function Doctors() {
             setFormOpen(false)
             setEditing(null)
             setRefreshKey((k) => k + 1)
-            if (saved) push(editing ? 'Doctor updated' : 'Doctor added')
+            if (saved)
+              push(editing ? 'Doctor updated' : 'Doctor added — login credentials sent to their email')
           }}
         />
       </Modal>

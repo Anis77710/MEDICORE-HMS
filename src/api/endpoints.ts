@@ -24,6 +24,24 @@ export const ENDPOINTS = {
   PUBLIC_DOCTORS: '/public/doctors',
   PUBLIC_DOCTOR_AVAILABILITY: '/public/doctors/:id/availability',
   PUBLIC_PAYMENT_INITIATE: '/public/payment/initiate',
+  PUBLIC_HOSPITALS: '/public/hospitals',
+  PUBLIC_PLATFORM: '/public/platform',
+
+  // ---------- Master admin (platform panel) ----------
+  MASTER_LOGIN: '/master/login',
+  MASTER_ME: '/master/me',
+  MASTER_STATS: '/master/stats',
+  MASTER_REGISTER_INITIATE: '/master/register/initiate',
+  MASTER_REQUESTS: '/master/requests',
+  MASTER_REQUEST_DETAIL: '/master/requests/:id',
+  MASTER_REQUEST_APPROVE: '/master/requests/:id/approve',
+  MASTER_REQUEST_REJECT: '/master/requests/:id/reject',
+  MASTER_HOSPITALS: '/master/hospitals',
+  MASTER_HOSPITAL_DETAIL: '/master/hospitals/:slug',
+  MASTER_HOSPITAL_STATUS: '/master/hospitals/:slug/status',
+  MASTER_HOSPITAL_LISTED: '/master/hospitals/:slug/listed',
+  MASTER_HOSPITAL_DELETE: '/master/hospitals/:slug',
+  MASTER_SETTINGS: '/master/settings',
 
   // ---------- Consultations (admin oversight) ----------
   CONSULTATIONS: '/consultations',

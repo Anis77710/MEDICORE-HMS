@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type Request, type Response } from 'express'
 import { z } from 'zod'
 import { ApiError } from '../utils/ApiError.js'
 import { env } from '../config/env.js'
@@ -8,7 +8,10 @@ import { PatientModel } from '../models/Patient.js'
 import { AppointmentModel } from '../models/Appointment.js'
 import { PaymentAttemptModel, type PaymentBooking } from '../models/PaymentAttempt.js'
 import { makeReadableId, parseDay } from '../models/Counter.js'
-import { isSlotFree } from '../domain/availability.js'
+import { isSlotFree, isWorkingDay, isPastSlot, dayFullName } from '../domain/availability.js'
+import { hospitalOf } from '../middleware/tenant.js'
+import { getTenantConnection, isValidSlug } from '../config/tenants.js'
+import { withTenant } from '../models/registry.js'
 import { notifyAppointmentEvent, notifyPaymentReceipt } from '../utils/appointmentMailer.js'
 import {
   buildPaymentFields,
@@ -59,6 +62,15 @@ async function loadDoctorAndCheckSlot(booking: PaymentBooking) {
       409,
     )
   }
+  if (!isWorkingDay(doctor, booking.date)) {
+    throw new ApiError(
+      `${doctor.name} does not work on ${dayFullName(booking.date)} — choose a working day`,
+      409,
+    )
+  }
+  if (isPastSlot(booking.date, booking.time)) {
+    throw new ApiError('Cannot book an appointment in the past — choose a future date and time', 400)
+  }
   const clashes = await AppointmentModel.find({
     doctorId: booking.doctorId,
     date: booking.date,
@@ -87,18 +99,20 @@ esewaRouter.post('/payment/initiate', validate({ body: initiateBody }), async (r
     const doctor = await loadDoctorAndCheckSlot(booking)
 
     const transactionUuid = newTransactionUuid()
+    const slug = hospitalOf(req).slug
     const attempt = await PaymentAttemptModel.create({
       transactionUuid,
       amount: doctor.consultationFee,
       status: 'pending',
       booking,
+      hospital: slug,
     })
 
     const { fields, signature, formUrl } = buildPaymentFields({
       totalAmount: doctor.consultationFee,
       transactionUuid,
-      successUrl: `${env.APP_API_URL}/api/public/payment/success`,
-      failureUrl: `${env.APP_API_URL}/api/public/payment/failure`,
+      successUrl: `${env.APP_API_URL}/api/public/payment/success?hosp=${encodeURIComponent(slug)}`,
+      failureUrl: `${env.APP_API_URL}/api/public/payment/failure?hosp=${encodeURIComponent(slug)}`,
     })
 
     res.status(201).json({
@@ -120,8 +134,30 @@ const redirectToFrontend = (res: { redirect(status: number, url: string): void }
 // browser here via GET with `data`/`signature` query params (form POST with
 // the same fields also accepted). Creates the booking only when the payment
 // is verified, the amount matches and the slot is still free, then redirects
-// the browser back to the frontend.
+// the browser back to the frontend. The `hosp` query param (added at
+// initiate time) routes the callback to the correct hospital database.
 esewaRouter.all('/payment/success', async (req, res, next) => {
+  const slug = resolveCallbackSlug(req)
+  try {
+    await withTenant(getTenantConnection(slug), slug, () => handlePaymentSuccess(req, res, slug, next))
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** Picks the hospital for an eSewa callback: `hosp` param, then header/default. */
+function resolveCallbackSlug(req: Request): string {
+  const hosp = req.query?.hosp
+  const slug = typeof hosp === 'string' && isValidSlug(hosp) ? hosp : hospitalOf(req).slug
+  return slug
+}
+
+async function handlePaymentSuccess(
+  req: Request,
+  res: Response,
+  slug: string,
+  next: (err?: unknown) => void,
+): Promise<void> {
   try {
     const { data, signature } = {
       ...(req.query as { data?: string; signature?: string }),
@@ -155,6 +191,13 @@ esewaRouter.all('/payment/success', async (req, res, next) => {
       )
       return
     }
+    if (attempt.hospital && attempt.hospital !== slug) {
+      await PaymentAttemptModel.findByIdAndUpdate(attempt._id, {
+        $set: { status: 'failed' },
+      })
+      redirectToFrontend(res, 'payment=failed')
+      return
+    }
 
     if (verified.status !== 'COMPLETE' || Number(verified.total_amount) !== attempt.amount) {
       await PaymentAttemptModel.findByIdAndUpdate(attempt._id, {
@@ -169,9 +212,9 @@ esewaRouter.all('/payment/success', async (req, res, next) => {
     try {
       doctor = await loadDoctorAndCheckSlot(booking)
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
+      if (err instanceof ApiError && (err.status === 409 || err.status === 400)) {
         await PaymentAttemptModel.findByIdAndUpdate(attempt._id, { $set: { status: 'failed' } })
-        redirectToFrontend(res, 'payment=conflict&message=slot_taken')
+        redirectToFrontend(res, 'payment=conflict&message=slot_unavailable')
         return
       }
       throw err
@@ -250,26 +293,29 @@ esewaRouter.all('/payment/success', async (req, res, next) => {
   } catch (err) {
     next(err)
   }
-})
+}
 
 // /public/payment/failure — eSewa's callback when the payer aborts or fails
 // (GET redirect with query params, or form POST).
 esewaRouter.all('/payment/failure', async (req, res, next) => {
+  const slug = resolveCallbackSlug(req)
   try {
-    const { data, signature } = {
-      ...(req.query as { data?: string; signature?: string }),
-      ...(req.body as { data?: string; signature?: string }),
-    }
-    if (typeof data === 'string') {
-      const verified = verifyEsewaCallback(data, signature)
-      if (verified?.transaction_uuid) {
-        await PaymentAttemptModel.findOneAndUpdate(
-          { transactionUuid: verified.transaction_uuid, status: 'pending' },
-          { $set: { status: 'failed', transactionCode: verified.transaction_code ?? '' } },
-        )
+    await withTenant(getTenantConnection(slug), slug, async () => {
+      const { data, signature } = {
+        ...(req.query as { data?: string; signature?: string }),
+        ...(req.body as { data?: string; signature?: string }),
       }
-    }
-    redirectToFrontend(res, 'payment=failed')
+      if (typeof data === 'string') {
+        const verified = verifyEsewaCallback(data, signature)
+        if (verified?.transaction_uuid) {
+          await PaymentAttemptModel.findOneAndUpdate(
+            { transactionUuid: verified.transaction_uuid, status: 'pending' },
+            { $set: { status: 'failed' as const, transactionCode: verified.transaction_code ?? '' } },
+          )
+        }
+      }
+      redirectToFrontend(res, 'payment=failed')
+    })
   } catch (err) {
     next(err)
   }

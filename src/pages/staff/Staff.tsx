@@ -174,7 +174,8 @@ export default function Staff() {
             setFormOpen(false)
             setEditing(null)
             setRefreshKey((k) => k + 1)
-            if (saved) push(editing ? 'Staff member updated' : 'Staff member added')
+            if (saved)
+              push(editing ? 'Staff member updated' : 'Staff member added — login credentials sent to their email')
           }}
         />
       </Modal>

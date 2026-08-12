@@ -16,6 +16,8 @@ process.env.ESEWA_PRODUCT_CODE = 'EPAYTEST'
 process.env.ESEWA_SECRET_KEY = '8gBm/:&EnhH.1/q'
 process.env.APP_BASE_URL = 'http://localhost:5173'
 process.env.APP_API_URL = 'http://localhost:8080'
+process.env.MASTER_ADMIN_EMAIL = 'master@smoke.dev'
+process.env.MASTER_ADMIN_PASSWORD = 'smokeMaster@2026'
 
 const { env } = await import('../config/env.js')
 const { connectDb, disconnectDb } = await import('../config/db.js')
@@ -76,6 +78,17 @@ async function api(path: string, opts: ApiOpts = {}): Promise<Response> {
 
 const json = async <T>(r: Response): Promise<T> => (await r.json()) as T
 
+// Booking tests use relative future dates so the suite never depends on the
+// calendar (past dates are rejected by the booking rules).
+function inDays(n: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+const FULL_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
 // Emails are dispatched as a non-blocking side effect, so poll the
 // in-memory capture (EMAIL_TRANSPORT=log) until the message lands.
 async function waitForMail(
@@ -92,23 +105,151 @@ async function waitForMail(
 }
 
 try {
+  // ---------- Master admin + paid hospital registration ----------
+  // Free registration no longer exists — hospitals must pay the NPR 2,000
+  // registration fee (eSewa) and be approved by the master admin.
+  const oldRegister = await api('/auth/register', {
+    json: { hospitalName: 'Second Hospital', name: 'New Admin', email: 'newadmin@test.dev', phone: '', birthYear: 1990 },
+  })
+  check('POST /auth/register removed -> 410 (paid flow only)', oldRegister.status === 410)
+
+  const masterBadLogin = await api('/master/login', { json: { email: 'master@smoke.dev', password: 'wrong' } })
+  check('master login wrong password -> 401', masterBadLogin.status === 401)
+
+  const masterLogin = await api('/master/login', { json: { email: 'master@smoke.dev', password: 'smokeMaster@2026' } })
+  check('POST /master/login -> 200', masterLogin.status === 200)
+  const masterBody = await json<{ admin: { email: string }; token: string }>(masterLogin)
+  check('master login returns admin + token', masterBody.admin.email === 'master@smoke.dev' && Boolean(masterBody.token))
+  const masterToken = masterBody.token
+
+  const masterMe = await api('/master/me', { token: masterToken })
+  check('GET /master/me -> 200', masterMe.status === 200)
+
+  const masterNoAuth = await api('/master/requests')
+  check('master routes without token -> 401', masterNoAuth.status === 401)
+
+  const regInit = await api('/master/register/initiate', {
+    json: { hospitalName: 'Second Hospital', name: 'New Admin', email: 'newadmin@test.dev', phone: '555 0101', birthYear: 1990 },
+  })
+  check('POST /master/register/initiate -> 201', regInit.status === 201)
+  const regInitBody = await json<{ regNo: string; amount: number; formUrl: string; fields: Record<string, string> }>(regInit)
+  check('initiate charges NPR 2,000 fee and signs fields', regInitBody.amount === 2000 && /^HREG-\d+-\d+-\d+-\d+$/.test(regInitBody.regNo) && Boolean(regInitBody.fields.signature))
+  check('initiate signs the exact eSewa field set', regInitBody.fields.signed_field_names === 'total_amount,transaction_uuid,product_code' && regInitBody.fields.product_code === 'EPAYTEST')
+
+  const regDup = await api('/master/register/initiate', {
+    json: { hospitalName: 'Second Hospital', name: 'Another Admin', email: 'other@test.dev', phone: '', birthYear: 1991 },
+  })
+  check('duplicate initiate -> 409', regDup.status === 409)
+
+  const regForged = await api('/master/register/success', {
+    json: { data: JSON.stringify({ status: 'COMPLETE', total_amount: '2000', transaction_uuid: regInitBody.regNo, signed_field_names: 'status,total_amount,transaction_uuid,product_code' }), signature: 'FAKE' },
+  })
+  check('forged registration callback rejected -> redirect error', regForged.status === 302 && Boolean(regForged.headers.get('location')?.includes('payment=error')))
+
+  const regCbFields = {
+    transaction_code: 'REGCODE123',
+    status: 'COMPLETE' as const,
+    total_amount: 2000,
+    transaction_uuid: regInitBody.fields.transaction_uuid!,
+    product_code: 'EPAYTEST',
+    signed_field_names: 'transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names',
+  }
+  const regCbOrder = ['transaction_code', 'status', 'total_amount', 'transaction_uuid', 'product_code', 'signed_field_names']
+  const regCbSig = signEsewa({ ...regCbFields, total_amount: String(regCbFields.total_amount) }, regCbOrder, '8gBm/:&EnhH.1/q')
+  const regCbData = Buffer.from(JSON.stringify({ ...regCbFields, signature: regCbSig })).toString('base64')
+  const regCb = await api('/master/register/success', { json: { data: regCbData } })
+  check('valid registration callback -> 302 success', regCb.status === 302 && Boolean(regCb.headers.get('location')?.includes('payment=success')))
+  check('callback redirects with registration number', Boolean(new URL(regCb.headers.get('location')!).searchParams.get('reg')?.startsWith('HREG-')))
+
+  const requests = await api('/master/requests', { token: masterToken })
+  const requestsBody = await json<{ items: { regNo: string; status: string; payment: { amount: number; transactionCode: string } }[]; counts: { paid: number } }>(requests)
+  check('GET /master/requests shows paid request', requestsBody.items.some((r) => r.regNo === regInitBody.regNo && r.status === 'paid') && requestsBody.counts.paid === 1)
+
+  // Replaying the callback after payment must stay idempotent (no re-charge).
+  const regReplay = await api('/master/register/success', { json: { data: regCbData } })
+  check('replayed registration callback idempotent -> success', regReplay.status === 302 && Boolean(regReplay.headers.get('location')?.includes('payment=success')))
+  const requestsAfterReplay = await json<{ items: { regNo: string; status: string }[] }>(await api('/master/requests', { token: masterToken }))
+  check('replay does not re-transition request', requestsAfterReplay.items.filter((r) => r.regNo === regInitBody.regNo).length === 1)
+
+  const pendingId = requestsBody.items.find((r) => r.regNo === regInitBody.regNo)
+  void pendingId
+  const paidList = await api('/master/requests?status=paid', { token: masterToken })
+  const paidBody = await json<{ items: { _id: string; regNo: string; slug: string; hospitalName: string; admin: { email: string } }[] }>(paidList)
+  check('GET /master/requests?status=paid filters', paidBody.items.length === 1 && paidBody.items[0]!.slug === 'second-hospital')
+
+  const approveReq = await api(`/master/requests/${paidBody.items[0]!._id}/approve`, { method: 'POST', token: masterToken })
+  check('POST /master/requests/:id/approve -> 200', approveReq.status === 200)
+  const approveBody = await json<{ credentials: { username: string }; request: { status: string; regNo: string } }>(approveReq)
+  check('approval provisions admin credentials (new@medicore.hms)', approveBody.credentials.username === 'new@medicore.hms')
+  check('request marked approved with regNo intact', approveBody.request.status === 'approved' && approveBody.request.regNo === regInitBody.regNo)
+
+  const hospital = await api('/master/hospitals', { token: masterToken })
+  const hospitalBody = await json<{ items: { slug: string; name: string; status: string; listed: boolean }[]; total: number }>(hospital)
+  check('approved hospital appears in registry', hospitalBody.items.some((h) => h.slug === 'second-hospital' && h.status === 'active' && h.listed === true))
+
+  const credsMail = await waitForMail((m) => m.to === 'newadmin@test.dev' && /approved: login credentials & receipt/i.test(m.subject))
+  check('approval email with credentials + receipt sent', Boolean(credsMail))
+  check('receipt block contains fee + transaction code', Boolean(credsMail && credsMail.text.includes('NPR 2,000') && credsMail.text.includes('REGCODE123')))
+
+  const adminLogin = await api('/auth/login', { json: { email: 'newadmin@test.dev', password: 'new@1990' } })
+  check('new hospital admin logs in with emailed credentials', adminLogin.status === 200)
+
+  const approveAgain = await api(`/master/requests/${paidBody.items[0]!._id}/approve`, { method: 'POST', token: masterToken })
+  check('double approval rejected -> 409', approveAgain.status === 409)
+
+  // ---------- Reject flow ----------
+  const rejectInit = await api('/master/register/initiate', {
+    json: { hospitalName: 'Rejected Clinic', name: 'Reject Admin', email: 'reject@test.dev', phone: '', birthYear: 1990 },
+  })
+  const rejectInitBody = await json<{ regNo: string; fields: Record<string, string> }>(rejectInit)
+  const rejectCbFields = { status: 'COMPLETE', total_amount: '2000', transaction_uuid: rejectInitBody.fields.transaction_uuid!, product_code: 'EPAYTEST', signed_field_names: 'status,total_amount,transaction_uuid,product_code' }
+  const rejectCbSig = signEsewa(rejectCbFields, ['status', 'total_amount', 'transaction_uuid', 'product_code'], '8gBm/:&EnhH.1/q')
+  const rejectCb = await api(`/master/register/success?data=${encodeURIComponent(JSON.stringify(rejectCbFields))}&signature=${encodeURIComponent(rejectCbSig)}`)
+  check('GET registration callback (query params) -> success', rejectCb.status === 302 && Boolean(rejectCb.headers.get('location')?.includes('payment=success')))
+  const rejectList = await json<{ items: { _id: string; regNo: string; slug: string }[] }>(await api('/master/requests?status=paid', { token: masterToken }))
+  const rejectReq = rejectList.items.find((r) => r.regNo === rejectInitBody.regNo)
+  const reject = await api(`/master/requests/${rejectReq!._id}/reject`, { method: 'POST', token: masterToken, json: { reason: 'Duplicate clinic' } })
+  check('POST /master/requests/:id/reject -> 200', reject.status === 200 && (await json<{ status: string; reason: string }>(reject)).status === 'rejected')
+  const hospitalsAfterReject = await json<{ items: { slug: string }[] }>(await api('/master/hospitals', { token: masterToken }))
+  check('rejected request is not provisioned as tenant', !hospitalsAfterReject.items.some((h) => h.slug === 'rejected-clinic'))
+  const rejectMail = await waitForMail((m) => m.to === 'reject@test.dev' && /registration update/i.test(m.subject))
+  check('rejection email sent with reason', Boolean(rejectMail && rejectMail.text.includes('Duplicate clinic')))
+
+  // ---------- Master hospital management ----------
+  const suspend = await api('/master/hospitals/second-hospital/status', { token: masterToken, method: 'PATCH', json: { status: 'suspended' } })
+  check('suspend hospital -> 200', suspend.status === 200)
+  const suspendedLogin = await api('/auth/login', { json: { email: 'new@medicore.hms', password: 'new@1990', hospital: 'second-hospital' } })
+  check('suspended hospital login blocked -> 403', suspendedLogin.status === 403)
+  const suspendedReq = await fetch(`${base}/public/doctors`, { headers: { 'x-hospital-slug': 'second-hospital' } })
+  check('suspended hospital requests blocked -> 403', suspendedReq.status === 403)
+
+  const activate = await api('/master/hospitals/second-hospital/status', { token: masterToken, method: 'PATCH', json: { status: 'active' } })
+  check('activate hospital -> 200', activate.status === 200)
+  const reactivated = await api('/auth/login', { json: { email: 'new@medicore.hms', password: 'new@1990', hospital: 'second-hospital' } })
+  check('reactivated hospital login allowed', reactivated.status === 200)
+
+  // Hospital tokens must never access master endpoints.
+  const hospitalTokenOnMaster = await api('/master/stats', { token: (await json<{ token: string }>(reactivated)).token })
+  check('hospital token blocked from master API -> 401', hospitalTokenOnMaster.status === 401)
+
+  const unlist = await api('/master/hospitals/second-hospital/listed', { token: masterToken, method: 'PATCH', json: { listed: false } })
+  check('unlist hospital from public directory -> 200', unlist.status === 200)
+  const publicHospitals = await json<{ slug: string }[]>(await api('/public/hospitals'))
+  check('unlisted hospital hidden from public directory', publicHospitals.length === 0 || !publicHospitals.some((h) => h.slug === 'second-hospital'))
+
+  const masterSettings = await api('/master/settings', { token: masterToken })
+  check('GET /master/settings -> 200', masterSettings.status === 200)
+  const masterUpdSettings = await api('/master/settings', { token: masterToken, method: 'PUT', json: { registrationFee: 2500, tagline: 'Smoke platform' } })
+  const masterUpdSettingsBody = await json<{ registrationFee: number; tagline: string }>(masterUpdSettings)
+  check('PUT /master/settings updates fee + tagline', masterUpdSettingsBody.registrationFee === 2500 && masterUpdSettingsBody.tagline === 'Smoke platform')
+  const publicPlatform = await json<{ registrationFee: number; tagline: string }>(await api('/public/platform'))
+  check('public platform info reflects settings', publicPlatform.registrationFee === 2500 && publicPlatform.tagline === 'Smoke platform')
+
+  const masterStats = await api('/master/stats', { token: masterToken })
+  const masterStatsBody = await json<{ hospitals: { total: number; active: number; suspended: number }; requests: Record<string, number>; revenue: number; recentRequests: { regNo: string }[] }>(masterStats)
+  check('GET /master/stats -> 200 (shapes + revenue)', masterStatsBody.hospitals.total >= 1 && (masterStatsBody.requests.approved ?? 0) >= 1 && masterStatsBody.revenue >= 2000 && masterStatsBody.recentRequests.length >= 1)
+
   // ---------- Auth ----------
-  // The seed created the admin; a normal user can register non-admin roles.
-  const reg = await api('/auth/register', {
-    json: { name: 'Staff User', email: 'staff@test.dev', role: 'STAFF', password: 'password123' },
-  })
-  check('POST /auth/register (non-admin) -> 201', reg.status === 201)
-  const regBody = await json<{ user: { email: string; role: string }; token: string }>(reg)
-  check('register returns user + token', Boolean(regBody.user && regBody.token))
-  check('passwordHash never exposed', !('passwordHash' in regBody.user))
-
-  const dup = await api('/auth/register', {
-    json: { name: 'Xx', email: 'staff@test.dev', role: 'STAFF', password: 'password123' },
-  })
-  check('duplicate email rejected -> 409', dup.status === 409)
-
-  const badLogin = await api('/auth/login', { json: { email: 'admin@healsync.health', password: 'wrongpass' } })
-  check('wrong password -> 401', badLogin.status === 401)
 
   const login = await api('/auth/login', { json: { email: 'admin@healsync.health', password: 'admin123' } })
   check('POST /auth/login (seeded admin) -> 200', login.status === 200)
@@ -117,6 +258,9 @@ try {
   let token = loginBody.token
   const cookie = login.headers.getSetCookie()[0]?.split(';')[0] ?? ''
   check('refresh cookie set (httpOnly)', cookie.includes('hs_refresh'))
+
+  const usernameLogin = await api('/auth/login', { json: { email: 'sarah@medicore.hms', password: 'admin123' } })
+  check('login by username (firstname@medicore.hms) -> 200', usernameLogin.status === 200)
 
   const me = await api('/auth/me', { token })
   check('GET /auth/me -> 200', me.status === 200)
@@ -172,11 +316,14 @@ try {
   // ---------- Doctors ----------
   const createDoc = await api('/doctors', {
     token,
-    json: { name: 'Dr. Smoke Test', email: 'smoke@doc.dev', department: 'Cardiology', specialty: 'Cardiologist', consultationFee: 100 },
+    json: { name: 'Dr. Smoke Test', email: 'smoke@doc.dev', department: 'Cardiology', specialty: 'Cardiologist', consultationFee: 100, birthYear: 1985, schedule: FULL_WEEK },
   })
   check('POST /doctors -> 201', createDoc.status === 201)
-  const doctor = await json<{ id: string; schedule: unknown[]; rating: number }>(createDoc)
+  const doctor = await json<{ id: string; schedule: unknown[]; rating: number; credentials: { username: string; password: string } }>(createDoc)
   check('doctor defaults (schedule, rating)', Array.isArray(doctor.schedule) && doctor.rating > 0)
+  check('doctor create returns credentials (smoke@medicore.hms)', doctor.credentials?.username === 'smoke@medicore.hms')
+  const doctorLogin = await api('/auth/login', { json: { email: doctor.credentials.username, password: doctor.credentials.password } })
+  check('new doctor can login with generated credentials', doctorLogin.status === 200)
 
   const listD = await api('/doctors?department=Cardiology', { token })
   check('GET /doctors?department -> 200', listD.status === 200)
@@ -184,7 +331,7 @@ try {
   // ---------- Appointments ----------
   const createAppt = await api('/appointments', {
     token,
-    json: { patientId: patient.id, doctorId: doctor.id, type: 'Checkup', date: '2026-08-10', time: '10:30', reason: 'Smoke appointment' },
+    json: { patientId: patient.id, doctorId: doctor.id, type: 'Checkup', date: inDays(2), time: '10:30', reason: 'Smoke appointment' },
   })
   check('POST /appointments -> 201 with resolved names', createAppt.status === 201)
   const appt = await json<{ id: string; patientName: string; doctorName: string; status: string }>(createAppt)
@@ -206,10 +353,10 @@ try {
   // Rescheduling (PUT with date/time/doctor change) must email the patient.
   const createAppt2 = await api('/appointments', {
     token,
-    json: { patientId: patient.id, doctorId: doctor.id, type: 'Follow-up', date: '2026-08-12', time: '11:00', reason: 'Smoke reschedule' },
+    json: { patientId: patient.id, doctorId: doctor.id, type: 'Follow-up', date: inDays(4), time: '11:00', reason: 'Smoke reschedule' },
   })
   const appt2 = await json<{ id: string }>(createAppt2)
-  const resched = await api(`/appointments/${appt2.id}`, { token, method: 'PUT', json: { date: '2026-08-14', time: '09:30' } })
+  const resched = await api(`/appointments/${appt2.id}`, { token, method: 'PUT', json: { date: inDays(6), time: '09:30' } })
   check('PUT /appointments/:id reschedules', resched.status === 200)
   const reschedMail = await waitForMail((m) => m.to === 'tp@test.dev' && /rescheduled/i.test(m.subject))
   check('reschedule email sent to patient', Boolean(reschedMail))
@@ -219,10 +366,10 @@ try {
   // Rescheduling into a slot already held by another active appointment must be rejected.
   const appt3 = await api('/appointments', {
     token,
-    json: { patientId: patient.id, doctorId: doctor.id, type: 'Checkup', date: '2026-08-15', time: '10:00', reason: 'Smoke conflict' },
+    json: { patientId: patient.id, doctorId: doctor.id, type: 'Checkup', date: inDays(7), time: '10:00', reason: 'Smoke conflict' },
   })
   const appt3Body = await json<{ id: string }>(appt3)
-  const clashResched = await api(`/appointments/${appt3Body.id}`, { token, method: 'PUT', json: { date: '2026-08-14', time: '09:30' } })
+  const clashResched = await api(`/appointments/${appt3Body.id}`, { token, method: 'PUT', json: { date: inDays(6), time: '09:30' } })
   check('reschedule into taken slot -> 409', clashResched.status === 409)
   await api(`/appointments/${appt3Body.id}/cancel`, { method: 'POST', token })
   await api(`/appointments/${appt2.id}/cancel`, { method: 'POST', token })
@@ -269,15 +416,22 @@ try {
   check('payment record created', Boolean(payBody.payment.id))
 
   // ---------- Staff (admin-only) ----------
-  const createStaff = await api('/staff', { token, json: { name: 'Nurse Smoke', email: 'nurse@smoke.dev', role: 'NURSE', department: 'Cardiology' } })
+  const createStaff = await api('/staff', { token, json: { name: 'Nurse Smoke', email: 'nurse@smoke.dev', role: 'NURSE', department: 'Cardiology', birthYear: 1990 } })
   check('POST /staff (admin) -> 201', createStaff.status === 201)
+  const createStaffBody = await json<{ credentials: { username: string; password: string } }>(createStaff)
+  check('staff create returns generated credentials', Boolean(createStaffBody.credentials?.username && createStaffBody.credentials?.password))
+  check('credentials follow firstname@medicore.hms scheme', createStaffBody.credentials.username === 'nurse@medicore.hms')
 
   const audit = await api('/staff/audit-log', { token })
   check('GET /staff/audit-log (admin) -> 200', audit.status === 200)
 
   // ---------- Role enforcement ----------
-  const staffToken = regBody.token
-  const staffCreateStaff = await api('/staff', { token: staffToken, json: { name: 'Nope', email: 'x@y.dev', role: 'NURSE' } })
+  const nurseLogin = await api('/auth/login', {
+    json: { email: createStaffBody.credentials.username, password: createStaffBody.credentials.password },
+  })
+  check('new staff can login with generated username+password', nurseLogin.status === 200)
+  const nurseBody = await json<{ token: string }>(nurseLogin)
+  const staffCreateStaff = await api('/staff', { token: nurseBody.token, json: { name: 'Nope', email: 'x@y.dev', role: 'NURSE', birthYear: 1991 } })
   check('non-admin staff create blocked -> 403', staffCreateStaff.status === 403)
 
   // ---------- Doctor Portal ----------
@@ -287,7 +441,7 @@ try {
   check('doctor login role is DOCTOR', docBody.user.role === 'DOCTOR')
   const docToken = docBody.token
 
-  const docPortalBlocked = await api('/doctor-portal/me', { token: staffToken })
+  const docPortalBlocked = await api('/doctor-portal/me', { token: nurseBody.token })
   check('non-doctor blocked from doctor portal -> 403', docPortalBlocked.status === 403)
 
   const docMe = await api('/doctor-portal/me', { token: docToken })
@@ -450,14 +604,14 @@ try {
   // ---------- Public booking via eSewa (pay before book) ----------
   const payDoctor = await api('/doctors', {
     token,
-    json: { name: 'Dr. Pay Doc', email: 'pay@doc.dev', department: 'Cardiology', specialty: 'Cardiologist', consultationFee: 500 },
+    json: { name: 'Dr. Pay Doc', email: 'pay@doc.dev', department: 'Cardiology', specialty: 'Cardiologist', consultationFee: 500, birthYear: 1990, schedule: FULL_WEEK },
   })
   const payDoctorBody = await json<{ id: string }>(payDoctor)
 
   const payBooking = {
     firstName: 'Pay', lastName: 'Me', email: 'pay.me@test.dev', phone: '555 0101',
     dob: '1990-01-01', gender: 'Male', doctorId: payDoctorBody.id, type: 'Consultation',
-    date: '2026-09-10', time: '10:00', durationMin: 30, reason: 'Smoke esewa booking',
+    date: inDays(30), time: '10:00', durationMin: 30, reason: 'Smoke esewa booking',
   }
 
   const initiate = await api('/public/payment/initiate', { json: payBooking })
@@ -510,7 +664,7 @@ try {
 
   // eSewa actually delivers the callback as a browser GET redirect with
   // data/signature query params — the route must accept that, not only POST.
-  const getInit = await api('/public/payment/initiate', { json: { ...payBooking, date: '2026-09-14', time: '10:30', firstName: 'Get', lastName: 'Redirect', email: 'get.redirect@test.dev' } })
+  const getInit = await api('/public/payment/initiate', { json: { ...payBooking, date: inDays(34), time: '10:30', firstName: 'Get', lastName: 'Redirect', email: 'get.redirect@test.dev' } })
   const getInitBody = await json<{ transactionUuid: string }>(getInit)
   const getFields = { status: 'COMPLETE', total_amount: '500', transaction_uuid: getInitBody.transactionUuid, product_code: 'EPAYTEST', signed_field_names: 'status,total_amount,transaction_uuid,product_code' }
   const getSig = signEsewa(getFields, ['status', 'total_amount', 'transaction_uuid', 'product_code'], '8gBm/:&EnhH.1/q')
@@ -529,7 +683,7 @@ try {
   await PaymentAttemptModel.deleteOne({ transactionUuid: freeSlotBody.transactionUuid })
 
   // Amount tampering must fail the attempt without booking.
-  const tamperInit = await api('/public/payment/initiate', { json: { ...payBooking, date: '2026-09-11', time: '09:00', firstName: 'Tamper', lastName: 'Tester', email: 'tamper@test.dev' } })
+  const tamperInit = await api('/public/payment/initiate', { json: { ...payBooking, date: inDays(31), time: '09:00', firstName: 'Tamper', lastName: 'Tester', email: 'tamper@test.dev' } })
   const tamperBody = await json<{ transactionUuid: string }>(tamperInit)
   const tamperFields = { status: 'COMPLETE', total_amount: '999', transaction_uuid: tamperBody.transactionUuid, product_code: 'EPAYTEST', signed_field_names: 'status,total_amount,transaction_uuid,product_code' }
   const tamperSig = signEsewa(tamperFields, ['status', 'total_amount', 'transaction_uuid', 'product_code'], '8gBm/:&EnhH.1/q')
@@ -538,7 +692,7 @@ try {
   check('amount mismatch does not create a patient', !(await PatientModel.findOne({ email: 'tamper@test.dev' })))
 
   // FAILED status callback marks the attempt failed and never books.
-  const failInit = await api('/public/payment/initiate', { json: { ...payBooking, date: '2026-09-12', time: '09:30', firstName: 'Fail', lastName: 'Case', email: 'failcase@test.dev' } })
+  const failInit = await api('/public/payment/initiate', { json: { ...payBooking, date: inDays(32), time: '09:30', firstName: 'Fail', lastName: 'Case', email: 'failcase@test.dev' } })
   const failBody = await json<{ transactionUuid: string }>(failInit)
   const failFields = { status: 'FAILED', total_amount: '500', transaction_uuid: failBody.transactionUuid, product_code: 'EPAYTEST', signed_field_names: 'status,total_amount,transaction_uuid,product_code' }
   const failSig = signEsewa(failFields, ['status', 'total_amount', 'transaction_uuid', 'product_code'], '8gBm/:&EnhH.1/q')

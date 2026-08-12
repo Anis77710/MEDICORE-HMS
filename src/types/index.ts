@@ -9,15 +9,32 @@ export interface User {
   id: string
   name: string
   email: string
+  username?: string
   role: Role
   avatarUrl?: string
   phone?: string
   department?: string
 }
 
+// Auto-generated login credentials (firstname@medicore.hms /
+// firstname@birthYear). Returned once when an account is created and
+// emailed to the member's Gmail address.
+export interface MemberCredentials {
+  username: string
+  password: string
+}
+
+export interface HospitalInfo {
+  slug: string
+  name: string
+}
+
 export interface AuthResponse {
   user: User
   token: string
+  username?: string
+  password?: string
+  hospital?: HospitalInfo
 }
 
 // ---------- Patients ----------
@@ -76,6 +93,7 @@ export interface Doctor {
   qualification: string
   experienceYears: number
   consultationFee: number
+  birthYear?: number
   schedule: string[]
   patientsCount: number
   rating: number
@@ -393,6 +411,7 @@ export interface StaffMember {
   shift: 'Morning' | 'Evening' | 'Night' | 'Rotating'
   joinedAt: string
   salary: number
+  birthYear?: number
   status: 'Active' | 'On Leave' | 'Resigned'
 }
 

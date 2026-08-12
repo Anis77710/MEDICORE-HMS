@@ -95,7 +95,7 @@ export function MedicineForm({
         <Field label="Manufacturer">
           <Input value={form.manufacturer} onChange={set('manufacturer')} required placeholder="Pfizer" />
         </Field>
-        <Field label="Price (USD)">
+        <Field label="Price (NPR)">
           <Input type="number" min={0} step="0.01" value={form.price} onChange={set('price')} required />
         </Field>
         <Field label="Stock Quantity">

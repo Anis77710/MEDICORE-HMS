@@ -18,6 +18,7 @@ import type {
   ResetPasswordResult,
 } from '../../types'
 import { getAvailabilitySlots, isWorkingDay, dayOfWeek } from '../availability'
+import { mockCredentialsFor } from './misc'
 
 export interface DoctorInput {
   name: string
@@ -27,6 +28,7 @@ export interface DoctorInput {
   specialty: string
   qualification: string
   experienceYears: number
+  birthYear: number
   consultationFee: number
   schedule: string[]
   status: Doctor['status']
@@ -84,7 +86,9 @@ export async function getDoctor(id: string): Promise<Doctor> {
   return http.get<Doctor>(withParams(ENDPOINTS.DOCTOR_DETAIL, { id }))
 }
 
-export async function createDoctor(input: DoctorInput): Promise<Doctor> {
+export async function createDoctor(
+  input: DoctorInput,
+): Promise<Doctor & { credentials?: { username: string; password: string } | null }> {
   if (USE_MOCK_API) {
     await mockDelay(600)
     const doctor: Doctor = {
@@ -95,9 +99,22 @@ export async function createDoctor(input: DoctorInput): Promise<Doctor> {
       account: null,
     }
     store.doctors.push(doctor)
-    return doctor
+    const account = {
+      id: nextId('u'),
+      name: doctor.name,
+      email: doctor.email,
+      username: mockCredentialsFor(doctor.name, input.birthYear).username,
+      role: 'DOCTOR' as const,
+      status: 'Active' as const,
+      createdAt: new Date().toISOString(),
+    }
+    store.accounts.push(account)
+    return { ...doctor, account: mockAccountFor(doctor), credentials: mockCredentialsFor(doctor.name, input.birthYear) }
   }
-  return http.post<Doctor>(ENDPOINTS.DOCTOR_CREATE, input)
+  return http.post<Doctor & { credentials?: { username: string; password: string } | null }>(
+    ENDPOINTS.DOCTOR_CREATE,
+    input,
+  )
 }
 
 export async function updateDoctor(id: string, input: Partial<DoctorInput>): Promise<Doctor> {
@@ -176,6 +193,7 @@ export async function createDoctorAccount(
       id: nextId('u'),
       name: doctor.name,
       email: input.email,
+      username: mockCredentialsFor(doctor.name, doctor.birthYear ?? 1990).username,
       role: 'DOCTOR' as const,
       status: 'Active' as const,
       createdAt: new Date().toISOString(),

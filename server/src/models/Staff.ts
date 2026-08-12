@@ -1,5 +1,6 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
 import { jsonTransform } from './helpers.js'
+import { registerSchema, proxyModel } from './registry.js'
 
 export interface StaffMember {
   name: string
@@ -10,6 +11,7 @@ export interface StaffMember {
   shift: 'Morning' | 'Evening' | 'Night' | 'Rotating'
   joinedAt: string
   salary: number
+  birthYear?: number
   status: 'Active' | 'On Leave' | 'Resigned'
 }
 
@@ -23,12 +25,14 @@ const staffSchema = new Schema<StaffMember>(
     shift: { type: String, enum: ['Morning', 'Evening', 'Night', 'Rotating'], default: 'Morning' },
     joinedAt: { type: String, default: '' },
     salary: { type: Number, default: 0 },
+    birthYear: { type: Number },
     status: { type: String, enum: ['Active', 'On Leave', 'Resigned'], default: 'Active' },
   },
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
 
-export const StaffModel = model<StaffMember>('StaffMember', staffSchema)
+registerSchema('StaffMember', staffSchema)
+export const StaffModel = proxyModel<StaffMember>('StaffMember')
 
 export interface MedicalRecord {
   patientId: string
@@ -53,7 +57,8 @@ const medicalRecordSchema = new Schema<MedicalRecord>(
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
 
-export const MedicalRecordModel = model<MedicalRecord>('MedicalRecord', medicalRecordSchema)
+registerSchema('MedicalRecord', medicalRecordSchema)
+export const MedicalRecordModel = proxyModel<MedicalRecord>('MedicalRecord')
 
 export interface PatientDocument {
   patientId: string
@@ -76,7 +81,8 @@ const documentSchema = new Schema<PatientDocument>(
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
 
-export const DocumentModel = model<PatientDocument>('Document', documentSchema)
+registerSchema('Document', documentSchema)
+export const DocumentModel = proxyModel<PatientDocument>('Document')
 
 export interface AuditLogEntry {
   actor: string
@@ -106,4 +112,5 @@ auditLogSchema.index({ action: 1 })
 auditLogSchema.index({ resource: 1 })
 auditLogSchema.index({ actorId: 1 })
 
-export const AuditLogModel = model<AuditLogEntry>('AuditLog', auditLogSchema)
+registerSchema('AuditLog', auditLogSchema)
+export const AuditLogModel = proxyModel<AuditLogEntry>('AuditLog')

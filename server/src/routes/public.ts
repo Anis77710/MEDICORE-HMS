@@ -5,6 +5,8 @@ import { DoctorModel } from '../models/Doctor.js'
 import { AppointmentModel } from '../models/Appointment.js'
 import { validate } from '../middleware/validate.js'
 import { getAvailabilitySlots, isWorkingDay } from '../domain/availability.js'
+import { hospitalRegistry } from '../config/tenants.js'
+import { getPlatformSettings } from '../config/platform.js'
 
 // ============================================================
 // Public endpoints — no auth. Used by the public booking page:
@@ -64,4 +66,43 @@ publicRouter.get(
     }
   },
 )
+
+// GET /public/hospitals — the public hospital directory: every approved
+// hospital that is active and has been listed by the master admin.
+publicRouter.get('/hospitals', async (_req, res, next) => {
+  try {
+    const hospitals = await hospitalRegistry()
+      .find({ status: 'active', listed: true })
+      .sort({ name: 1 })
+      .select('slug name createdAt')
+      .lean()
+    res.json(
+      hospitals.map((h) => ({
+        slug: h.slug,
+        name: h.name,
+        createdAt: h.createdAt,
+      })),
+    )
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /public/platform — platform-level info shown to the public
+// (site name, tagline, contact details, registration fee).
+publicRouter.get('/platform', async (_req, res, next) => {
+  try {
+    const settings = await getPlatformSettings()
+    res.json({
+      siteName: settings.siteName,
+      tagline: settings.tagline,
+      contactEmail: settings.contactEmail,
+      contactPhone: settings.contactPhone,
+      registrationFee: settings.registrationFee,
+      hospitalDirectoryEnabled: settings.hospitalDirectoryEnabled,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
 

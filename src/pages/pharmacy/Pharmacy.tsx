@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Pencil, Trash2, Pill, Plus, AlertTriangle, PackageX } from 'lucide-react'
 import { listMedicines, deleteMedicine, listPrescriptions } from '../../api/services/pharmacy'
 import type { Medicine, Prescription } from '../../types'
@@ -93,7 +93,7 @@ export default function Pharmacy() {
       <div className="grid-stats mb-4">
         <StatCard
           label="Inventory Value"
-          value={`$${stats.stockValue.toLocaleString()}`}
+          value={`Rs. ${stats.stockValue.toLocaleString()}`}
           icon={<Pill size={20} />}
           tone="teal"
         />
@@ -195,7 +195,7 @@ export default function Pharmacy() {
                         <Badge tone="gray">{m.category}</Badge>
                       </td>
                       <td className="muted">{m.manufacturer}</td>
-                      <td>${m.price.toFixed(2)}</td>
+                      <td>रू {m.price.toFixed(2)}</td>
                       <td>
                         <strong
                           className={

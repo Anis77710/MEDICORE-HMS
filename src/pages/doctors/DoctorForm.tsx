@@ -38,6 +38,7 @@ export function DoctorForm({
     consultationFee: 80,
     status: 'Active' as Doctor['status'],
     schedule: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+    birthYear: '',
   })
 
   useEffect(() => {
@@ -53,6 +54,7 @@ export function DoctorForm({
         consultationFee: doctor.consultationFee,
         status: doctor.status,
         schedule: doctor.schedule,
+        birthYear: doctor.birthYear ? String(doctor.birthYear) : '',
       })
     }
   }, [doctor])
@@ -76,13 +78,17 @@ export function DoctorForm({
     setBusy(true)
     try {
       if (doctor) {
-        await updateDoctor(doctor.id, { ...form })
+        await updateDoctor(doctor.id, { ...form, birthYear: form.birthYear ? Number(form.birthYear) : undefined })
         push('Doctor updated')
       } else {
-        await createDoctor({ ...form })
-        push('Doctor added')
+        const year = parseInt(form.birthYear, 10)
+        if (Number.isNaN(year) || year < 1900 || year > 2100) {
+          setError('Please enter a valid birth year (e.g. 1985)')
+          setBusy(false)
+          return
+        }
+        await createDoctor({ ...form, birthYear: year })
       }
-      onDone(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save doctor')
     } finally {
@@ -97,10 +103,10 @@ export function DoctorForm({
           <Input value={form.name} onChange={set('name')} required placeholder="Dr. John Smith" />
         </Field>
         <Field label="Email">
-          <Input type="email" value={form.email} onChange={set('email')} required placeholder="doctor@Medicore HMS.health" />
+          <Input type="email" value={form.email} onChange={set('email')} required placeholder="john@gmail.com" />
         </Field>
         <Field label="Phone">
-          <Input value={form.phone} onChange={set('phone')} required placeholder="+1 (555) 000-0000" />
+          <Input value={form.phone} onChange={set('phone')} required placeholder="+977 98XXXXXXXX" />
         </Field>
         <Field label="Department">
           <select className="select" value={form.department} onChange={set('department')}>
@@ -124,7 +130,7 @@ export function DoctorForm({
             onChange={set('experienceYears')}
           />
         </Field>
-        <Field label="Consultation Fee (USD)">
+        <Field label="Consultation Fee (NPR)">
           <Input
             type="number"
             min={0}
@@ -153,6 +159,11 @@ export function DoctorForm({
             ))}
           </div>
         </Field>
+        {!doctor && (
+          <Field label="Birth Year">
+            <Input type="number" min={1900} max={2100} value={form.birthYear} onChange={set('birthYear')} placeholder="e.g. 1985" required />
+          </Field>
+        )}
       </div>
 
       {error && <div className="auth-error">{error}</div>}

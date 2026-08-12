@@ -224,6 +224,7 @@
   align-items: center;
   justify-content: center;
   padding: 40px 32px;
+  margin-top: -30px;
 }
 .lp-hero-photo-overlay {
   display: none;
@@ -700,3 +701,33 @@
   .lp-modules-tabs { gap: 6px; }
   .lp-stats-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ---------- Paid hospital registration (master) ---------- */
+.lp-book-glow { position: absolute; inset: 0 auto auto 0; width: 100%; height: 420px; background: radial-gradient(600px 260px at 20% 0%, rgba(14,116,144,.14), transparent 70%), radial-gradient(500px 240px at 80% 0%, rgba(20,184,166,.1), transparent 70%); pointer-events: none; }
+.lp-book-nav { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; position: relative; }
+.lp-form-field { margin-bottom: 18px; }
+.lp-book-grid { display: grid; grid-template-columns: 1.55fr 0.9fr; gap: 40px; align-items: start; }
+.lp-form-field .auth-input-wrap { width: 100%; }
+.lp-form-field .auth-input { width: 100%; }
+.lp-summary { position: sticky; top: 28px; }
+.lp-summary-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; color: var(--lp-ink); margin-bottom: 18px; }
+.lp-summary-title svg { color: var(--lp-primary); }
+.lp-summary-list { list-style: none; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px dashed var(--lp-border, #dbe4ea); padding-bottom: 16px; margin-bottom: 16px; }
+.lp-summary-list li { display: flex; justify-content: space-between; font-size: 14.5px; color: var(--lp-body); }
+.lp-summary-list li strong { color: var(--lp-ink); font-weight: 700; }
+.lp-summary-note { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.6; color: var(--lp-muted); }
+.lp-summary-note svg { color: var(--lp-primary); flex-shrink: 0; margin-top: 2px; }
+.lp-trust { display: flex; flex-direction: column; gap: 14px; }
+.lp-trust-item { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--lp-ink); }
+.lp-trust-item svg { color: var(--lp-primary); flex-shrink: 0; }
+.lp-status { max-width: 560px; margin: 0 auto; text-align: center; }
+.lp-status-icon { width: 84px; height: 84px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 22px; }
+.lp-status-ok { background: rgba(16,185,129,.14); color: #0e9f6e; }
+.lp-status-bad { background: rgba(239,68,68,.12); color: #dc2626; }
+.lp-status-warn { background: rgba(217,119,6,.14); color: #d97706; }
+.lp-status h1 { font-size: 26px; color: var(--lp-ink); margin-bottom: 12px; }
+.lp-status p { font-size: 15px; line-height: 1.7; color: var(--lp-body); }
+.lp-status-ref { margin-top: 18px; font-size: 14px; color: var(--lp-muted); }
+.lp-status-ref strong { color: var(--lp-ink); }
+.lp-status-actions { margin-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.lp-status-note { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--lp-muted); }

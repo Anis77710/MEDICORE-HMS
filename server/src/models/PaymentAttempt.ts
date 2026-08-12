@@ -1,5 +1,6 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
 import { jsonTransform } from './helpers.js'
+import { registerSchema, proxyModel } from './registry.js'
 
 // ============================================================
 // Payment attempts for the public eSewa booking flow.
@@ -32,6 +33,7 @@ export interface PaymentAttempt {
   status: (typeof PAYMENT_STATUSES)[number]
   transactionCode?: string
   booking: PaymentBooking
+  hospital: string
   patientId?: string
   appointmentId?: string
   appointmentNo?: string
@@ -63,8 +65,10 @@ const paymentAttemptSchema = new Schema<PaymentAttempt>(
     patientId: { type: String, default: '' },
     appointmentId: { type: String, default: '' },
     appointmentNo: { type: String, default: '' },
+    hospital: { type: String, default: '' },
   },
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
 
-export const PaymentAttemptModel = model<PaymentAttempt>('PaymentAttempt', paymentAttemptSchema)
+registerSchema('PaymentAttempt', paymentAttemptSchema)
+export const PaymentAttemptModel = proxyModel<PaymentAttempt>('PaymentAttempt')

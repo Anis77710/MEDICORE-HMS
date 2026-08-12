@@ -1,4 +1,5 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
+import { registerSchema, proxyModel } from './registry.js'
 
 // Refresh tokens are stored hashed (SHA-256) so a leaked DB never exposes
 // usable tokens. Rotation replaces each token on every refresh; reusing a
@@ -30,4 +31,5 @@ const refreshTokenSchema = new Schema<RefreshToken>(
   { timestamps: true },
 )
 
-export const RefreshTokenModel = model<RefreshToken>('RefreshToken', refreshTokenSchema)
+registerSchema('RefreshToken', refreshTokenSchema)
+export const RefreshTokenModel = proxyModel<RefreshToken>('RefreshToken')

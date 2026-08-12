@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit'
 import { env, isProd } from './config/env.js'
 import { ApiError } from './utils/ApiError.js'
 import { requireErrorHandler } from './middleware/errorHandler.js'
+import { tenantMiddleware } from './middleware/tenant.js'
 import { authRouter } from './routes/auth.js'
 import { publicRouter } from './routes/public.js'
 import { esewaRouter } from './routes/esewa.js'
@@ -22,6 +23,7 @@ import { reportsRouter } from './routes/reports.js'
 import { settingsRouter } from './routes/settings.js'
 import { doctorPortalRouter } from './routes/doctorPortal.js'
 import { consultationsRouter } from './routes/consultations.js'
+import { masterRouter } from './routes/master.js'
 
 export const app = express()
 
@@ -76,6 +78,7 @@ const authLimiter = rateLimit({
 })
 
 app.use('/api', globalLimiter)
+app.use('/api', tenantMiddleware)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'healsync-api', time: new Date().toISOString() })
@@ -96,6 +99,7 @@ app.use('/api/reports', reportsRouter)
 app.use('/api/settings', settingsRouter)
 app.use('/api/doctor-portal', doctorPortalRouter)
 app.use('/api/consultations', consultationsRouter)
+app.use('/api/master', masterRouter)
 
 app.use((_req, res) => {
   res.status(404).json({ message: 'Not found' })

@@ -38,9 +38,39 @@ export function dayOfWeek(date: string): string {
   return DAY_NAMES[d.getDay()] ?? ''
 }
 
-export function isWorkingDay(doctor: Doctor, date: string): boolean {
+const DAY_FULL: Record<string, string> = {
+  Sun: 'Sunday',
+  Mon: 'Monday',
+  Tue: 'Tuesday',
+  Wed: 'Wednesday',
+  Thu: 'Thursday',
+  Fri: 'Friday',
+  Sat: 'Saturday',
+}
+
+export function dayFullName(date: string): string {
+  return DAY_FULL[dayOfWeek(date)] ?? dayOfWeek(date)
+}
+
+export function isWorkingDay(doctor: Pick<Doctor, 'schedule' | 'status'>, date: string): boolean {
   if (doctor.status !== 'Active') return false
   return doctor.schedule.includes(dayOfWeek(date))
+}
+
+/** Local-time YYYY-MM-DD for a Date. */
+export function toIsoDate(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
+/** True when a proposed booking date/time has already passed (includes today's elapsed slots). */
+export function isPastSlot(date: string, startTime: string): boolean {
+  const today = toIsoDate(new Date())
+  if (date < today) return true
+  if (date > today) return false
+  const now = new Date()
+  return timeToMinutes(startTime) <= now.getHours() * 60 + now.getMinutes()
 }
 
 export function minutesToTime(min: number): string {

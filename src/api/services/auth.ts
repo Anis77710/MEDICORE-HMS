@@ -5,11 +5,24 @@
 // ============================================================
 
 import { ENDPOINTS } from '../endpoints'
-import { http, setToken, USE_MOCK_API, ApiError } from '../client'
-import { MOCK_USER, mockDelay, mockPatients, mockStaff } from '../mock'
+import { http, setToken, setHospital, USE_MOCK_API, ApiError } from '../client'
+import { MOCK_USER, mockAccounts, mockDelay, mockPatients, mockStaff } from '../mock'
 import type { AuthResponse, User } from '../../types'
 
 const MOCK_USER_KEY = 'medicore_mock_user'
+
+// Mirrors the server-side rule: ramesh@medicore.hms / ramesh@1985
+function mockUsername(name: string): string {
+  const cleaned = name.replace(/^(dr|mr|mrs|ms|prof|er)\.?\s+/i, '').trim()
+  const first = (cleaned.split(/\s+/)[0] ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  return `${first || 'user'}@medicore.hms`
+}
+
+function mockPassword(name: string, birthYear: number): string {
+  const cleaned = name.replace(/^(dr|mr|mrs|ms|prof|er)\.?\s+/i, '').trim()
+  const first = (cleaned.split(/\s+/)[0] ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  return `${first || 'user'}@${birthYear}`
+}
 
 function saveMockUser(user: User): void {
   localStorage.setItem(MOCK_USER_KEY, JSON.stringify(user))
@@ -24,8 +37,22 @@ function readMockUser(): User | null {
   }
 }
 
-function resolveMockUser(email: string): User {
-  const patient = mockPatients.find((p) => p.email.toLowerCase() === email.toLowerCase())
+function resolveMockUser(identifier: string): User {
+  const account = mockAccounts.find(
+    (a) => a.email.toLowerCase() === identifier.toLowerCase() || a.username === identifier.toLowerCase(),
+  )
+  if (account) {
+    return {
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      username: account.username,
+      role: account.role,
+      phone: account.phone,
+      department: account.department,
+    }
+  }
+  const patient = mockPatients.find((p) => p.email.toLowerCase() === identifier.toLowerCase())
   if (patient) {
     return {
       id: patient.id,
@@ -35,7 +62,7 @@ function resolveMockUser(email: string): User {
       phone: patient.phone,
     }
   }
-  const staff = mockStaff.find((s) => s.email.toLowerCase() === email.toLowerCase())
+  const staff = mockStaff.find((s) => s.email.toLowerCase() === identifier.toLowerCase())
   if (staff) {
     return {
       id: staff.id,
@@ -46,7 +73,7 @@ function resolveMockUser(email: string): User {
       department: staff.department,
     }
   }
-  return { ...MOCK_USER, email }
+  return { ...MOCK_USER, email: identifier }
 }
 
 export interface LoginInput {
@@ -55,57 +82,52 @@ export interface LoginInput {
   remember?: boolean
 }
 
-export interface RegisterInput {
+// Registration is for NEW HOSPITALS only — it creates the hospital
+// profile plus the first ADMIN account with generated credentials.
+export interface HospitalRegisterInput {
+  hospitalName: string
   name: string
   email: string
   phone: string
-  role: 'ADMIN' | 'DOCTOR' | 'NURSE' | 'STAFF' | 'PATIENT'
-  password: string
+  birthYear: number
 }
 
 export async function login(input: LoginInput): Promise<AuthResponse> {
   if (USE_MOCK_API) {
     await mockDelay(700)
     if (!input.email || !input.password) {
-      throw new ApiError('Please enter your email and password', 400)
+      throw new ApiError('Please enter your username and password', 400)
     }
     const user = resolveMockUser(input.email)
     const token = `mock-token-${btoa(JSON.stringify(user)).slice(0, 24)}`
     saveMockUser(user)
-    return { user, token }
+    return { user, token, hospital: { slug: 'medicore', name: 'Medicore Demo Hospital' } }
   }
-  return http.post<AuthResponse>(ENDPOINTS.AUTH_LOGIN, input, { auth: false })
+  const res = await http.post<AuthResponse>(ENDPOINTS.AUTH_LOGIN, input, { auth: false })
+  if (res.hospital?.slug) setHospital(res.hospital.slug)
+  return res
 }
 
-export async function register(input: RegisterInput): Promise<AuthResponse> {
+export async function register(input: HospitalRegisterInput): Promise<AuthResponse> {
   if (USE_MOCK_API) {
     await mockDelay(800)
-    if (input.password.length < 6) {
-      throw new ApiError('Password must be at least 6 characters', 400)
-    }
-    let user: User
-    if (input.role === 'PATIENT') {
-      user = {
-        id: `p-${Date.now()}`,
-        name: input.name,
-        email: input.email,
-        phone: input.phone,
-        role: 'PATIENT',
-      }
-    } else {
-      user = {
-        id: `u-${Date.now()}`,
-        name: input.name,
-        email: input.email,
-        phone: input.phone,
-        role: input.role,
-      }
+    const username = mockUsername(input.name)
+    const password = mockPassword(input.name, input.birthYear)
+    const user: User = {
+      id: `u-${Date.now()}`,
+      name: input.name,
+      email: input.email,
+      username,
+      phone: input.phone,
+      role: 'ADMIN',
     }
     const token = `mock-token-${btoa(JSON.stringify(user)).slice(0, 24)}`
     saveMockUser(user)
-    return { user, token }
+    return { user, token, username, password, hospital: { slug: 'medicore', name: input.hospitalName } }
   }
-  return http.post<AuthResponse>(ENDPOINTS.AUTH_REGISTER, input, { auth: false })
+  const res = await http.post<AuthResponse>(ENDPOINTS.AUTH_REGISTER, input, { auth: false })
+  if (res.hospital?.slug) setHospital(res.hospital.slug)
+  return res
 }
 
 export async function logout(): Promise<void> {

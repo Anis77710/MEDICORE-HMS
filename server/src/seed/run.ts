@@ -53,12 +53,13 @@ export async function seedData(): Promise<void> {
   await UserModel.create({
     name: 'Dr. Sarah Chen',
     email: 'admin@healsync.health',
+    username: 'sarah@medicore.hms',
     phone: '+1 (555) 010-2244',
     role: 'ADMIN',
     passwordHash: 'admin123',
     lastLoginAt: new Date(),
   })
-  console.log('Admin created: admin@healsync.health / admin123')
+  console.log('Admin created: sarah@medicore.hms / admin123 (or admin@healsync.health / admin123)')
 
   await HospitalSettingsModel.create({ _id: 'hospital' })
 
@@ -80,16 +81,18 @@ export async function seedData(): Promise<void> {
 
   // ----- Doctor portal logins: every seeded doctor gets an account -----
   // A doctor signs in here and is matched to their Doctor profile by email.
+  // Username follows the firstname@medicore.hms convention.
   await UserModel.create(
     doctorData.map((d) => ({
       name: d.name,
       email: d.email,
+      username: `${d.name.replace(/^dr\.?\s+/i, '').trim().split(/\s+/)[0]!.toLowerCase()}@medicore.hms`,
       phone: d.phone,
       role: 'DOCTOR' as const,
       passwordHash: 'doctor123',
     })),
   )
-  console.log('Seeded doctor accounts (password: doctor123)')
+  console.log('Seeded doctor accounts (username: firstname@medicore.hms, password: doctor123)')
 
   // ----- Departments -----
   const departments = await DepartmentModel.insertMany([
@@ -328,7 +331,7 @@ export async function seedData(): Promise<void> {
   ])
 
   console.log('\nSeed complete.')
-  console.log('Login: admin@healsync.health / admin123')
+  console.log('Login: sarah@medicore.hms / admin123')
 }
 
 async function run(): Promise<void> {

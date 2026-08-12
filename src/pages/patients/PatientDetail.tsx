@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   HeartPulse,
@@ -167,8 +167,8 @@ export default function PatientDetail() {
               <span>Insurance</span>
             </div>
             <div>
-              <strong>${totalBilled.toLocaleString()}</strong>
-              <span>Total billed · ${totalPaid.toLocaleString()} paid</span>
+              <strong>Rs. {totalBilled.toLocaleString()}</strong>
+              <span>Total billed · Rs. {totalPaid.toLocaleString()} paid</span>
             </div>
           </div>
         </div>
@@ -443,8 +443,8 @@ export default function PatientDetail() {
                         <td className="muted">{i.description}</td>
                         <td>{i.issuedAt}</td>
                         <td>{i.dueDate}</td>
-                        <td className="font-semibold">${i.total.toLocaleString()}</td>
-                        <td>${i.amountPaid.toLocaleString()}</td>
+                        <td className="font-semibold">Rs. {i.total.toLocaleString()}</td>
+                        <td>Rs. {i.amountPaid.toLocaleString()}</td>
                         <td>
                           <StatusBadge status={i.status} />
                         </td>

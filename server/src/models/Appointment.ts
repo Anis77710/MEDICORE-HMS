@@ -1,5 +1,6 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
 import { jsonTransform } from './helpers.js'
+import { registerSchema, proxyModel } from './registry.js'
 
 export const APPOINTMENT_STATUSES = ['Confirmed', 'Pending', 'Completed', 'Cancelled'] as const
 export const APPOINTMENT_TYPES = ['Checkup', 'Consultation', 'Follow-up', 'Emergency', 'Procedure'] as const
@@ -41,4 +42,5 @@ const appointmentSchema = new Schema<Appointment>(
 
 appointmentSchema.index({ date: 1, time: 1 })
 
-export const AppointmentModel = model<Appointment>('Appointment', appointmentSchema)
+registerSchema('Appointment', appointmentSchema)
+export const AppointmentModel = proxyModel<Appointment>('Appointment')

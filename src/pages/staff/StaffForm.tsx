@@ -39,6 +39,7 @@ export function StaffForm({
     shift: 'Morning' as StaffMember['shift'],
     salary: 0,
     status: 'Active' as StaffMember['status'],
+    birthYear: '',
   })
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export function StaffForm({
         shift: member.shift,
         salary: member.salary,
         status: member.status,
+        birthYear: member.birthYear ? String(member.birthYear) : '',
       })
     }
   }, [member])
@@ -66,13 +68,17 @@ export function StaffForm({
     setBusy(true)
     try {
       if (member) {
-        await updateStaff(member.id, { ...form })
+        await updateStaff(member.id, { ...form, birthYear: form.birthYear ? Number(form.birthYear) : undefined })
         push('Staff member updated')
       } else {
-        await createStaff({ ...form })
-        push('Staff member added')
+        const year = parseInt(form.birthYear, 10)
+        if (Number.isNaN(year) || year < 1900 || year > 2100) {
+          setError('Please enter a valid birth year (e.g. 1985)')
+          setBusy(false)
+          return
+        }
+        await createStaff({ ...form, birthYear: year })
       }
-      onDone(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save staff member')
     } finally {
@@ -87,10 +93,10 @@ export function StaffForm({
           <Input value={form.name} onChange={set('name')} required placeholder="Jane Smith" />
         </Field>
         <Field label="Email">
-          <Input type="email" value={form.email} onChange={set('email')} required placeholder="j.smith@Medicore HMS.health" />
+          <Input type="email" value={form.email} onChange={set('email')} required placeholder="j.smith@gmail.com" />
         </Field>
         <Field label="Phone">
-          <Input value={form.phone} onChange={set('phone')} required placeholder="+1 (555) 000-0000" />
+          <Input value={form.phone} onChange={set('phone')} required placeholder="+977 98XXXXXXXX" />
         </Field>
         <Field label="Role">
           <select className="select" value={form.role} onChange={set('role')}>
@@ -115,7 +121,7 @@ export function StaffForm({
             ))}
           </select>
         </Field>
-        <Field label="Annual Salary (USD)">
+        <Field label="Annual Salary (NPR)">
           <Input type="number" min={0} value={form.salary} onChange={set('salary')} />
         </Field>
         <Field label="Status">
@@ -125,6 +131,11 @@ export function StaffForm({
             ))}
           </select>
         </Field>
+        {!member && (
+          <Field label="Birth Year">
+            <Input type="number" min={1900} max={2100} value={form.birthYear} onChange={set('birthYear')} placeholder="e.g. 1985" required />
+          </Field>
+        )}
       </div>
 
       {error && <div className="auth-error">{error}</div>}

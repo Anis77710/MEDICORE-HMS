@@ -1,5 +1,6 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
 import { jsonTransform } from './helpers.js'
+import { registerSchema, proxyModel } from './registry.js'
 
 // Clinical consultation record. Immutable once created: clinical data is
 // never silently overwritten, so there is intentionally no update route.
@@ -116,4 +117,5 @@ const consultationSchema = new Schema<Consultation>(
 consultationSchema.index({ patientId: 1, createdAt: -1 })
 consultationSchema.index({ doctorId: 1, createdAt: -1 })
 
-export const ConsultationModel = model<Consultation>('Consultation', consultationSchema)
+registerSchema('Consultation', consultationSchema)
+export const ConsultationModel = proxyModel<Consultation>('Consultation')

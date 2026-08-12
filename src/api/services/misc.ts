@@ -18,6 +18,14 @@ export interface StaffInput {
   shift: StaffMember['shift']
   salary: number
   status: StaffMember['status']
+  birthYear: number
+}
+
+// Mirrors the server rule: firstname@medicore.hms / firstname@birthYear
+export function mockCredentialsFor(name: string, birthYear: number): { username: string; password: string } {
+  const cleaned = name.replace(/^(dr|mr|mrs|ms|prof|er)\.?\s+/i, '').trim()
+  const first = (cleaned.split(/\s+/)[0] ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  return { username: `${first || 'user'}@medicore.hms`, password: `${first || 'user'}@${birthYear}` }
 }
 
 export async function listStaff(q: { search?: string; role?: string } = {}): Promise<StaffMember[]> {
@@ -34,7 +42,9 @@ export async function listStaff(q: { search?: string; role?: string } = {}): Pro
   return http.get<StaffMember[]>(ENDPOINTS.STAFF, { params: { ...q } })
 }
 
-export async function createStaff(input: StaffInput): Promise<StaffMember> {
+export async function createStaff(
+  input: StaffInput,
+): Promise<StaffMember & { credentials?: { username: string; password: string } }> {
   if (USE_MOCK_API) {
     await mockDelay(600)
     const member: StaffMember = {
@@ -43,9 +53,12 @@ export async function createStaff(input: StaffInput): Promise<StaffMember> {
       joinedAt: new Date().toISOString().slice(0, 10),
     }
     store.staff.push(member)
-    return member
+    return { ...member, credentials: mockCredentialsFor(member.name, input.birthYear) }
   }
-  return http.post<StaffMember>(ENDPOINTS.STAFF_CREATE, input)
+  return http.post<StaffMember & { credentials?: { username: string; password: string } }>(
+    ENDPOINTS.STAFF_CREATE,
+    input,
+  )
 }
 
 export async function updateStaff(id: string, input: Partial<StaffInput>): Promise<StaffMember> {
@@ -145,7 +158,7 @@ export async function getHospitalSettings(): Promise<HospitalSettings> {
       address: '120 Wellness Boulevard, Springfield, IL 62701',
       license: 'HS-2026-04821',
       timezone: 'UTC-5 (Eastern)',
-      currency: 'USD ($)',
+      currency: 'NPR (Rs.)',
     }
   }
   return http.get<HospitalSettings>(ENDPOINTS.SETTINGS_HOSPITAL)

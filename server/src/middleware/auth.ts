@@ -6,6 +6,8 @@ import { env } from '../config/env.js'
 import { ApiError } from '../utils/ApiError.js'
 import { RefreshTokenModel } from '../models/RefreshToken.js'
 import { UserModel } from '../models/User.js'
+import { currentContext } from '../models/registry.js'
+import { hospitalOf } from './tenant.js'
 import type { UserRole } from '../models/User.js'
 
 export const REFRESH_COOKIE = 'hs_refresh'
@@ -15,6 +17,7 @@ export interface JwtPayload {
   role: UserRole
   name?: string
   ver?: number
+  hospital?: string
 }
 
 export interface AuthedRequest extends Request {
@@ -29,9 +32,21 @@ function sha256(value: string): string {
 }
 
 // ---------- Access tokens ----------
-export function signAccessToken(user: { id: string; role: UserRole; name?: string; ver?: number }): string {
+export function signAccessToken(user: {
+  id: string
+  role: UserRole
+  name?: string
+  ver?: number
+  hospital?: string
+}): string {
   return jwt.sign(
-    { sub: user.id, role: user.role, name: user.name, ver: user.ver ?? 0 },
+    {
+      sub: user.id,
+      role: user.role,
+      name: user.name,
+      ver: user.ver ?? 0,
+      hospital: user.hospital ?? currentContext().slug,
+    },
     env.JWT_SECRET,
     { expiresIn: `${env.ACCESS_TOKEN_TTL_MIN}m` },
   )
@@ -47,6 +62,11 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
   try {
     payload = jwt.verify(header.slice(7), env.JWT_SECRET) as JwtPayload
   } catch {
+    next(new ApiError('Session expired — please sign in again', 401))
+    return
+  }
+  // A token is only valid inside the hospital database it was issued for.
+  if (payload.hospital && payload.hospital !== hospitalOf(req).slug) {
     next(new ApiError('Session expired — please sign in again', 401))
     return
   }
@@ -90,6 +110,7 @@ export interface RefreshTokenPayload {
   fam: string
   ua?: string
   ip?: string
+  hospital?: string
 }
 
 export function signRefreshToken(userId: string, familyId: string): {
@@ -97,9 +118,11 @@ export function signRefreshToken(userId: string, familyId: string): {
   jti: string
 } {
   const jti = randomUUID()
-  const token = jwt.sign({ jti, sub: userId, fam: familyId }, env.JWT_SECRET, {
-    expiresIn: `${env.REFRESH_TOKEN_TTL_DAYS}d`,
-  })
+  const token = jwt.sign(
+    { jti, sub: userId, fam: familyId, hospital: currentContext().slug },
+    env.JWT_SECRET,
+    { expiresIn: `${env.REFRESH_TOKEN_TTL_DAYS}d` },
+  )
   return { token, jti }
 }
 
@@ -149,6 +172,7 @@ export async function rotateRefreshToken(
   } catch {
     return null
   }
+  if (payload.hospital && payload.hospital !== currentContext().slug) return null
   const hash = hashRefreshToken(oldToken)
   const record = await RefreshTokenModel.findOne({ hash })
   if (!record || record.revokedAt || record.expiresAt < new Date()) return null

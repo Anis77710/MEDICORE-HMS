@@ -1,5 +1,6 @@
-import { Schema, model } from 'mongoose'
+import { Schema } from 'mongoose'
 import { jsonTransform } from './helpers.js'
+import { registerSchema, proxyModel } from './registry.js'
 
 export interface Medicine {
   name: string
@@ -28,7 +29,8 @@ const medicineSchema = new Schema<Medicine>(
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
 
-export const MedicineModel = model<Medicine>('Medicine', medicineSchema)
+registerSchema('Medicine', medicineSchema)
+export const MedicineModel = proxyModel<Medicine>('Medicine')
 
 export interface PrescriptionMedicine {
   name: string
@@ -76,4 +78,5 @@ const prescriptionSchema = new Schema<Prescription>(
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )
 
-export const PrescriptionModel = model<Prescription>('Prescription', prescriptionSchema)
+registerSchema('Prescription', prescriptionSchema)
+export const PrescriptionModel = proxyModel<Prescription>('Prescription')

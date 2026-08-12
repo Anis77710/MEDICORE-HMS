@@ -89,7 +89,7 @@ export default function Dashboard() {
         />
         <StatCard
           label="Revenue This Month"
-          value={`$${(stats.revenueMonth / 1_000_000).toFixed(1)}M`}
+          value={`Rs. ${(stats.revenueMonth / 1_000_000).toFixed(1)}M`}
           change={stats.revenueChange}
           icon={<DollarSign size={20} />}
           tone="green"

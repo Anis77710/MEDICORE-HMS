@@ -17,12 +17,20 @@ function csv(name: string, fallback: string): string[] {
     .filter(Boolean)
 }
 
+const JWT_SECRET = str('JWT_SECRET', 'dev-only-secret-change-me')
+if (JWT_SECRET === 'dev-only-secret-change-me' && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET must be set to a strong random secret in production')
+}
+if (JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET must be at least 32 characters')
+}
+
 export const env = {
   NODE_ENV: str('NODE_ENV', 'development'),
   PORT: num('PORT', 8080),
   MONGO_URI: str('MONGO_URI', 'mongodb://127.0.0.1:27017/healsync'),
   CORS_ORIGIN: csv('CORS_ORIGIN', 'http://localhost:5173,http://localhost:5174'),
-  JWT_SECRET: str('JWT_SECRET', 'dev-only-secret-change-me'),
+  JWT_SECRET,
   ACCESS_TOKEN_TTL_MIN: num('ACCESS_TOKEN_TTL_MIN', 15),
   REFRESH_TOKEN_TTL_DAYS: num('REFRESH_TOKEN_TTL_DAYS', 7),
   // Email delivery. Default 'smtp' — all emails go through a real SMTP
@@ -44,6 +52,17 @@ export const env = {
   // origin (eSewa callback URLs). Same value in production.
   APP_BASE_URL: str('APP_BASE_URL', 'http://localhost:5173'),
   APP_API_URL: str('APP_API_URL', 'http://localhost:8080'),
+  // Optional base domain for per-hospital subdomains (e.g. "medicore.health"
+  // routes <slug>.medicore.health to that hospital's database). When empty,
+  // hospitals are resolved from the x-hospital-slug header only.
+  HOSPITAL_DOMAIN: str('HOSPITAL_DOMAIN', ''),
+  // Platform (master admin) account. Created in the registry database on first
+  // boot if no master admin exists yet. Change the password in production.
+  MASTER_ADMIN_EMAIL: str('MASTER_ADMIN_EMAIL', 'master@medicore.health').toLowerCase(),
+  MASTER_ADMIN_PASSWORD: str('MASTER_ADMIN_PASSWORD', ''),
+  // One-time fee charged (via eSewa) when a hospital registers. The fee can
+  // also be edited later from the master panel (platform settings).
+  HOSPITAL_REGISTRATION_FEE: num('HOSPITAL_REGISTRATION_FEE', 2000),
 } as const
 
 export const isProd = env.NODE_ENV === 'production'
