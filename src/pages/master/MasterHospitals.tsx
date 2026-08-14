@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Pause, Play, Eye, EyeOff, Trash2, Users, Stethoscope, CalendarDays } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Pause, Play, Eye, EyeOff, Trash2, Users, Stethoscope, CalendarDays, ChevronRight, ChevronUp, ChevronDown, Save } from 'lucide-react'
 import { masterApi, type MasterHospital } from '../../api/services/master'
 import {
   Card, Spinner, EmptyState, Badge, PageHeader, Button, SearchInput, ConfirmDialog,
@@ -19,11 +20,17 @@ export default function MasterHospitals() {
   const [query, setQuery] = useState('')
   const [deleting, setDeleting] = useState<MasterHospital | null>(null)
   const [busy, setBusy] = useState<Record<string, boolean>>({})
+  const [order, setOrder] = useState<string[]>([])
+  const [orderDirty, setOrderDirty] = useState(false)
+  const [savingOrder, setSavingOrder] = useState(false)
 
   const load = () =>
     masterApi
       .listHospitals(true)
-      .then((res) => setItems(res.items))
+      .then((res) => {
+        setItems(res.items)
+        setOrder(res.items.filter((h) => h.listed).map((h) => h.slug))
+      })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load hospitals'))
       .finally(() => setLoading(false))
 
@@ -76,6 +83,28 @@ export default function MasterHospitals() {
       h.adminEmail.toLowerCase().includes(query.toLowerCase()),
   )
 
+  const moveOrder = (index: number, dir: -1 | 1) => {
+    const target = index + dir
+    if (target < 0 || target >= order.length) return
+    const next = [...order]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    setOrder(next)
+    setOrderDirty(true)
+  }
+
+  const saveOrder = async () => {
+    setSavingOrder(true)
+    try {
+      await masterApi.setDirectoryOrder(order)
+      setOrderDirty(false)
+      push('Public directory order saved.')
+    } catch (err) {
+      push(err instanceof Error ? err.message : 'Failed to save directory order')
+    } finally {
+      setSavingOrder(false)
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -83,6 +112,41 @@ export default function MasterHospitals() {
         subtitle="Activate, suspend, list or remove every hospital on the platform."
         actions={<SearchInput value={query} onChange={setQuery} placeholder="Search hospitals…" />}
       />
+
+      <Card padded className="mb-4">
+        <div className="card-title-row">
+          <h3 className="card-title">Public Directory Order</h3>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {orderDirty && (
+              <Button size="sm" variant="primary" loading={savingOrder} onClick={saveOrder}>
+                <Save size={14} /> Save order
+              </Button>
+            )}
+          </div>
+        </div>
+        {order.length === 0 ? (
+          <p className="text-sm muted">No hospitals are listed in the public directory yet — use <b>List</b> below.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {order.map((slug, i) => {
+              const h = items.find((x) => x.slug === slug)
+              if (!h) return null
+              return (
+                <div key={slug} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className="mono text-sm muted" style={{ width: 26 }}>{i + 1}.</span>
+                  <span className="font-semibold" style={{ flex: 1 }}>{h.name}</span>
+                  <Button size="sm" variant="ghost" disabled={i === 0} onClick={() => moveOrder(i, -1)} aria-label="Move up">
+                    <ChevronUp size={14} />
+                  </Button>
+                  <Button size="sm" variant="ghost" disabled={i === order.length - 1} onClick={() => moveOrder(i, 1)} aria-label="Move down">
+                    <ChevronDown size={14} />
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Card>
 
       <Card padded>
         {error && <div className="auth-error mb-4">{error}</div>}
@@ -108,7 +172,9 @@ export default function MasterHospitals() {
                 {filtered.map((h) => (
                   <tr key={h.slug}>
                     <td>
-                      <div className="font-semibold">{h.name}</div>
+                      <Link to={`/master/hospitals/${h.slug}`} className="font-semibold">
+                        {h.name}
+                      </Link>
                       <div className="text-sm muted mono">/ {h.slug}</div>
                       <div className="text-sm muted">{h.adminEmail}</div>
                     </td>
@@ -137,6 +203,9 @@ export default function MasterHospitals() {
                     </td>
                     <td className="align-right">
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <Link to={`/master/hospitals/${h.slug}`} className="btn btn-ghost btn-sm" title="View details">
+                          <ChevronRight size={14} />
+                        </Link>
                         {h.status === 'suspended' ? (
                           <Button size="sm" variant="outline" loading={busy[h.slug]} onClick={() => setStatus(h, 'active')}>
                             <Play size={14} /> Activate

@@ -105,6 +105,16 @@ async function waitForMail(
 }
 
 try {
+  // ---------- Health check (liveness probe for uptime monitors) ----------
+  // No auth token is sent — the endpoint must be public, return 200 with a
+  // minimal JSON body, and (being registered before tenant middleware) must
+  // not touch the database or any application data.
+  const health = await api('/health')
+  const healthBody = await json<Record<string, unknown>>(health)
+  check('GET /api/health -> 200 without authentication', health.status === 200)
+  check('health response is valid JSON with status ok', healthBody.status === 'ok')
+  check('health response is minimal (no internals)', Object.keys(healthBody).length === 1)
+
   // ---------- Master admin + paid hospital registration ----------
   // Free registration no longer exists — hospitals must pay the NPR 2,000
   // registration fee (eSewa) and be approved by the master admin.
@@ -132,9 +142,10 @@ try {
     json: { hospitalName: 'Second Hospital', name: 'New Admin', email: 'newadmin@test.dev', phone: '555 0101', birthYear: 1990 },
   })
   check('POST /master/register/initiate -> 201', regInit.status === 201)
-  const regInitBody = await json<{ regNo: string; amount: number; formUrl: string; fields: Record<string, string> }>(regInit)
-  check('initiate charges NPR 2,000 fee and signs fields', regInitBody.amount === 2000 && /^HREG-\d+-\d+-\d+-\d+$/.test(regInitBody.regNo) && Boolean(regInitBody.fields.signature))
+  const regInitBody = await json<{ amount: number; formUrl: string; fields: Record<string, string> }>(regInit)
+  check('initiate charges NPR 2,000 fee and signs fields', regInitBody.amount === 2000 && Boolean(regInitBody.fields.signature))
   check('initiate signs the exact eSewa field set', regInitBody.fields.signed_field_names === 'total_amount,transaction_uuid,product_code' && regInitBody.fields.product_code === 'EPAYTEST')
+  check('initiate keeps the eSewa callback URL short', !regInitBody.fields.success_url!.includes('tok=') && regInitBody.fields.success_url!.length <= 100)
 
   const regDup = await api('/master/register/initiate', {
     json: { hospitalName: 'Second Hospital', name: 'Another Admin', email: 'other@test.dev', phone: '', birthYear: 1991 },
@@ -142,7 +153,7 @@ try {
   check('duplicate initiate -> 409', regDup.status === 409)
 
   const regForged = await api('/master/register/success', {
-    json: { data: JSON.stringify({ status: 'COMPLETE', total_amount: '2000', transaction_uuid: regInitBody.regNo, signed_field_names: 'status,total_amount,transaction_uuid,product_code' }), signature: 'FAKE' },
+    json: { data: JSON.stringify({ status: 'COMPLETE', total_amount: '2000', transaction_uuid: regInitBody.fields.transaction_uuid, signed_field_names: 'status,total_amount,transaction_uuid,product_code' }), signature: 'FAKE' },
   })
   check('forged registration callback rejected -> redirect error', regForged.status === 302 && Boolean(regForged.headers.get('location')?.includes('payment=error')))
 
@@ -159,19 +170,20 @@ try {
   const regCbData = Buffer.from(JSON.stringify({ ...regCbFields, signature: regCbSig })).toString('base64')
   const regCb = await api('/master/register/success', { json: { data: regCbData } })
   check('valid registration callback -> 302 success', regCb.status === 302 && Boolean(regCb.headers.get('location')?.includes('payment=success')))
-  check('callback redirects with registration number', Boolean(new URL(regCb.headers.get('location')!).searchParams.get('reg')?.startsWith('HREG-')))
+  const regNo = new URL(regCb.headers.get('location')!).searchParams.get('reg') ?? ''
+  check('callback redirects with registration number', regNo.startsWith('HREG-'))
 
   const requests = await api('/master/requests', { token: masterToken })
   const requestsBody = await json<{ items: { regNo: string; status: string; payment: { amount: number; transactionCode: string } }[]; counts: { paid: number } }>(requests)
-  check('GET /master/requests shows paid request', requestsBody.items.some((r) => r.regNo === regInitBody.regNo && r.status === 'paid') && requestsBody.counts.paid === 1)
+  check('GET /master/requests shows paid request', requestsBody.items.some((r) => r.regNo === regNo && r.status === 'paid') && requestsBody.counts.paid === 1)
 
   // Replaying the callback after payment must stay idempotent (no re-charge).
   const regReplay = await api('/master/register/success', { json: { data: regCbData } })
   check('replayed registration callback idempotent -> success', regReplay.status === 302 && Boolean(regReplay.headers.get('location')?.includes('payment=success')))
   const requestsAfterReplay = await json<{ items: { regNo: string; status: string }[] }>(await api('/master/requests', { token: masterToken }))
-  check('replay does not re-transition request', requestsAfterReplay.items.filter((r) => r.regNo === regInitBody.regNo).length === 1)
+  check('replay does not re-transition request', requestsAfterReplay.items.filter((r) => r.regNo === regNo).length === 1)
 
-  const pendingId = requestsBody.items.find((r) => r.regNo === regInitBody.regNo)
+  const pendingId = requestsBody.items.find((r) => r.regNo === regNo)
   void pendingId
   const paidList = await api('/master/requests?status=paid', { token: masterToken })
   const paidBody = await json<{ items: { _id: string; regNo: string; slug: string; hospitalName: string; admin: { email: string } }[] }>(paidList)
@@ -181,7 +193,7 @@ try {
   check('POST /master/requests/:id/approve -> 200', approveReq.status === 200)
   const approveBody = await json<{ credentials: { username: string }; request: { status: string; regNo: string } }>(approveReq)
   check('approval provisions admin credentials (new@medicore.hms)', approveBody.credentials.username === 'new@medicore.hms')
-  check('request marked approved with regNo intact', approveBody.request.status === 'approved' && approveBody.request.regNo === regInitBody.regNo)
+  check('request marked approved with regNo intact', approveBody.request.status === 'approved' && approveBody.request.regNo === regNo)
 
   const hospital = await api('/master/hospitals', { token: masterToken })
   const hospitalBody = await json<{ items: { slug: string; name: string; status: string; listed: boolean }[]; total: number }>(hospital)
@@ -194,6 +206,13 @@ try {
   const adminLogin = await api('/auth/login', { json: { email: 'newadmin@test.dev', password: 'new@1990' } })
   check('new hospital admin logs in with emailed credentials', adminLogin.status === 200)
 
+  // The approval email tells admins to sign in with the generated username,
+  // so that must resolve to the new hospital's tenant (no header needed).
+  const tenantUsernameLogin = await api('/auth/login', { json: { email: 'new@medicore.hms', password: 'new@1990' } })
+  const tenantUsernameLoginBody = await json<{ hospital: { slug: string } }>(tenantUsernameLogin)
+  check('new hospital admin logs in with emailed username', tenantUsernameLogin.status === 200)
+  check('username login resolves the tenant hospital', tenantUsernameLoginBody.hospital?.slug === 'second-hospital')
+
   const approveAgain = await api(`/master/requests/${paidBody.items[0]!._id}/approve`, { method: 'POST', token: masterToken })
   check('double approval rejected -> 409', approveAgain.status === 409)
 
@@ -201,13 +220,14 @@ try {
   const rejectInit = await api('/master/register/initiate', {
     json: { hospitalName: 'Rejected Clinic', name: 'Reject Admin', email: 'reject@test.dev', phone: '', birthYear: 1990 },
   })
-  const rejectInitBody = await json<{ regNo: string; fields: Record<string, string> }>(rejectInit)
+  const rejectInitBody = await json<{ fields: Record<string, string> }>(rejectInit)
   const rejectCbFields = { status: 'COMPLETE', total_amount: '2000', transaction_uuid: rejectInitBody.fields.transaction_uuid!, product_code: 'EPAYTEST', signed_field_names: 'status,total_amount,transaction_uuid,product_code' }
   const rejectCbSig = signEsewa(rejectCbFields, ['status', 'total_amount', 'transaction_uuid', 'product_code'], '8gBm/:&EnhH.1/q')
   const rejectCb = await api(`/master/register/success?data=${encodeURIComponent(JSON.stringify(rejectCbFields))}&signature=${encodeURIComponent(rejectCbSig)}`)
   check('GET registration callback (query params) -> success', rejectCb.status === 302 && Boolean(rejectCb.headers.get('location')?.includes('payment=success')))
+  const rejectRegNo = new URL(rejectCb.headers.get('location')!).searchParams.get('reg') ?? ''
   const rejectList = await json<{ items: { _id: string; regNo: string; slug: string }[] }>(await api('/master/requests?status=paid', { token: masterToken }))
-  const rejectReq = rejectList.items.find((r) => r.regNo === rejectInitBody.regNo)
+  const rejectReq = rejectList.items.find((r) => r.regNo === rejectRegNo)
   const reject = await api(`/master/requests/${rejectReq!._id}/reject`, { method: 'POST', token: masterToken, json: { reason: 'Duplicate clinic' } })
   check('POST /master/requests/:id/reject -> 200', reject.status === 200 && (await json<{ status: string; reason: string }>(reject)).status === 'rejected')
   const hospitalsAfterReject = await json<{ items: { slug: string }[] }>(await api('/master/hospitals', { token: masterToken }))

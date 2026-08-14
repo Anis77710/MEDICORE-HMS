@@ -1,5 +1,17 @@
 import { PatientModel } from '../models/Patient.js'
 import { sendMail } from './email.js'
+import {
+  emailLayout,
+  escHtml,
+  formatNpr,
+  formatPaidAt,
+  greeting,
+  kvCard,
+  paragraph,
+  paragraphHtml,
+  receiptCard,
+  emphasis,
+} from './emailTemplate.js'
 
 // ============================================================
 // Patient appointment notifications — every booking lifecycle
@@ -16,6 +28,8 @@ export type AppointmentEvent =
   | {
       kind: 'rescheduled'
       previous?: { date: string; time: string; doctorName?: string }
+      reason?: string
+      note?: string
     }
 
 function fmtDate(date: string): string {
@@ -41,6 +55,12 @@ function buildMessage(
   event: AppointmentEvent,
 ): { subject: string; text: string; html: string } {
   const when = `${fmtDate(appointment.date)} at ${fmtTime(appointment.time)}`
+  const appointmentCard = kvCard('Appointment details', [
+    { label: 'Doctor', value: appointment.doctorName },
+    { label: 'Department', value: appointment.department },
+    { label: 'Type', value: appointment.type },
+    { label: 'When', value: when },
+  ])
 
   if (event.kind === 'booked') {
     const subject = `Appointment request received — ${appointment.doctorName}`
@@ -56,7 +76,17 @@ Your request is awaiting approval. You will receive a confirmation email
 as soon as it is approved.
 
 Medicore HMS`
-    return { subject, text, html: htmlBody(subject, text) }
+    const html = emailLayout({
+      title: 'Appointment request received',
+      body:
+        greeting(appointment.patientName) +
+        paragraphHtml(
+          `We have received your ${emphasis(escHtml(appointment.type.toLowerCase()))} appointment request. ` +
+            `It is now ${emphasis('awaiting approval')} — you will receive a confirmation email as soon as it is approved.`,
+        ) +
+        appointmentCard,
+    })
+    return { subject, text, html }
   }
 
   if (event.kind === 'approved') {
@@ -73,7 +103,17 @@ Please arrive 10 minutes early and bring a valid ID. To cancel or
 reschedule, contact the hospital front desk.
 
 Medicore HMS`
-    return { subject, text, html: htmlBody(subject, text) }
+    const html = emailLayout({
+      title: 'Your appointment is confirmed',
+      body:
+        greeting(appointment.patientName) +
+        paragraphHtml(`Great news — your appointment has been ${emphasis('approved')}:`) +
+        appointmentCard +
+        paragraph('Please arrive 10 minutes early and bring a valid ID. To cancel or reschedule, contact the hospital front desk.', {
+          muted: true,
+        }),
+    })
+    return { subject, text, html }
   }
 
   if (event.kind === 'cancelled') {
@@ -90,46 +130,64 @@ If you did not request this cancellation, please contact the hospital
 front desk. We apologise for any inconvenience.
 
 Medicore HMS`
-    return { subject, text, html: htmlBody(subject, text) }
+    const html = emailLayout({
+      title: 'Your appointment has been cancelled',
+      body:
+        greeting(appointment.patientName) +
+        paragraphHtml(
+          `Your appointment with ${emphasis(escHtml(appointment.doctorName))} has been ${emphasis('cancelled')}:`,
+        ) +
+        appointmentCard +
+        paragraph('If you did not request this cancellation, please contact the hospital front desk. We apologise for any inconvenience.', {
+          muted: true,
+        }),
+    })
+    return { subject, text, html }
   }
 
   const subject = `Your appointment has been rescheduled — ${appointment.doctorName}`
   const previous = event.previous
     ? `  Previously: ${fmtDate(event.previous.date)} at ${fmtTime(event.previous.time)}${event.previous.doctorName ? ` (${event.previous.doctorName})` : ''}\n`
     : ''
+  const reason = event.reason
+    ? `  Reason:     ${event.reason}\n`
+    : '  Reason:     Requested by your doctor\n'
   const text = `Hello ${appointment.patientName},
 
-Your appointment has been RESCHEDULED:
+Your appointment has been RESCHEDULED by ${appointment.doctorName}:
 
-${previous}  New schedule: ${when}
+${previous}${reason}  New schedule: ${when}
   Doctor:     ${appointment.doctorName}
   Department: ${appointment.department}
-
+${event.note ? `  Note:       ${event.note}\n` : ''}
 If the new time does not suit you, please contact the hospital front
 desk to choose another slot.
 
 Medicore HMS`
-  return { subject, text, html: htmlBody(subject, text) }
-}
-
-function htmlBody(title: string, text: string): string {
-  const lines = text
-    .split('\n')
-    .filter((l) => l.trim())
-    .map((l) => `<p style="margin:6px 0">${l.replace(/</g, '&lt;')}</p>`)
-    .join('')
-  return `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1f2937">
-  <div style="background:#0e7490;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0">
-    <strong>Medicore HMS</strong>
-  </div>
-  <div style="border:1px solid #e5e7eb;border-top:none;padding:20px;border-radius:0 0 8px 8px">
-    <h2 style="margin:0 0 12px;font-size:18px">${title}</h2>
-    ${lines}
-  </div>
-  <p style="color:#6b7280;font-size:12px;margin-top:16px">
-    This is an automated message from Medicore HMS. Please do not reply to this email.
-  </p>
-</div>`
+  const previousHtml = event.previous
+    ? paragraph(
+        `Previously scheduled for: ${fmtDate(event.previous.date)} at ${fmtTime(event.previous.time)}${event.previous.doctorName ? ` (${event.previous.doctorName})` : ''}`,
+        { muted: true },
+      )
+    : ''
+  const reasonHtml = paragraphHtml(
+    `Your appointment has been ${emphasis('rescheduled')} by ${emphasis(escHtml(appointment.doctorName))}:`,
+  ) +
+    (event.reason ? paragraphHtml(`Reason: ${emphasis(escHtml(event.reason))}`) : '')
+  const noteHtml = event.note
+    ? paragraph(escHtml(event.note), { muted: true })
+    : ''
+  const html = emailLayout({
+    title: 'Your appointment has been rescheduled',
+    body:
+      greeting(appointment.patientName) +
+      reasonHtml +
+      previousHtml +
+      appointmentCard +
+      noteHtml +
+      paragraph('If the new time does not suit you, please contact the hospital front desk to choose another slot.', { muted: true }),
+  })
+  return { subject, text, html }
 }
 
 type AppointmentLike = {
@@ -197,7 +255,36 @@ Your appointment request is now awaiting approval — you will receive a
 confirmation email as soon as it is approved.
 
 Medicore HMS`
-    await sendMail({ to: details.email, subject, text, html: htmlBody(subject, text) })
+    const html = emailLayout({
+      title: 'Payment received',
+      body:
+        greeting(details.patientName) +
+        paragraphHtml(
+          `We received your eSewa payment of ${emphasis(formatNpr(details.amount))} for the appointment below.`,
+        ) +
+        receiptCard(
+          [
+            { label: 'Payment ref', value: details.transactionCode || details.appointmentNo },
+            { label: 'Appointment', value: details.appointmentNo },
+            { label: 'Doctor', value: details.doctorName },
+            { label: 'Department', value: details.department },
+            { label: 'When', value: `${fmtDate(details.date)} at ${fmtTime(details.time)}` },
+            { label: 'Status', value: 'Paid' },
+            { label: 'Amount Paid', value: formatNpr(details.amount), total: true },
+          ],
+          {
+            subtitle: 'eSewa Payment — Official Receipt',
+            date: formatPaidAt(new Date()),
+            footer:
+              'This is a computer-generated receipt for your Medicore HMS appointment fee.<br/>Thank you for choosing Medicore HMS.',
+          },
+        ) +
+        paragraph(
+          'Your appointment request is now awaiting approval — you will receive a confirmation email as soon as it is approved.',
+          { muted: true },
+        ),
+    })
+    await sendMail({ to: details.email, subject, text, html })
     console.log(`[mail] payment receipt queued for ${details.email} (appointment ${details.appointmentNo})`)
   } catch (err) {
     console.error(

@@ -3,17 +3,18 @@
 //
 // The master admin runs the platform, not a hospital:
 //   - reviews and approves/rejects hospital registration
-//     requests (each hospital pays the NPR 2,000 registration
+//     requests (each hospital pays the one-time registration
 //     fee via eSewa before a request can be approved),
 //   - manages every registered hospital (suspend / activate /
 //     list in the public directory / delete),
 //   - manages platform settings (fee, site name, contacts).
 //
-// Hospital registration is now a PAID flow: POST /register/initiate
-// creates a registration request and returns the eSewa form; the
-// signed callback marks it paid; the master admin approves it,
-// which provisions the hospital database + admin account and
-// emails the login credentials together with the payment receipt.
+// Hospital registration is now a PAID flow: POST /register/initiate stores a
+// short-lived attempt keyed by the payment transaction_uuid and returns the
+// eSewa form. The signed eSewa callback claims the attempt and creates the
+// registration request as "paid"; only then is any data kept. The master
+// admin approves it, which provisions the hospital database +
+// admin account and emails the login credentials with the payment receipt.
 // The old free /auth/register endpoint is gone (410).
 // ============================================================
 
@@ -35,11 +36,17 @@ import {
 import {
   masterAdminModel,
   registrationRequestModel,
+  registrationAttemptModel,
   getPlatformSettings,
   nextPlatformId,
+  auditLogModel,
+  platformAnnouncementModel,
+  contactMessageModel,
+  logAudit,
   type RegistrationRequest,
+  type AuditAction,
 } from '../config/platform.js'
-import { requireMasterAuth, signMasterAccessToken } from '../middleware/masterAuth.js'
+import { requireMasterAuth, signMasterAccessToken, type MasterRequest } from '../middleware/masterAuth.js'
 import { withTenant } from '../models/registry.js'
 import { UserModel } from '../models/User.js'
 import { HospitalSettingsModel } from '../models/Settings.js'
@@ -55,6 +62,28 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function redirectToFrontend(res: { redirect(status: number, url: string): void }, params: string): void {
   res.redirect(302, `${env.APP_BASE_URL}/master/register/status?${params}`)
+}
+
+// ---------- Registration flow ----------
+// Hospital registration is a PAID flow: POST /register/initiate validates
+// the details and stores a short-lived RegistrationAttempt keyed by the
+// payment's transaction_uuid (the callback URL stays short — eSewa rejects
+// long success_urls). The signed eSewa callback claims that attempt and
+// creates the registration request as "paid"; only then does any data
+// persist beyond the attempt. The master admin approves it, which
+// provisions the hospital database + admin account and emails the login
+// credentials with the payment receipt. The old free /auth/register
+// endpoint is gone (410).
+
+/** Actor info of the signed-in master admin, for the audit log. */
+function auditActor(req: Request): { id: string; email: string; name: string } {
+  const { masterAdmin } = req as unknown as MasterRequest
+  return { id: String(masterAdmin.id), email: masterAdmin.email, name: masterAdmin.name }
+}
+
+/** Attaches an audit entry in the background; never blocks the request. */
+function audit(req: Request, action: AuditAction, summary: string, opts?: { targetType?: 'request' | 'hospital' | 'settings' | 'announcement' | 'contact'; targetId?: string }): void {
+  void logAudit({ actor: auditActor(req), action, summary, ...opts })
 }
 
 // ---------- POST /master/login ----------
@@ -75,6 +104,11 @@ masterRouter.post(
         throw new ApiError('Invalid email or password', 401)
       }
       await masterAdminModel().updateOne({ _id: admin._id }, { lastLoginAt: new Date() })
+      void logAudit({
+        actor: { id: String(admin._id), email: admin.email, name: admin.name },
+        action: 'login',
+        summary: 'Signed in to the master panel',
+      })
       res.json({
         admin: { name: admin.name, email: admin.email },
         token: signMasterAccessToken(String(admin._id), admin.name),
@@ -94,7 +128,12 @@ masterRouter.get('/me', requireMasterAuth, (req, res) => {
 // ---------- POST /master/register/initiate ----------
 // Public — starts the paid hospital registration. Validates the details,
 // reserves the hospital slug and returns the eSewa form for the
-// registration fee. Nothing is provisioned until the master approves.
+// registration fee. Nothing is provisioned here: the applicant's details
+// are stored in a short-lived RegistrationAttempt keyed by the payment's
+// transaction_uuid (which eSewa returns inside its signed callback), so an
+// applicant who abandons the payment leaves nothing behind but an expiring
+// attempt and can simply try again. The request is only created once the
+// payment is verified (see /master/register/success).
 masterRouter.post(
   '/register/initiate',
   validate({
@@ -128,6 +167,7 @@ masterRouter.post(
       }
       const normalized = email.toLowerCase()
 
+      // Read-only duplicate checks — these never write to the database.
       if (cachedHospital(slug)) {
         throw new ApiError('This hospital is already registered — please log in instead', 409)
       }
@@ -136,45 +176,55 @@ masterRouter.post(
       }
       const open = await registrationRequestModel().findOne({
         $or: [{ slug }, { 'admin.email': normalized }],
-        status: { $in: ['pending_payment', 'paid'] },
+        status: { $in: ['paid', 'approved'] },
       })
       if (open) {
         throw new ApiError(
-          open.slug === slug && open.status === 'paid'
-            ? 'This hospital already submitted a registration and is awaiting approval'
-            : 'A registration with these details is already in progress',
+          'This hospital already submitted a registration and is awaiting approval',
           409,
         )
+      }
+      // A payment may already be in flight for this hospital or this email.
+      // A different applicant on the same hospital name (or a different
+      // hospital on the same email) is blocked; the same applicant retrying
+      // is allowed — their stale attempts are replaced with a fresh one.
+      const pending = await registrationAttemptModel().findOne({
+        $or: [{ slug }, { 'admin.email': normalized }],
+        status: 'pending',
+      })
+      if (pending && pending.slug === slug && pending.email !== normalized) {
+        throw new ApiError('A registration for this hospital is already in progress from another applicant', 409)
+      }
+      if (pending) {
+        await registrationAttemptModel().deleteMany({ email: normalized, status: 'pending' })
       }
 
       const settings = await getPlatformSettings()
       const fee = settings.registrationFee
 
-      // Retry after a failed payment reuses the same request (new transaction).
-      let request = await registrationRequestModel().findOne({ slug, status: 'pending_payment' })
-      if (request) {
-        request.payment.transactionUuid = newTransactionUuid()
-        await request.save()
-      } else {
-        request = await registrationRequestModel().create({
-          regNo: await nextPlatformId('hreg'),
-          hospitalName,
-          slug,
-          admin: { name, email: normalized, phone, birthYear },
-          status: 'pending_payment',
-          payment: { transactionUuid: newTransactionUuid(), amount: fee },
-        })
-      }
+      // Store the applicant under the payment's uuid so the success callback
+      // URL never needs to carry the details (long callback URLs are rejected
+      // by eSewa). The attempt expires automatically if never paid.
+      const transactionUuid = newTransactionUuid()
+      await registrationAttemptModel().create({
+        transactionUuid,
+        hospitalName,
+        slug,
+        name,
+        email: normalized,
+        phone,
+        birthYear,
+        fee,
+      })
 
       const { fields, signature, formUrl } = buildPaymentFields({
         totalAmount: fee,
-        transactionUuid: request.payment.transactionUuid,
-        successUrl: `${env.APP_API_URL}/api/master/register/success?reg=${encodeURIComponent(request.regNo)}`,
-        failureUrl: `${env.APP_API_URL}/api/master/register/failure?reg=${encodeURIComponent(request.regNo)}`,
+        transactionUuid,
+        successUrl: `${env.APP_API_URL}/api/master/register/success`,
+        failureUrl: `${env.APP_API_URL}/api/master/register/failure`,
       })
 
       res.status(201).json({
-        regNo: request.regNo,
         amount: fee,
         formUrl,
         fields: { ...fields, signature },
@@ -186,7 +236,9 @@ masterRouter.post(
 )
 
 // ---------- /master/register/success ----------
-// eSewa's signed callback. Marks the registration request as paid and
+// eSewa's signed callback. Verifies the payment, then — and only then —
+// claims the RegistrationAttempt stored at initiate time under the payment's
+// transaction_uuid and creates the registration request as "paid", then
 // redirects the browser to the status page. The hospital is only created
 // when the master admin approves the request.
 masterRouter.all('/register/success', async (req: Request, res: Response, next) => {
@@ -204,75 +256,73 @@ masterRouter.all('/register/success', async (req: Request, res: Response, next) 
       redirectToFrontend(res, 'payment=error&message=invalid_signature')
       return
     }
-
     const uuid = verified.transaction_uuid
-    const found = await registrationRequestModel().findOne({ 'payment.transactionUuid': uuid })
-    if (!found) {
-      redirectToFrontend(res, 'payment=failed')
-      return
-    }
-    if (found.status === 'approved' || found.status === 'paid') {
-      redirectToFrontend(res, `payment=success&reg=${encodeURIComponent(found.regNo)}`)
-      return
-    }
-    if (found.status !== 'pending_payment') {
-      redirectToFrontend(res, 'payment=failed')
-      return
-    }
-
-    // Atomically claim the request so a racing/replayed callback can only
-    // transition it once.
-    const claim = await registrationRequestModel().findOneAndUpdate(
-      { _id: found._id, status: 'pending_payment' },
-      { $set: { 'payment.transactionCode': verified.transaction_code ?? '' } },
+    // Atomically claim the attempt (details stored at initiate time under
+    // this uuid) so a replayed or racing callback can never create two
+    // requests.
+    const attempt = await registrationAttemptModel().findOneAndUpdate(
+      { transactionUuid: uuid, status: 'pending' },
+      { $set: { status: 'claimed' } },
       { new: true },
     )
-    if (!claim) {
-      redirectToFrontend(res, 'payment=failed')
-      return
-    }
-
-    if (verified.status !== 'COMPLETE' || Number(verified.total_amount) !== claim.payment.amount) {
-      await registrationRequestModel().updateOne(
-        { _id: claim._id },
-        { $set: { 'payment.transactionCode': verified.transaction_code ?? '' } },
+    if (!attempt) {
+      const existing = await registrationRequestModel().findOne({
+        'payment.transactionUuid': uuid,
+      })
+      redirectToFrontend(
+        res,
+        existing ? `payment=success&reg=${encodeURIComponent(existing.regNo)}` : 'payment=failed',
       )
+      return
+    }
+    if (verified.status !== 'COMPLETE' || Number(verified.total_amount) !== attempt.fee) {
+      await registrationAttemptModel().findByIdAndDelete(attempt._id)
       redirectToFrontend(res, 'payment=failed')
       return
     }
+    // Two completed payments for the same applicant (e.g. two tabs) must not
+    // create two requests — surface the existing one.
+    const dup = await registrationRequestModel().findOne({
+      $or: [{ slug: attempt.slug }, { 'admin.email': attempt.email }],
+      status: { $in: ['paid', 'approved'] },
+    })
+    if (dup) {
+      await registrationAttemptModel().findByIdAndDelete(attempt._id)
+      redirectToFrontend(res, `payment=success&reg=${encodeURIComponent(dup.regNo)}`)
+      return
+    }
 
-    await registrationRequestModel().updateOne(
-      { _id: claim._id },
-      {
-        $set: {
-          status: 'paid',
-          'payment.paidAt': new Date(),
-          'payment.transactionCode': verified.transaction_code ?? '',
-        },
+    const request = await registrationRequestModel().create({
+      regNo: await nextPlatformId('hreg'),
+      hospitalName: attempt.hospitalName,
+      slug: attempt.slug,
+      admin: {
+        name: attempt.name,
+        email: attempt.email,
+        phone: attempt.phone,
+        birthYear: attempt.birthYear,
       },
-    )
-    redirectToFrontend(res, `payment=success&reg=${encodeURIComponent(claim.regNo)}`)
+      status: 'paid',
+      payment: {
+        transactionUuid: uuid,
+        transactionCode: verified.transaction_code ?? '',
+        amount: attempt.fee,
+        paidAt: new Date(),
+      },
+    })
+    await registrationAttemptModel().findByIdAndDelete(attempt._id)
+    redirectToFrontend(res, `payment=success&reg=${encodeURIComponent(request.regNo)}`)
   } catch (err) {
     next(err)
   }
 })
 
 // ---------- /master/register/failure ----------
-masterRouter.all('/register/failure', async (req, res, next) => {
+// eSewa's callback when the payer aborts or fails. Nothing was provisioned
+// at initiate time and no charge was made — the applicant can simply retry.
+// The abandoned RegistrationAttempt is left for the TTL to expire.
+masterRouter.all('/register/failure', async (_req: Request, res: Response, next) => {
   try {
-    const { data, signature } = {
-      ...(req.query as { data?: string; signature?: string }),
-      ...(req.body as { data?: string; signature?: string }),
-    }
-    if (typeof data === 'string') {
-      const verified = verifyEsewaCallback(data, signature)
-      if (verified?.transaction_uuid) {
-        await registrationRequestModel().updateOne(
-          { 'payment.transactionUuid': verified.transaction_uuid, status: 'pending_payment' },
-          { $set: { 'payment.transactionCode': verified.transaction_code ?? '' } },
-        )
-      }
-    }
     redirectToFrontend(res, 'payment=failed')
   } catch (err) {
     next(err)
@@ -388,6 +438,13 @@ masterRouter.post('/requests/:id/approve', requireMasterAuth, async (req, res, n
       paidAt: request.payment.paidAt,
     })
 
+    audit(
+      req,
+      'approve_request',
+      `Approved registration ${request.regNo} for "${hospitalName}" (fee ${request.payment.amount})`,
+      { targetType: 'request', targetId: String(request._id) },
+    )
+
     res.json({
       request,
       credentials: { username },
@@ -419,6 +476,10 @@ masterRouter.post(
         hospitalName: request.hospitalName,
         regNo: request.regNo,
         reason,
+      })
+      audit(req, 'reject_request', `Rejected registration ${request.regNo} for "${request.hospitalName}"`, {
+        targetType: 'request',
+        targetId: String(request._id),
       })
       res.json(request)
     } catch (err) {
@@ -498,6 +559,10 @@ masterRouter.patch(
       const { status } = req.body as { status: 'active' | 'suspended' }
       const updated = await updateHospitalRegistry(String(req.params.slug), { status })
       if (!updated) throw new ApiError('Hospital not found', 404)
+      audit(req, 'hospital_status', `${status === 'active' ? 'Activated' : 'Suspended'} hospital "${updated.name}"`, {
+        targetType: 'hospital',
+        targetId: updated.slug,
+      })
       res.json(updated)
     } catch (err) {
       next(err)
@@ -515,6 +580,10 @@ masterRouter.patch(
       const { listed } = req.body as { listed: boolean }
       const updated = await updateHospitalRegistry(String(req.params.slug), { listed })
       if (!updated) throw new ApiError('Hospital not found', 404)
+      audit(req, 'hospital_listed', `${listed ? 'Listed' : 'Unlisted'} hospital "${updated.name}" in the public directory`, {
+        targetType: 'hospital',
+        targetId: updated.slug,
+      })
       res.json(updated)
     } catch (err) {
       next(err)
@@ -540,6 +609,10 @@ masterRouter.delete(
         await conn.dropDatabase().catch(() => {})
       }
       await unregisterTenant(slug)
+      audit(req, 'hospital_delete', `Deleted hospital "${record.name}" (${slug})`, {
+        targetType: 'hospital',
+        targetId: slug,
+      })
       res.json({ message: `Hospital "${record.name}" deleted` })
     } catch (err) {
       next(err)
@@ -586,6 +659,13 @@ masterRouter.put(
       const updated = await getPlatformSettings()
       Object.assign(updated, allowed)
       await updated.save()
+      const changed = Object.keys(allowed)
+        .map((k) => `${k}=${allowed[k]}`)
+        .join(', ')
+      audit(req, 'settings_update', `Updated platform settings: ${changed || 'nothing'}`, {
+        targetType: 'settings',
+        targetId: 'platform',
+      })
       res.json(updated)
     } catch (err) {
       next(err)
@@ -642,3 +722,413 @@ masterRouter.get('/stats', requireMasterAuth, async (_req, res, next) => {
     next(err)
   }
 })
+
+// ---------- GET /master/analytics?range=30d|90d|1y|all ----------
+// Platform analytics: revenue & registration series per month, the
+// registration funnel, top hospitals by activity, monthly conversion
+// rates (approved ÷ initiated), and a linear 30-day revenue projection.
+masterRouter.get(
+  '/analytics',
+  requireMasterAuth,
+  validate({ query: z.object({ range: z.enum(['30d', '90d', '1y', 'all']).optional() }) }),
+  async (req, res, next) => {
+    try {
+      const { range = '30d' } = req.query as { range?: string }
+      const ranges: Record<string, number> = { '30d': 30, '90d': 90, '1y': 365, all: 0 }
+      const days = ranges[range] ?? 30
+      const from = days ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : new Date(0)
+
+      const [requests, hospitals] = await Promise.all([
+        registrationRequestModel().find({ createdAt: { $gte: from } }).sort({ createdAt: 1 }).lean(),
+        hospitalRegistry().find({}).sort({ createdAt: 1 }).limit(100).lean(),
+      ])
+
+      const keyOf = (d?: Date) => (d ? new Date(d).toISOString().slice(0, 7) : '')
+      const byMonth = new Map<string, { revenue: number; registrations: number }>()
+      for (const r of requests) {
+        const key = keyOf(r.createdAt)
+        if (!key) continue
+        const bucket = byMonth.get(key) ?? { revenue: 0, registrations: 0 }
+        bucket.registrations += 1
+        if (r.status === 'approved') bucket.revenue += r.payment.amount
+        byMonth.set(key, bucket)
+      }
+      const months = [...byMonth.keys()].sort()
+      const revenueSeries = months.map((m) => ({ label: m, value: byMonth.get(m)!.revenue }))
+      const registrationSeries = months.map((m) => ({ label: m, value: byMonth.get(m)!.registrations }))
+
+      const funnel = {
+        pending_payment: requests.filter((r) => r.status === 'pending_payment').length,
+        paid: requests.filter((r) => r.status === 'paid').length,
+        approved: requests.filter((r) => r.status === 'approved').length,
+        rejected: requests.filter((r) => r.status === 'rejected').length,
+      }
+
+      const top = await Promise.all(
+        hospitals
+          .filter((h) => h.status === 'active')
+          .slice(0, 8)
+          .map(async (h) => {
+            const counts = await hospitalCounts(h.slug)
+            const requestsCount = requests.filter((r) => r.slug === h.slug).length
+            return {
+              slug: h.slug,
+              name: h.name,
+              patients: counts.patients,
+              doctors: counts.doctors,
+              appointments: counts.appointments,
+              requests: requestsCount,
+              score: counts.patients + counts.doctors + counts.appointments + requestsCount,
+            }
+          }),
+      )
+      top.sort((a, b) => b.score - a.score)
+
+      const conversion = months.map((m) => {
+        const bucket = requests.filter((r) => keyOf(r.createdAt) === m)
+        const approved = bucket.filter((r) => r.status === 'approved').length
+        return {
+          label: m,
+          rate: bucket.length ? Math.round((approved / bucket.length) * 100) : 0,
+          total: bucket.length,
+          approved,
+        }
+      })
+
+      const approved = requests.filter((r) => r.status === 'approved')
+      const collected = approved.reduce((s, r) => s + r.payment.amount, 0)
+      const pending = requests
+        .filter((r) => r.status === 'paid')
+        .reduce((s, r) => s + r.payment.amount, 0)
+      const windowDays =
+        days ||
+        Math.max(1, Math.round((Date.now() - (requests[0]?.createdAt ? new Date(requests[0].createdAt).getTime() : Date.now())) / 86400000))
+      const avgDaily = Math.round(collected / windowDays)
+
+      res.json({
+        range,
+        from,
+        to: new Date(),
+        months,
+        revenueSeries,
+        registrationSeries,
+        funnel,
+        top: top.map(({ score: _score, ...rest }) => rest),
+        conversion,
+        projection: {
+          next30Days: avgDaily * 30,
+          avgDaily,
+          note: 'Linear projection from the selected window’s approved revenue',
+        },
+        revenue: { collected, pending },
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+)
+
+// ---------- GET /master/receipts ----------
+// Paid registrations (revenue): all requests that moved money —
+// approved (collected), paid awaiting approval (pending), rejected (refunded).
+masterRouter.get(
+  '/receipts',
+  requireMasterAuth,
+  validate({
+    query: z.object({
+      status: z.enum(['approved', 'paid', 'rejected']).optional(),
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    }),
+  }),
+  async (req, res, next) => {
+    try {
+      const { status, from, to } = req.query as { status?: string; from?: string; to?: string }
+      const filter: Record<string, unknown> = { status: { $in: ['paid', 'approved', 'rejected'] } }
+      if (status) filter.status = status
+      const paidAt: Record<string, Date> = {}
+      if (from) paidAt.$gte = new Date(`${from}T00:00:00.000Z`)
+      if (to) paidAt.$lte = new Date(`${to}T23:59:59.999Z`)
+      if (from || to) filter['payment.paidAt'] = paidAt
+
+      const [items, summaryRows] = await Promise.all([
+        registrationRequestModel().find(filter).sort({ 'payment.paidAt': -1 }).limit(500).lean(),
+        registrationRequestModel().find({ status: { $in: ['paid', 'approved', 'rejected'] } }).lean(),
+      ])
+      const summary = {
+        approved: summaryRows.filter((r) => r.status === 'approved').reduce((s, r) => s + r.payment.amount, 0),
+        paid: summaryRows.filter((r) => r.status === 'paid').reduce((s, r) => s + r.payment.amount, 0),
+        rejected: summaryRows.filter((r) => r.status === 'rejected').reduce((s, r) => s + r.payment.amount, 0),
+      }
+
+      res.json({
+        items: items.map((r) => ({
+          id: String(r._id),
+          regNo: r.regNo,
+          hospitalName: r.hospitalName,
+          payer: r.admin.name,
+          payerEmail: r.admin.email,
+          amount: r.payment.amount,
+          transactionCode: r.payment.transactionCode ?? '',
+          paidAt: r.payment.paidAt,
+          status: r.status,
+        })),
+        total: items.length,
+        summary,
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+)
+
+// ---------- Announcements ----------
+// Platform-wide banners shown inside every hospital dashboard.
+
+// GET /master/announcements — all banners, newest first.
+masterRouter.get('/announcements', requireMasterAuth, async (_req, res, next) => {
+  try {
+    const items = await platformAnnouncementModel().find({}).sort({ createdAt: -1 }).limit(100).lean()
+    res.json({
+      items: items.map((a) => ({
+        id: String(a._id),
+        title: a.title,
+        message: a.message,
+        audience: a.audience,
+        active: a.active,
+        createdBy: a.createdBy,
+        createdAt: a.createdAt,
+        updatedAt: a.updatedAt,
+      })),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// POST /master/announcements — create a banner.
+masterRouter.post(
+  '/announcements',
+  requireMasterAuth,
+  validate({
+    body: z.object({
+      title: z.string().min(1, 'title required').max(120),
+      message: z.string().min(1, 'message required').max(2000),
+      audience: z.enum(['all', 'active']).default('all'),
+    }),
+  }),
+  async (req, res, next) => {
+    try {
+      const { title, message, audience } = req.body as { title: string; message: string; audience: 'all' | 'active' }
+      const actor = auditActor(req)
+      const doc = await platformAnnouncementModel().create({
+        title,
+        message,
+        audience,
+        active: true,
+        createdBy: { id: actor.id, email: actor.email },
+      })
+      audit(req, 'announcement_create', `Posted announcement "${title}" (${audience})`, {
+        targetType: 'announcement',
+        targetId: String(doc._id),
+      })
+      res.status(201).json({
+        id: String(doc._id),
+        title: doc.title,
+        message: doc.message,
+        audience: doc.audience,
+        active: doc.active,
+        createdBy: doc.createdBy,
+        createdAt: doc.createdAt,
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+)
+
+// PATCH /master/announcements/:id — activate / retire a banner.
+masterRouter.patch(
+  '/announcements/:id',
+  requireMasterAuth,
+  validate({ body: z.object({ active: z.boolean() }) }),
+  async (req, res, next) => {
+    try {
+      const { active } = req.body as { active: boolean }
+      const doc = await platformAnnouncementModel().findByIdAndUpdate(req.params.id, { $set: { active } }, { new: true })
+      if (!doc) throw new ApiError('Announcement not found', 404)
+      res.json({ id: String(doc._id), active: doc.active })
+    } catch (err) {
+      next(err)
+    }
+  },
+)
+
+// DELETE /master/announcements/:id — permanently remove a banner.
+masterRouter.delete('/announcements/:id', requireMasterAuth, async (req, res, next) => {
+  try {
+    const doc = await platformAnnouncementModel().findByIdAndDelete(req.params.id)
+    if (!doc) throw new ApiError('Announcement not found', 404)
+    audit(req, 'announcement_delete', `Deleted announcement "${doc.title}"`, {
+      targetType: 'announcement',
+      targetId: String(doc._id),
+    })
+    res.json({ message: 'Announcement deleted' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------- GET /master/audit ----------
+// Chronological log of every master admin action. Filterable by action
+// type and searchable by summary/target.
+masterRouter.get(
+  '/audit',
+  requireMasterAuth,
+  validate({
+    query: z.object({
+      action: z.string().max(40).optional(),
+      q: z.string().max(120).optional(),
+      page: z.coerce.number().int().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(200).optional(),
+    }),
+  }),
+  async (req, res, next) => {
+    try {
+      const { action, q, page = 1, limit = 50 } = req.query as { action?: string; q?: string; page?: number; limit?: number }
+      const filter: Record<string, unknown> = {}
+      if (action) filter.action = action
+      if (q) {
+        const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+        filter.$or = [{ summary: rx }, { targetId: rx }]
+      }
+      const [items, total] = await Promise.all([
+        auditLogModel()
+          .find(filter)
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .lean(),
+        auditLogModel().countDocuments(filter),
+      ])
+      res.json({
+        items: items.map((e) => ({
+          id: String(e._id),
+          actor: e.actor,
+          action: e.action,
+          targetType: e.targetType ?? null,
+          targetId: e.targetId ?? null,
+          summary: e.summary,
+          createdAt: e.createdAt,
+        })),
+        total,
+        page,
+        limit,
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+)
+
+// ---------- Contact inbox ----------
+
+// GET /master/contacts?filter=all|open|done
+masterRouter.get(
+  '/contacts',
+  requireMasterAuth,
+  validate({ query: z.object({ filter: z.enum(['all', 'open', 'done']).optional() }) }),
+  async (req, res, next) => {
+    try {
+      const { filter = 'all' } = req.query as { filter?: string }
+      const query = filter === 'open' ? { done: false } : filter === 'done' ? { done: true } : {}
+      const [items, openTotal] = await Promise.all([
+        contactMessageModel().find(query).sort({ createdAt: -1 }).limit(200).lean(),
+        contactMessageModel().countDocuments({ done: false }),
+      ])
+      res.json({
+        items: items.map((c) => ({
+          id: String(c._id),
+          name: c.name,
+          email: c.email,
+          hospital: c.hospital,
+          message: c.message,
+          done: c.done,
+          doneAt: c.doneAt,
+          createdAt: c.createdAt,
+        })),
+        total: items.length,
+        openTotal,
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+)
+
+// PATCH /master/contacts/:id — mark done / reopen.
+masterRouter.patch(
+  '/contacts/:id',
+  requireMasterAuth,
+  validate({ body: z.object({ done: z.boolean() }) }),
+  async (req, res, next) => {
+    try {
+      const { done } = req.body as { done: boolean }
+      const doc = await contactMessageModel().findByIdAndUpdate(
+        req.params.id,
+        { $set: { done, doneAt: done ? new Date() : null } },
+        { new: true },
+      )
+      if (!doc) throw new ApiError('Contact message not found', 404)
+      if (done) {
+        audit(req, 'contact_done', `Marked contact message from "${doc.name}" (${doc.email}) as done`, {
+          targetType: 'contact',
+          targetId: String(doc._id),
+        })
+      }
+      res.json({ id: String(doc._id), done: doc.done })
+    } catch (err) {
+      next(err)
+    }
+  },
+)
+
+// DELETE /master/contacts/:id — remove a contact message.
+masterRouter.delete('/contacts/:id', requireMasterAuth, async (req, res, next) => {
+  try {
+    const doc = await contactMessageModel().findByIdAndDelete(req.params.id)
+    if (!doc) throw new ApiError('Contact message not found', 404)
+    audit(req, 'contact_delete', `Deleted contact message from "${doc.name}" (${doc.email})`, {
+      targetType: 'contact',
+      targetId: String(doc._id),
+    })
+    res.json({ message: 'Contact message deleted' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------- PUT /master/directory/order ----------
+// Reorders the public directory. Body: { slugs: string[] } — the final
+// display order of listed hospitals; hidden hospitals keep their score.
+masterRouter.put(
+  '/directory/order',
+  requireMasterAuth,
+  validate({
+    body: z.object({ slugs: z.array(z.string().min(1).max(60)).max(200) }),
+  }),
+  async (req, res, next) => {
+    try {
+      const { slugs } = req.body as { slugs: string[] }
+      await Promise.all(
+        slugs.map((slug, index) =>
+          hospitalRegistry().updateOne({ slug }, { $set: { displayOrder: index + 1 } }),
+        ),
+      )
+      const records = await hospitalRegistry().find({}).sort({ displayOrder: 1, name: 1 }).limit(200).lean()
+      res.json({ items: records.map((h) => publicHospital(h)) })
+    } catch (err) {
+      next(err)
+    }
+  },
+)

@@ -11,6 +11,7 @@ import { ENDPOINTS, withParams } from '../endpoints'
 import { http, USE_MOCK_API } from '../client'
 import { mockDelay } from '../mock'
 import { store, nextId } from '../store'
+import { dayOfWeek } from '../availability'
 import type {
   Appointment,
   Consultation,
@@ -128,6 +129,48 @@ export async function cancelAppointment(id: string): Promise<Appointment> {
     return store.appointments[idx]
   }
   return http.post<Appointment>(withParams(ENDPOINTS.DOCTOR_APPOINTMENT_CANCEL, { id }))
+}
+
+export interface RescheduleAppointmentInput {
+  date: string
+  time: string
+  durationMin?: number
+  reason: string
+  note?: string
+}
+
+export async function rescheduleAppointment(
+  id: string,
+  input: RescheduleAppointmentInput,
+): Promise<Appointment> {
+  if (USE_MOCK_API) {
+    await mockDelay(600)
+    const idx = store.appointments.findIndex((a) => a.id === id)
+    if (idx === -1) throw new Error('Appointment not found')
+    const existing = store.appointments[idx]!
+    const doctor = store.doctors.find((d) => d.id === existing.doctorId)
+    const day = dayOfWeek(input.date)
+    if (doctor && doctor.schedule.length > 0 && !doctor.schedule.includes(day)) {
+      throw new Error(`${doctor.name} does not work on ${day} — choose a working day`)
+    }
+    const clash = store.appointments.some(
+      (a) =>
+        a.id !== id &&
+        a.doctorId === existing.doctorId &&
+        a.date === input.date &&
+        a.time === input.time &&
+        a.status !== 'Cancelled',
+    )
+    if (clash) throw new Error('This time slot is already booked — choose a different time')
+    store.appointments[idx] = {
+      ...existing,
+      date: input.date,
+      time: input.time,
+      durationMin: input.durationMin ?? existing.durationMin,
+    }
+    return store.appointments[idx]
+  }
+  return http.post<Appointment>(withParams(ENDPOINTS.DOCTOR_APPOINTMENT_RESCHEDULE, { id }), input)
 }
 
 export async function listConsultations(q: { patientId?: string } = {}): Promise<Consultation[]> {

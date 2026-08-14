@@ -1,19 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft, Building2, Calendar, CheckCircle2, CreditCard, Lock, Mail, Phone, ShieldCheck, User,
 } from 'lucide-react'
 import { MedicoreLogo } from '../../components/ui/MedicoreLogo'
 import { Field, Input, Button } from '../../components/ui'
-import { masterApi, type PublicPlatformInfo } from '../../api/services/master'
+import { masterApi } from '../../api/services/master'
 import '../landing/landing.css'
 
-function formatNpr(amount: number): string {
-  return `NPR ${amount.toLocaleString('en-US')}`
-}
-
 export default function RegisterHospital() {
-  const [platform, setPlatform] = useState<PublicPlatformInfo | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
@@ -23,12 +18,6 @@ export default function RegisterHospital() {
     phone: '',
     birthYear: '',
   })
-
-  useEffect(() => {
-    masterApi.publicPlatform().then(setPlatform).catch(() => setPlatform(null))
-  }, [])
-
-  const fee = platform?.registrationFee ?? 2000
 
   const set =
     (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -51,7 +40,6 @@ export default function RegisterHospital() {
         phone: form.phone,
         birthYear: year,
       })
-      // No gateway configured — registration cannot proceed (server returns 503).
       // Auto-submit the hidden form to eSewa; the browser returns to
       // /master/register/status?payment=... after the payment.
       const gateForm = document.createElement('form')
@@ -77,11 +65,11 @@ export default function RegisterHospital() {
     <div className="lp-book">
       <nav className="lp-book-nav">
         <div className="lp-container lp-book-nav-inner">
-          <Link to="/" className="lp-book-brand">
+          <Link to="/home" className="lp-book-brand">
             <MedicoreLogo size={30} />
             Medicore HMS
           </Link>
-          <Link to="/" className="lp-book-back">
+          <Link to="/home" className="lp-book-back">
             <ArrowLeft size={16} /> Back to home
           </Link>
         </div>
@@ -94,7 +82,7 @@ export default function RegisterHospital() {
           <header className="lp-book-head">
             <h1>Register your hospital</h1>
             <p>
-              Pay the one-time registration fee of <strong>{formatNpr(fee)}</strong> by eSewa, and
+              Pay the one-time registration fee by eSewa, and
               the platform team will review your request. Once approved, your hospital goes live
               and your login credentials — along with your payment receipt — are emailed to you.
             </p>
@@ -190,7 +178,7 @@ export default function RegisterHospital() {
                   {error && <div className="auth-error">{error}</div>}
 
                   <Button type="submit" size="lg" block loading={busy}>
-                    Pay {formatNpr(fee)} &amp; Submit Request
+                    Pay &amp; Submit Request
                   </Button>
                 </form>
               </div>
@@ -204,11 +192,7 @@ export default function RegisterHospital() {
                 <ul className="lp-summary-list">
                   <li>
                     <span>Registration fee</span>
-                    <strong>{formatNpr(fee)}</strong>
-                  </li>
-                  <li>
-                    <span>One-time</span>
-                    <strong>Yes</strong>
+                    <strong>One-time</strong>
                   </li>
                   <li>
                     <span>Payment method</span>
@@ -217,7 +201,7 @@ export default function RegisterHospital() {
                 </ul>
                 <div className="lp-summary-note">
                   <CheckCircleIcon />
-                  Free registration is no longer available — every hospital pays the one-time fee.
+                  Every hospital pays the one-time registration fee.
                   Your receipt is included in the approval email.
                 </div>
               </div>

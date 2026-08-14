@@ -539,6 +539,67 @@
 }
 .lp-form-success-title { font-size: 20px; font-weight: 800; color: var(--lp-ink); }
 .lp-form-success-sub { font-size: 14px; color: var(--lp-muted); }
+.lp-form-error {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 10px 14px;
+  border-radius: var(--lp-radius); background: #fee2e2; color: #b91c1c; font-size: 13.5px; font-weight: 600;
+}
+
+/* ---------- Booking calendar ---------- */
+.lp-cal { border: 1.5px solid var(--lp-border); border-radius: var(--lp-radius); padding: 12px; background: #fff; }
+.lp-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.lp-cal-month { font-family: var(--lp-font-head); font-weight: 800; font-size: 14.5px; color: var(--lp-ink); }
+.lp-cal-nav {
+  width: 28px; height: 28px; border-radius: 8px; border: 1.5px solid var(--lp-border);
+  background: #fff; color: var(--lp-primary); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .15s;
+}
+.lp-cal-nav:hover:not(:disabled) { border-color: var(--lp-primary); background: var(--lp-soft); }
+.lp-cal-nav:disabled { opacity: .35; cursor: default; }
+.lp-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.lp-cal-dow {
+  font-size: 11px; font-weight: 700; color: var(--lp-muted); text-align: center;
+  padding: 4px 0; text-transform: uppercase; letter-spacing: .04em;
+}
+.lp-cal-day {
+  aspect-ratio: 1; border: 1.5px solid transparent; border-radius: 8px; background: var(--lp-soft);
+  color: var(--lp-primary-deep); font-size: 13.5px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all .12s;
+}
+.lp-cal-day:hover:not(:disabled) { border-color: var(--lp-primary); background: #e0f2fe; }
+.lp-cal-day:disabled { background: #f8fafc; color: #cbd5e1; cursor: default; }
+.lp-cal-day--blank { visibility: hidden; }
+.lp-cal-day--booked,
+.lp-cal-day--booked:hover:not(:disabled),
+.lp-cal-day--booked:disabled {
+  background: #fef2f2; color: #b91c1c; cursor: default;
+  flex-direction: column; gap: 1px;
+}
+.lp-cal-booked-tag {
+  font-size: 8.5px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .05em; opacity: .8; line-height: 1;
+}
+.lp-cal-day--selected,
+.lp-cal-day--selected:hover:not(:disabled) {
+  background: var(--lp-primary); border-color: var(--lp-primary); color: #fff;
+  box-shadow: 0 2px 8px rgba(14,116,144,.25);
+}
+
+/* ---------- Public directory ---------- */
+.lp-directory { padding: 100px 0; background: #ffffff; }
+.lp-directory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 8px; }
+.lp-directory-card {
+  background: #f8fafc; border: 1px solid var(--lp-border); border-radius: var(--lp-radius);
+  padding: 28px; display: flex; flex-direction: column; gap: 8px; transition: all .15s;
+}
+.lp-directory-card:hover { transform: translateY(-3px); box-shadow: var(--lp-shadow); border-color: var(--lp-primary); }
+.lp-directory-icon {
+  width: 46px; height: 46px; border-radius: 12px; background: var(--lp-soft);
+  color: var(--lp-primary); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;
+}
+.lp-directory-name { font-size: 16.5px; font-weight: 800; color: var(--lp-ink); }
+.lp-directory-slug { font-size: 13px; color: var(--lp-muted); font-family: ui-monospace, monospace; }
+.lp-directory-since { font-size: 12.5px; color: var(--lp-muted); }
+.lp-directory-book { margin-top: 10px; align-self: flex-start; font-size: 13.5px; }
 
 /* ---------- Book appointment page ---------- */
 .lp-book { background: var(--lp-soft); min-height: 100vh; position: relative; }
@@ -607,6 +668,7 @@
 }
 .lp-book-card select.lp-input { appearance: auto; }
 .lp-book-hint { font-size: 12.5px; color: var(--lp-muted); }
+.lp-book-hint-error { color: #dc2626; display: block; margin-top: 4px; }
 
 /* Section titles with number chips */
 .lp-book-card .lp-form-title { display: flex; align-items: center; gap: 10px; font-size: 18px; margin-top: 28px; }
@@ -643,6 +705,15 @@
 .lp-form-success-icon.tone-success { background: #d1fae5; color: #059669; }
 .lp-form-success-icon.tone-error { background: #fee2e2; color: #b91c1c; }
 .lp-form-success-icon.tone-warn { background: #fef3c7; color: #b45309; }
+.lp-form-success-icon.tone-info { background: #e0f2fe; color: #0e7490; }
+.lp-spinner {
+  width: 30px; height: 30px;
+  border: 3.5px solid rgba(14,116,144,.18);
+  border-top-color: #0e7490;
+  border-radius: 50%;
+  animation: lp-spin .8s linear infinite;
+}
+@keyframes lp-spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 900px) {
   .lp-book-grid { grid-template-columns: 1fr; }
@@ -683,6 +754,7 @@
   .lp-about-inner { grid-template-columns: 1fr; gap: 48px; }
   .lp-module-display { grid-template-columns: 1fr; gap: 36px; }
   .lp-testimonials-grid { grid-template-columns: 1fr 1fr; }
+  .lp-directory-grid { grid-template-columns: 1fr 1fr; }
   .lp-contact-inner { grid-template-columns: 1fr; gap: 48px; }
   .lp-footer-main { grid-template-columns: 1fr 1fr; gap: 36px; }
   .lp-stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -695,6 +767,7 @@
   .lp-about-right { grid-template-columns: 1fr; }
   .lp-about-card-big { grid-column: span 1; }
   .lp-testimonials-grid { grid-template-columns: 1fr; }
+  .lp-directory-grid { grid-template-columns: 1fr; }
   .lp-footer-main { grid-template-columns: 1fr; gap: 28px; }
   .lp-footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
   .lp-form-row { grid-template-columns: 1fr; }

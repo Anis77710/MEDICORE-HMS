@@ -59,6 +59,7 @@ export interface HospitalRecord {
   adminEmail: string
   status: 'active' | 'suspended'
   listed?: boolean
+  displayOrder?: number
   createdAt?: Date
   updatedAt?: Date
 }
@@ -71,6 +72,7 @@ const hospitalSchema = new Schema<HospitalRecord>(
     adminEmail: { type: String, required: true, lowercase: true, trim: true, index: true },
     status: { type: String, enum: ['active', 'suspended'], default: 'active' },
     listed: { type: Boolean, default: true },
+    displayOrder: { type: Number, default: 0 },
   },
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },
 )

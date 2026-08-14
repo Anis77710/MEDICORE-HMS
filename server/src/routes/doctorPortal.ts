@@ -10,7 +10,7 @@ import { UserModel } from '../models/User.js'
 import { requireAuth, requireRole, type AuthedRequest } from '../middleware/auth.js'
 import { validate, queryOf } from '../middleware/validate.js'
 import { writeAuditLog } from './staff.js'
-import { getAvailabilitySlots, isWorkingDay } from '../domain/availability.js'
+import { getAvailabilitySlots, isWorkingDay, isPastSlot, isSlotFree, dayFullName } from '../domain/availability.js'
 import { makeReadableId } from '../models/Counter.js'
 import { notifyAppointmentEvent } from '../utils/appointmentMailer.js'
 
@@ -233,6 +233,83 @@ doctorPortalRouter.post(
   '/appointments/:id/complete',
   validate({ params: z.object({ id: z.string() }) }),
   transition('Completed'),
+)
+
+// ---------- POST /doctor-portal/appointments/:id/reschedule ----------
+// Doctor moves a patient's appointment to a new slot and the patient is
+// notified by email with the reason (e.g. an emergency on the doctor's side).
+const rescheduleBody = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
+  time: z.string().regex(/^\d{2}:\d{2}$/, 'time must be HH:mm'),
+  durationMin: z.coerce.number().int().min(5).max(240).optional(),
+  reason: z.string().min(2, 'reason is required').max(120),
+  note: z.string().max(500).default(''),
+})
+
+doctorPortalRouter.post(
+  '/appointments/:id/reschedule',
+  validate({ params: z.object({ id: z.string() }), body: rescheduleBody }),
+  async (req, res, next) => {
+    try {
+      const doctor = await resolveDoctor(req)
+      assertCanServe(doctor)
+      const body = req.body as z.infer<typeof rescheduleBody>
+      const appointment = await AppointmentModel.findById(req.params.id)
+      if (!appointment) throw new ApiError('Appointment not found', 404)
+      if (appointment.doctorId !== doctor._id.toString()) {
+        throw new ApiError('You do not have permission to modify this appointment', 403)
+      }
+      if (appointment.status === 'Completed') {
+        throw new ApiError('A completed appointment cannot be rescheduled', 400)
+      }
+      const previous = {
+        date: appointment.date,
+        time: appointment.time,
+        doctorName: appointment.doctorName,
+      }
+      const targetDuration = body.durationMin ?? appointment.durationMin
+      if (!isWorkingDay(doctor, body.date)) {
+        throw new ApiError(
+          `You do not work on ${dayFullName(body.date)} — choose a working day`,
+          409,
+        )
+      }
+      if (isPastSlot(body.date, body.time)) {
+        throw new ApiError('Cannot reschedule to a past slot — choose a future date and time', 400)
+      }
+      const clashes = await AppointmentModel.find({
+        doctorId: doctor._id.toString(),
+        date: body.date,
+        status: { $ne: 'Cancelled' },
+      }).select('date time durationMin status')
+      if (!isSlotFree(clashes, body.date, body.time, targetDuration, String(appointment._id))) {
+        throw new ApiError(
+          'This time slot is already booked — choose a different time',
+          409,
+        )
+      }
+      appointment.date = body.date
+      appointment.time = body.time
+      appointment.durationMin = targetDuration
+      await appointment.save()
+      await writeAuditLog(req as AuthedRequest, 'appointment-reschedule', 'appointment', String(appointment._id), {
+        doctorId: String(doctor._id),
+        patientId: appointment.patientId,
+        from: `${previous.date}T${previous.time}`,
+        to: `${body.date}T${body.time}`,
+        reason: body.reason,
+      })
+      void notifyAppointmentEvent(appointment, {
+        kind: 'rescheduled',
+        previous,
+        reason: body.reason,
+        note: body.note || undefined,
+      })
+      res.json(appointment)
+    } catch (err) {
+      next(err)
+    }
+  },
 )
 
 // ---------- Consultations ----------

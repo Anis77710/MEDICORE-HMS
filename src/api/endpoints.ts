@@ -23,9 +23,12 @@ export const ENDPOINTS = {
   // ---------- Public (no auth) ----------
   PUBLIC_DOCTORS: '/public/doctors',
   PUBLIC_DOCTOR_AVAILABILITY: '/public/doctors/:id/availability',
+  PUBLIC_DOCTOR_AVAILABILITY_MONTH: '/public/doctors/:id/availability-month',
   PUBLIC_PAYMENT_INITIATE: '/public/payment/initiate',
+  PUBLIC_PAYMENT_RECONCILE: '/public/payment/reconcile',
   PUBLIC_HOSPITALS: '/public/hospitals',
   PUBLIC_PLATFORM: '/public/platform',
+  PUBLIC_CONTACT: '/public/contact',
 
   // ---------- Master admin (platform panel) ----------
   MASTER_LOGIN: '/master/login',
@@ -42,13 +45,22 @@ export const ENDPOINTS = {
   MASTER_HOSPITAL_LISTED: '/master/hospitals/:slug/listed',
   MASTER_HOSPITAL_DELETE: '/master/hospitals/:slug',
   MASTER_SETTINGS: '/master/settings',
+  MASTER_ANALYTICS: '/master/analytics',
+  MASTER_RECEIPTS: '/master/receipts',
+  MASTER_ANNOUNCEMENTS: '/master/announcements',
+  MASTER_ANNOUNCEMENT_DETAIL: '/master/announcements/:id',
+  MASTER_AUDIT: '/master/audit',
+  MASTER_CONTACTS: '/master/contacts',
+  MASTER_CONTACT_DETAIL: '/master/contacts/:id',
+  MASTER_DIRECTORY_ORDER: '/master/directory/order',
 
   // ---------- Consultations (admin oversight) ----------
   CONSULTATIONS: '/consultations',
   CONSULTATION_DETAIL: '/consultations/:id',
 
-  // ---------- Dashboard ----------
+  // ---------- Dashboard (hospital) ----------
   DASHBOARD_STATS: '/dashboard/stats',
+  DASHBOARD_ANNOUNCEMENTS: '/dashboard/announcements',
 
   // ---------- Patients ----------
   PATIENTS: '/patients',
@@ -141,6 +153,7 @@ export const ENDPOINTS = {
   DOCTOR_APPOINTMENT_CONFIRM: '/doctor-portal/appointments/:id/confirm',
   DOCTOR_APPOINTMENT_CANCEL: '/doctor-portal/appointments/:id/cancel',
   DOCTOR_APPOINTMENT_COMPLETE: '/doctor-portal/appointments/:id/complete',
+  DOCTOR_APPOINTMENT_RESCHEDULE: '/doctor-portal/appointments/:id/reschedule',
   DOCTOR_CONSULTATIONS: '/doctor-portal/consultations',
   DOCTOR_CONSULTATION: '/doctor-portal/consultations/:id',
   DOCTOR_PRESCRIPTIONS: '/doctor-portal/prescriptions',

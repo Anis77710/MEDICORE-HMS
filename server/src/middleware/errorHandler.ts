@@ -15,6 +15,17 @@ export function requireErrorHandler(
     res.status(400).json({ message: 'Malformed JSON body' })
     return
   }
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as { name?: string }).name === 'MongoServerError' &&
+    (err as { code?: number }).code === 11000
+  ) {
+    res.status(409).json({
+      message: 'A record with these details already exists — check for duplicates and try again',
+    })
+    return
+  }
   console.error('[unhandled]', err)
   res.status(500).json({ message: 'Internal server error' })
 }

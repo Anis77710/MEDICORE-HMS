@@ -131,6 +131,22 @@ export function verifyEsewaCallback(
   return data
 }
 
+/**
+ * Extracts the transaction_uuid from a callback payload WITHOUT verifying the
+ * signature — used only to reconcile against eSewa's transaction status API,
+ * which is the authoritative record of whether the money actually moved.
+ */
+export function extractCallbackUuid(dataPayload: string): string | undefined {
+  try {
+    const parsed = decodeCallbackData(dataPayload)
+    if (!parsed || typeof parsed !== 'object') return undefined
+    const uuid = (parsed as Record<string, unknown>).transaction_uuid
+    return typeof uuid === 'string' && uuid.length > 0 ? uuid : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** Queries eSewa for the final status of a transaction (not signature-signed). */
 export async function checkEsewaStatus(
   transactionUuid: string,

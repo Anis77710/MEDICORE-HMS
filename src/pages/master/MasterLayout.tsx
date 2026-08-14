@@ -7,18 +7,24 @@ import {
   LayoutDashboard,
   Building2,
   ClipboardList,
-  Receipt,
-  Settings,
   LogOut,
   X,
+  BarChart3,
+  Receipt,
+  Megaphone,
+  History,
+  Inbox,
 } from 'lucide-react'
 
 const NAV_ITEMS: { to: string; label: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; end?: boolean }[] = [
   { to: '/master', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/master/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/master/hospitals', label: 'Hospitals', icon: Building2 },
   { to: '/master/requests', label: 'Requests', icon: ClipboardList },
   { to: '/master/receipts', label: 'Receipts', icon: Receipt },
-  { to: '/master/settings', label: 'Platform Settings', icon: Settings },
+  { to: '/master/announcements', label: 'Announcements', icon: Megaphone },
+  { to: '/master/audit', label: 'Audit Log', icon: History },
+  { to: '/master/inbox', label: 'Contact Inbox', icon: Inbox },
 ]
 
 function MasterSidebar({ onNavigate }: { onNavigate?: () => void }) {

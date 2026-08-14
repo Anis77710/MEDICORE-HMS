@@ -40,15 +40,18 @@ import DoctorMedicalRecords from './pages/doctor/MedicalRecords'
 import LabPage from './pages/doctor/LabPage'
 import ProfilePage from './pages/doctor/ProfilePage'
 import DoctorSettings from './pages/doctor/SettingsPage'
-import MasterLogin from './pages/master/MasterLogin'
 import RegisterHospital from './pages/master/RegisterHospital'
 import RegisterStatus from './pages/master/RegisterStatus'
 import { MasterLayout } from './pages/master/MasterLayout'
 import MasterDashboard from './pages/master/MasterDashboard'
 import MasterHospitals from './pages/master/MasterHospitals'
 import MasterRequests from './pages/master/MasterRequests'
+import MasterAnalytics from './pages/master/MasterAnalytics'
+import MasterHospitalDetail from './pages/master/MasterHospitalDetail'
 import MasterReceipts from './pages/master/MasterReceipts'
-import MasterSettings from './pages/master/MasterSettings'
+import MasterAnnouncements from './pages/master/MasterAnnouncements'
+import MasterAuditLog from './pages/master/MasterAuditLog'
+import MasterContactInbox from './pages/master/MasterContactInbox'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -173,16 +176,9 @@ function MasterProtected({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/master/login" replace />
+    return <Navigate to="/login" replace />
   }
 
-  return <>{children}</>
-}
-
-function MasterPublicOnly({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useMasterAuth()
-  if (isLoading) return null
-  if (isAuthenticated) return <Navigate to="/master" replace />
   return <>{children}</>
 }
 
@@ -191,6 +187,10 @@ function AppRoutes() {
     <Routes>
       {/* Public landing page */}
       <Route path="/" element={<LandingRoute />} />
+      {/* Platform home — always shows the landing page, even for signed-in users
+          (used by public pages like hospital registration whose "Back to home"
+          must not get redirected to a hospital dashboard). */}
+      <Route path="/home" element={<LandingPage />} />
       <Route path="/book-appointment" element={<PublicOnly><BookAppointmentPage /></PublicOnly>} />
 
       <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
@@ -198,16 +198,20 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<PublicOnly><ForgotPassword /></PublicOnly>} />
       <Route path="/verify-otp" element={<PublicOnly><VerifyOtp /></PublicOnly>} />
 
-      {/* Master platform */}
-      <Route path="/master/login" element={<MasterPublicOnly><MasterLogin /></MasterPublicOnly>} />
+      {/* Master platform — sign-in happens on the shared /login screen */}
+      <Route path="/master/login" element={<Navigate to="/login" replace />} />
       <Route path="/master/register" element={<RegisterHospital />} />
       <Route path="/master/register/status" element={<RegisterStatus />} />
       <Route path="/master" element={<MasterProtected><MasterLayout /></MasterProtected>}>
         <Route index element={<MasterDashboard />} />
+        <Route path="analytics" element={<MasterAnalytics />} />
         <Route path="hospitals" element={<MasterHospitals />} />
+        <Route path="hospitals/:slug" element={<MasterHospitalDetail />} />
         <Route path="requests" element={<MasterRequests />} />
         <Route path="receipts" element={<MasterReceipts />} />
-        <Route path="settings" element={<MasterSettings />} />
+        <Route path="announcements" element={<MasterAnnouncements />} />
+        <Route path="audit" element={<MasterAuditLog />} />
+        <Route path="inbox" element={<MasterContactInbox />} />
       </Route>
 
       <Route element={<ProtectedLayout />}>

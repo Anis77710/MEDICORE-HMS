@@ -61,7 +61,21 @@ app.use(
 app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
-app.use(morgan(isProd ? 'combined' : 'dev'))
+app.use(
+  morgan(isProd ? 'combined' : 'dev', {
+    // UptimeRobot polls /api/health every minute — don't flood request logs.
+    skip: (req) => req.path === '/api/health',
+  }),
+)
+
+// Lightweight liveness probe for external uptime monitors (UptimeRobot).
+// Must stay registered BEFORE the /api rate limiter and tenant middleware:
+// no rate limiting, no tenant/DB resolution, no auth — returns in constant
+// time even when MongoDB is temporarily unreachable. Never add DB queries,
+// user data, or internals to this response.
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' })
+})
 
 const globalLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -79,10 +93,6 @@ const authLimiter = rateLimit({
 
 app.use('/api', globalLimiter)
 app.use('/api', tenantMiddleware)
-
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'healsync-api', time: new Date().toISOString() })
-})
 
 app.use('/api/auth', authLimiter, authRouter)
 app.use('/api/public', publicRouter)

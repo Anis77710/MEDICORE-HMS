@@ -1,6 +1,6 @@
 // ============================================================
 // Master admin API service — platform-level operations.
-// Hospital registration is paid (eSewa, NPR 2,000); the master
+// Hospital registration is paid (eSewa, one-time fee); the master
 // admin approves paid requests which provisions the hospital and
 // emails the admin credentials + receipt.
 // ============================================================
@@ -88,7 +88,6 @@ export interface PublicHospital {
 }
 
 export interface PaymentInitiation {
-  regNo: string
   amount: number
   formUrl: string
   fields: Record<string, string>
@@ -100,6 +99,127 @@ export interface HospitalRegistrationInput {
   email: string
   phone?: string
   birthYear: number
+}
+
+// ---------- Analytics ----------
+
+export type AnalyticsRange = '30d' | '90d' | '1y' | 'all'
+
+export interface AnalyticsPoint {
+  label: string
+  value: number
+}
+
+export interface AnalyticsConversionPoint extends AnalyticsPoint {
+  total: number
+  approved: number
+}
+
+export interface AnalyticsTopHospital {
+  slug: string
+  name: string
+  patients: number
+  doctors: number
+  appointments: number
+  requests: number
+}
+
+export interface AnalyticsResponse {
+  range: AnalyticsRange
+  from: string
+  to: string
+  months: string[]
+  revenueSeries: AnalyticsPoint[]
+  registrationSeries: AnalyticsPoint[]
+  funnel: Record<RegistrationStatus, number>
+  top: AnalyticsTopHospital[]
+  conversion: AnalyticsConversionPoint[]
+  projection: { next30Days: number; avgDaily: number; note: string }
+  revenue: { collected: number; pending: number }
+}
+
+// ---------- Receipts ----------
+
+export interface ReceiptItem {
+  id: string
+  regNo: string
+  hospitalName: string
+  payer: string
+  payerEmail: string
+  amount: number
+  transactionCode: string
+  paidAt?: string
+  status: RegistrationStatus
+}
+
+export interface ReceiptsResponse {
+  items: ReceiptItem[]
+  total: number
+  summary: { approved: number; paid: number; rejected: number }
+}
+
+// ---------- Announcements ----------
+
+export interface Announcement {
+  id: string
+  title: string
+  message: string
+  audience: 'all' | 'active'
+  active: boolean
+  createdBy: { id: string; email: string }
+  createdAt?: string
+  updatedAt?: string
+}
+
+// ---------- Audit log ----------
+
+export type AuditAction =
+  | 'login'
+  | 'approve_request'
+  | 'reject_request'
+  | 'hospital_status'
+  | 'hospital_listed'
+  | 'hospital_delete'
+  | 'settings_update'
+  | 'announcement_create'
+  | 'announcement_delete'
+  | 'contact_done'
+  | 'contact_delete'
+
+export interface AuditEntryItem {
+  id: string
+  actor: { id: string; email: string; name: string }
+  action: AuditAction
+  targetType: string | null
+  targetId: string | null
+  summary: string
+  createdAt?: string
+}
+
+export interface AuditResponse {
+  items: AuditEntryItem[]
+  total: number
+  page: number
+  limit: number
+}
+
+// ---------- Contact inbox ----------
+
+export interface ContactMessageItem {
+  id: string
+  name: string
+  email: string
+  hospital: string
+  message: string
+  done: boolean
+  doneAt?: string
+  createdAt?: string
+}
+
+export interface ContactsResponse {
+  items: ContactMessageItem[]
+  total: number
+  openTotal: number
 }
 
 export const masterApi = {
@@ -156,4 +276,46 @@ export const masterApi = {
 
   publicPlatform: () => masterHttp.get<PublicPlatformInfo>(ENDPOINTS.PUBLIC_PLATFORM),
   publicHospitals: () => masterHttp.get<PublicHospital[]>(ENDPOINTS.PUBLIC_HOSPITALS),
+
+  // ---------- Analytics ----------
+  analytics: (range: AnalyticsRange = '30d') =>
+    masterHttp.get<AnalyticsResponse>(ENDPOINTS.MASTER_ANALYTICS, { params: { range } }),
+
+  // ---------- Receipts ----------
+  receipts: (opts: { status?: 'approved' | 'paid' | 'rejected'; from?: string; to?: string } = {}) =>
+    masterHttp.get<ReceiptsResponse>(ENDPOINTS.MASTER_RECEIPTS, { params: opts }),
+
+  // ---------- Announcements ----------
+  listAnnouncements: () => masterHttp.get<{ items: Announcement[] }>(ENDPOINTS.MASTER_ANNOUNCEMENTS),
+
+  createAnnouncement: (input: { title: string; message: string; audience: 'all' | 'active' }) =>
+    masterHttp.post<Announcement>(ENDPOINTS.MASTER_ANNOUNCEMENTS, input),
+
+  setAnnouncementActive: (id: string, active: boolean) =>
+    masterHttp.patch<{ id: string; active: boolean }>(withParams(ENDPOINTS.MASTER_ANNOUNCEMENT_DETAIL, { id }), { active }),
+
+  deleteAnnouncement: (id: string) =>
+    masterHttp.delete<{ message: string }>(withParams(ENDPOINTS.MASTER_ANNOUNCEMENT_DETAIL, { id })),
+
+  // ---------- Audit log ----------
+  audit: (opts: { action?: string; q?: string; page?: number; limit?: number } = {}) =>
+    masterHttp.get<AuditResponse>(ENDPOINTS.MASTER_AUDIT, { params: opts }),
+
+  // ---------- Contact inbox ----------
+  contacts: (filter: 'all' | 'open' | 'done' = 'all') =>
+    masterHttp.get<ContactsResponse>(ENDPOINTS.MASTER_CONTACTS, { params: { filter } }),
+
+  setContactDone: (id: string, done: boolean) =>
+    masterHttp.patch<{ id: string; done: boolean }>(withParams(ENDPOINTS.MASTER_CONTACT_DETAIL, { id }), { done }),
+
+  deleteContact: (id: string) =>
+    masterHttp.delete<{ message: string }>(withParams(ENDPOINTS.MASTER_CONTACT_DETAIL, { id })),
+
+  // ---------- Directory ----------
+  setDirectoryOrder: (slugs: string[]) =>
+    masterHttp.put<{ items: MasterHospital[] }>(ENDPOINTS.MASTER_DIRECTORY_ORDER, { slugs }),
+
+  // ---------- Public contact form ----------
+  submitContact: (input: { name: string; email: string; hospital?: string; message: string }) =>
+    masterHttp.post<{ message: string }>(ENDPOINTS.PUBLIC_CONTACT, input),
 }

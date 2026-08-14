@@ -5,6 +5,9 @@ import { DepartmentModel } from '../models/Department.js'
 import { AppointmentModel } from '../models/Appointment.js'
 import { InvoiceModel } from '../models/Billing.js'
 import { requireAuth } from '../middleware/auth.js'
+import { hospitalOf } from '../middleware/tenant.js'
+import { cachedHospital } from '../config/tenants.js'
+import { platformAnnouncementModel } from '../config/platform.js'
 
 // A patient occupies a bed only while admitted or critical (inpatient).
 const OCCUPYING_STATUSES = ['Admitted', 'Critical']
@@ -116,6 +119,31 @@ dashboardRouter.get('/stats', async (_req, res, next) => {
         department: d.name,
         occupied: occupiedByDept.get(d.name) ?? 0,
         capacity: d.bedCount,
+      })),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /dashboard/announcements — platform announcements the master admin
+// posted. "all" reaches every hospital; "active" only active ones.
+dashboardRouter.get('/announcements', async (req, res, next) => {
+  try {
+    const slug = hospitalOf(req).slug
+    const record = cachedHospital(slug)
+    const audience = record?.status === 'active' ? { $in: ['all', 'active'] } : 'all'
+    const items = await platformAnnouncementModel()
+      .find({ active: true, audience })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean()
+    res.json({
+      items: items.map((a) => ({
+        id: String(a._id),
+        title: a.title,
+        message: a.message,
+        createdAt: a.createdAt,
       })),
     })
   } catch (err) {

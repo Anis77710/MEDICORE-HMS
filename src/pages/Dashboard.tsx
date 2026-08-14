@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, CalendarDays, BedDouble, DollarSign, FileText } from 'lucide-react'
-import { getDashboardStats } from '../api/services/misc'
+import { Users, CalendarDays, BedDouble, DollarSign, FileText, Megaphone, X } from 'lucide-react'
+import { getDashboardAnnouncements, getDashboardStats, type DashboardAnnouncement } from '../api/services/misc'
 import type { DashboardStats } from '../types'
 import { useAuth } from '../context/AuthContext'
 import { Card, StatCard, Spinner, Avatar, StatusBadge } from '../components/ui'
@@ -16,10 +16,20 @@ const TONE_ICON = {
   appointment: { bg: 'var(--amber-bg)', color: 'var(--amber)' },
 }
 
+const DISMISS_KEY = 'medicore_announcement_dismissed'
+
 export default function Dashboard() {
   const { user } = useAuth()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [error, setError] = useState('')
+  const [announcements, setAnnouncements] = useState<DashboardAnnouncement[]>([])
+  const [dismissed, setDismissed] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(DISMISS_KEY) ?? '[]'))
+    } catch {
+      return new Set<string>()
+    }
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -30,10 +40,30 @@ export default function Dashboard() {
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load dashboard')
       })
+    getDashboardAnnouncements()
+      .then((items) => {
+        if (!cancelled) setAnnouncements(items)
+      })
+      .catch(() => {
+        /* banners are optional */
+      })
     return () => {
       cancelled = true
     }
   }, [])
+
+  const dismiss = (id: string) => {
+    setDismissed((prev) => {
+      const next = new Set(prev)
+      next.add(id)
+      try {
+        localStorage.setItem(DISMISS_KEY, JSON.stringify([...next]))
+      } catch {
+        /* storage unavailable */
+      }
+      return next
+    })
+  }
 
   if (error) return <div className="auth-error">{error}</div>
   if (!stats) return <Spinner label="Loading dashboard…" />
@@ -45,8 +75,23 @@ export default function Dashboard() {
     day: 'numeric',
   })
 
+  const visible = announcements.filter((a) => !dismissed.has(a.id))
+
   return (
     <>
+      {visible.map((a) => (
+        <div key={a.id} className="alert alert-info mb-4" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <Megaphone size={17} style={{ marginTop: 2 }} />
+          <div style={{ flex: 1 }}>
+            <strong>{a.title}</strong>
+            <div className="text-sm">{a.message}</div>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={() => dismiss(a.id)} aria-label="Dismiss announcement">
+            <X size={15} />
+          </button>
+        </div>
+      ))}
+
       <div className="page-header">
         <div>
           <h1 className="page-title">Good morning, {user?.name ?? 'Administrator'}</h1>

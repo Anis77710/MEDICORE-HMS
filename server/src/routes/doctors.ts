@@ -158,6 +158,9 @@ doctorsRouter.post(
       if (await UserModel.findOne({ username })) {
         throw new ApiError(`The login username ${username} is already taken — the first name may need to differ`, 409)
       }
+      if (await DoctorModel.findOne({ email })) {
+        throw new ApiError('A doctor with this email already exists — use a different email address', 409)
+      }
       const doctor = await DoctorModel.create(req.body)
       let credentials: { username: string; password: string } | null = null
       if (!(await UserModel.findOne({ email }))) {
@@ -194,6 +197,14 @@ doctorsRouter.put(
     try {
       const before = await DoctorModel.findById(req.params.id)
       if (!before) throw new ApiError('Doctor not found', 404)
+      const body = req.body as { email?: string; name?: string }
+      if (body.email) {
+        const email = body.email.toLowerCase()
+        const clash = await DoctorModel.findOne({ email, _id: { $ne: req.params.id } })
+        if (clash) {
+          throw new ApiError('Another doctor already uses this email — use a different email address', 409)
+        }
+      }
       const doctor = await DoctorModel.findByIdAndUpdate(req.params.id, req.body, { new: true })
       if (!doctor) throw new ApiError('Doctor not found', 404)
       const changed: Record<string, unknown> = {}

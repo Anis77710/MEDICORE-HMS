@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Activity, Eye, EyeOff, Mail, Lock, ShieldCheck, KeyRound } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useMasterAuth } from '../../context/MasterAuthContext'
 import { useToast } from '../../context/ToastContext'
 import { Field, Input, Button } from '../../components/ui'
 import { MedicoreLogo } from '../../components/ui/MedicoreLogo'
 
 export default function Login() {
-  const { login } = useAuth()
+  const { login: loginHospital } = useAuth()
+  const { login: loginMaster } = useMasterAuth()
   const { push } = useToast()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -22,7 +24,17 @@ export default function Login() {
     setError('')
     setBusy(true)
     try {
-      await login(email, password, remember)
+      // Platform administrator credentials are accepted on this screen too —
+      // sign them into the master panel instead of a hospital dashboard.
+      try {
+        await loginMaster(email, password)
+        push('Welcome to the Medicore platform')
+        navigate('/master')
+        return
+      } catch {
+        // Not a platform admin — fall through to hospital sign-in.
+      }
+      await loginHospital(email, password, remember)
       push('Welcome back to Medicore HMS')
       navigate('/')
     } catch (err) {
@@ -66,7 +78,10 @@ export default function Login() {
           <div className="auth-form-panel">
             <div className="auth-form-inner">
               <h2 className="auth-title">Welcome Back</h2>
-              <p className="auth-subtitle">Please enter your details to access the dashboard.</p>
+              <p className="auth-subtitle">
+                Sign in to your hospital dashboard — platform administrators are
+                routed to the master panel automatically.
+              </p>
 
               <form onSubmit={submit} noValidate>
                 <Field label="Username or Email">
@@ -157,7 +172,7 @@ export default function Login() {
               <p className="auth-foot">
                 Registering a new hospital?{' '}
                 <Link to="/master/register" className="auth-link-strong">
-                  Register your hospital (NPR 2,000)
+                  Register your hospital
                 </Link>
               </p>
             </div>

@@ -4,9 +4,10 @@ import {
   Users, CalendarDays, Building2, Pill, Receipt, BarChart3,
   Stethoscope, Shield, Zap, Clock, CheckCircle2, Mail,
   Phone, MapPin, Menu, X, ChevronRight, UserCog,
-  Heart, Award, Lock,
+  Heart, Award, Lock, AlertCircle,
 } from 'lucide-react'
 import { MedicoreLogo } from '../../components/ui/MedicoreLogo'
+import { masterApi, type PublicHospital } from '../../api/services/master'
 import './landing.css'
 
 /* ─── Navbar ─────────────────────────────────────────────── */
@@ -20,7 +21,7 @@ function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const links = ['Home', 'About', 'Features', 'Contact']
+  const links = ['Home', 'About', 'Features', 'Hospitals', 'Contact']
 
   const scrollTo = (id: string) => {
     setMenuOpen(false)
@@ -717,21 +718,92 @@ function CTABanner() {
   )
 }
 
+/* ─── Public Directory ───────────────────────────────────── */
+function Directory() {
+  const [hospitals, setHospitals] = useState<PublicHospital[]>([])
+  const [enabled, setEnabled] = useState(true)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([masterApi.publicPlatform(), masterApi.publicHospitals()])
+      .then(([platform, list]) => {
+        if (cancelled) return
+        setEnabled(platform.hospitalDirectoryEnabled)
+        setHospitals(list)
+      })
+      .catch(() => {
+        /* directory is optional — hide on failure */
+      })
+      .finally(() => {
+        if (!cancelled) setLoaded(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (!loaded || !enabled || hospitals.length === 0) return null
+
+  return (
+    <section id="hospitals" className="lp-directory">
+      <div className="lp-container">
+        <div className="lp-section-head">
+          <h2 className="lp-section-title">Hospitals on Medicore</h2>
+          <p className="lp-section-sub">The hospitals already running their day-to-day on the Medicore platform.</p>
+        </div>
+        <div className="lp-directory-grid">
+          {hospitals.map((h) => (
+            <div key={h.slug} className="lp-directory-card">
+              <div className="lp-directory-icon">
+                <Building2 size={22} />
+              </div>
+              <div className="lp-directory-name">{h.name}</div>
+              <div className="lp-directory-slug">/{h.slug}</div>
+              {h.createdAt && (
+                <div className="lp-directory-since">On Medicore since {new Date(h.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}</div>
+              )}
+              <Link
+                to={`/book-appointment?hospital=${encodeURIComponent(h.slug)}`}
+                className="lp-btn lp-btn-outline lp-directory-book"
+              >
+                Book an appointment
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 /* ─── Contact ────────────────────────────────────────────── */
 function Contact() {
   const [form, setForm] = useState({ name: '', email: '', hospital: '', message: '' })
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [formError, setFormError] = useState('')
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const { name, email, message } = form
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      setFormError('Please fill in your name, email and message.')
+      return
+    }
     setBusy(true)
-    await new Promise((r) => setTimeout(r, 1000))
-    setSent(true)
-    setBusy(false)
+    setFormError('')
+    try {
+      await masterApi.submitContact({ name: name.trim(), email: email.trim(), hospital: form.hospital.trim(), message: message.trim() })
+      setSent(true)
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Could not send your message — please try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -781,6 +853,11 @@ function Contact() {
               <>
                 <div className="lp-form-title">Send us a message</div>
                 <form onSubmit={submit}>
+                  {formError && (
+                    <div className="lp-form-error">
+                      <AlertCircle size={15} /> {formError}
+                    </div>
+                  )}
                   <div className="lp-form-row">
                     <div className="lp-field">
                       <label className="lp-label">Full Name</label>
@@ -874,6 +951,7 @@ export default function LandingPage() {
       <Features />
       <Modules />
       <Testimonials />
+      <Directory />
       <CTABanner />
       <Contact />
       <Footer />

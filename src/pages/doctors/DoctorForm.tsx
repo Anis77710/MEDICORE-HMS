@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { CheckCircle2, XCircle, RotateCcw } from 'lucide-react'
 import { createDoctor, updateDoctor } from '../../api/services/doctors'
 import type { Doctor } from '../../types'
 import { Field, Input, Button, FormActions } from '../../components/ui'
@@ -17,6 +18,12 @@ const DEPARTMENTS = [
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+interface DoctorResult {
+  ok: boolean
+  message: string
+  credentials?: { username: string; password: string } | null
+}
+
 export function DoctorForm({
   doctor,
   onDone,
@@ -27,6 +34,8 @@ export function DoctorForm({
   const { push } = useToast()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [result, setResult] = useState<DoctorResult | null>(null)
+  const submittingRef = useRef(false)
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -72,28 +81,115 @@ export function DoctorForm({
     }))
   }
 
+  const resetAndAddAnother = () => {
+    setResult(null)
+    setError('')
+    setForm({
+      name: '',
+      email: '',
+      phone: '',
+      department: 'General Medicine',
+      specialty: '',
+      qualification: '',
+      experienceYears: 5,
+      consultationFee: 80,
+      status: 'Active' as Doctor['status'],
+      schedule: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      birthYear: '',
+    })
+  }
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (submittingRef.current) return
     setError('')
     setBusy(true)
+    submittingRef.current = true
     try {
       if (doctor) {
         await updateDoctor(doctor.id, { ...form, birthYear: form.birthYear ? Number(form.birthYear) : undefined })
-        push('Doctor updated')
+        setResult({ ok: true, message: `Dr. ${form.name} has been updated successfully.` })
       } else {
         const year = parseInt(form.birthYear, 10)
         if (Number.isNaN(year) || year < 1900 || year > 2100) {
           setError('Please enter a valid birth year (e.g. 1985)')
           setBusy(false)
+          submittingRef.current = false
           return
         }
-        await createDoctor({ ...form, birthYear: year })
+        const created = await createDoctor({ ...form, birthYear: year })
+        setResult({
+          ok: true,
+          message: `Dr. ${form.name} has been added successfully. Login credentials were sent to ${form.email}.`,
+          credentials: created.credentials,
+        })
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save doctor')
+      setResult({
+        ok: false,
+        message: err instanceof Error ? err.message : 'Failed to save doctor',
+      })
     } finally {
       setBusy(false)
+      submittingRef.current = false
     }
+  }
+
+  if (result) {
+    return (
+      <div className={`doctor-result ${result.ok ? 'doctor-result-ok' : 'doctor-result-error'}`}>
+        <div className="doctor-result-icon">
+          {result.ok ? <CheckCircle2 size={44} /> : <XCircle size={44} />}
+        </div>
+        <div className="doctor-result-title">
+          {result.ok
+            ? doctor
+              ? 'Doctor updated'
+              : 'Doctor created successfully'
+            : 'Failed to save doctor'}
+        </div>
+        <div className="doctor-result-sub">{result.message}</div>
+
+        {result.ok && result.credentials && (
+          <div className="doctor-result-credentials">
+            <div className="doctor-result-credentials-title">Temporary login credentials</div>
+            <div className="doctor-result-credentials-row">
+              <span>Username</span>
+              <strong>{result.credentials.username}</strong>
+            </div>
+            <div className="doctor-result-credentials-row">
+              <span>Password</span>
+              <strong>{result.credentials.password}</strong>
+            </div>
+            <div className="doctor-result-credentials-hint">
+              Share these with the doctor — they can change them after first login.
+            </div>
+          </div>
+        )}
+
+        <FormActions>
+          {result.ok ? (
+            <>
+              <Button type="button" variant="outline" onClick={resetAndAddAnother}>
+                <RotateCcw size={16} /> Add another
+              </Button>
+              <Button type="button" onClick={() => onDone(true)}>
+                Done
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button type="button" variant="outline" onClick={() => setResult(null)}>
+                Try again
+              </Button>
+              <Button type="button" variant="outline" onClick={() => onDone(false)}>
+                Cancel
+              </Button>
+            </>
+          )}
+        </FormActions>
+      </div>
+    )
   }
 
   return (

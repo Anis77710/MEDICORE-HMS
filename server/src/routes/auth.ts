@@ -25,6 +25,7 @@ import {
   cachedHospital,
   findHospitalByAdminEmail,
   getTenantConnection,
+  hospitalRegistry,
   isValidSlug,
   type HospitalInfo,
 } from '../config/tenants.js'
@@ -87,6 +88,29 @@ async function resolveLoginHospital(
       throw new ApiError('This hospital has been suspended — contact the platform administrator', 403)
     }
     return { slug: first.slug, name: first.name }
+  }
+
+  // Synthetic username (firstname@medicore.hms) — the credentials email tells
+  // admins to sign in with this, but it never matches a registry admin email.
+  // Find which registered hospital owns the username and sign into that
+  // tenant, instead of always falling back to the default hospital (which
+  // made username logins fail with "Invalid email or password" for every
+  // hospital admin/doctor/staff outside the default hospital).
+  if (identifier.endsWith('@medicore.hms')) {
+    const hospitals = await hospitalRegistry().find({}).lean()
+    const currentSlug = hospitalOf(req as Request).slug
+    for (const h of hospitals) {
+      if (h.slug === currentSlug) continue
+      const owner = await getTenantConnection(h.slug)
+        .collection('users')
+        .findOne({ username: identifier }, { projection: { _id: 1 } })
+      if (owner) {
+        if (h.status === 'suspended') {
+          throw new ApiError('This hospital has been suspended — contact the platform administrator', 403)
+        }
+        return { slug: h.slug, name: h.name }
+      }
+    }
   }
 
   return hospitalOf(req as Request)
@@ -172,7 +196,7 @@ authRouter.post(
   (_req, _res, next) => {
     next(
       new ApiError(
-        'Hospital registration now requires a one-time eSewa payment (NPR 2,000). ' +
+        'Hospital registration now requires a one-time eSewa payment. ' +
           'Register through the paid flow at /master/register — your request will be ' +
           'reviewed by the platform team and your login credentials will be emailed to you.',
         410,

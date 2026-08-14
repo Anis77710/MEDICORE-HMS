@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Building2, ClipboardList, IndianRupee, Activity, ArrowRight,
+  Building2, ClipboardList, IndianRupee, Activity, ArrowRight, TrendingUp, Banknote,
 } from 'lucide-react'
-import { masterApi, type MasterStats } from '../../api/services/master'
-import { Card, StatCard, Spinner, EmptyState, Badge, PageHeader } from '../../components/ui'
+import { masterApi, type MasterStats, type AnalyticsRange, type AnalyticsResponse } from '../../api/services/master'
+import { Card, StatCard, Spinner, EmptyState, Badge, PageHeader, Button } from '../../components/ui'
+import { AreaChart, BarChart, DonutChart } from '../../components/charts'
 
 const REQUEST_TONE: Record<string, 'amber' | 'green' | 'blue' | 'red' | 'gray'> = {
   pending_payment: 'amber',
@@ -18,20 +19,37 @@ const HOSPITAL_TONE: Record<string, 'green' | 'gray'> = {
   suspended: 'gray',
 }
 
+const RANGES: { value: AnalyticsRange; label: string }[] = [
+  { value: '30d', label: '30d' },
+  { value: '90d', label: '90d' },
+  { value: '1y', label: '1y' },
+  { value: 'all', label: 'All' },
+]
+
 function npr(n: number): string {
   return `NPR ${n.toLocaleString('en-US')}`
 }
 
 export default function MasterDashboard() {
   const [stats, setStats] = useState<MasterStats | null>(null)
+  const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null)
+  const [range, setRange] = useState<AnalyticsRange>('30d')
   const [error, setError] = useState('')
 
   const load = () => {
     masterApi.stats().then(setStats).catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'))
   }
+  const loadAnalytics = (r: AnalyticsRange) => {
+    masterApi.analytics(r).then(setAnalytics).catch(() => {
+      /* charts are secondary — dashboard still renders with stats */
+    })
+  }
   useEffect(() => {
     load()
   }, [])
+  useEffect(() => {
+    loadAnalytics(range)
+  }, [range])
 
   if (error) return <div className="auth-error">{error}</div>
   if (!stats) return <Spinner label="Loading platform overview…" />
@@ -46,8 +64,11 @@ export default function MasterDashboard() {
         subtitle="Every hospital on the Medicore platform, at a glance."
         actions={
           <>
-            <Link to="/master/requests" className="btn btn-outline">
-              <ClipboardList size={16} /> Requests
+            <Link to="/master/analytics" className="btn btn-outline">
+              <TrendingUp size={16} /> Analytics
+            </Link>
+            <Link to="/master/receipts" className="btn btn-outline">
+              <Banknote size={16} /> Receipts
             </Link>
             <Link to="/master/hospitals" className="btn btn-primary">
               <Building2 size={16} /> Manage Hospitals
@@ -104,6 +125,101 @@ export default function MasterDashboard() {
           footer={<span>{stats.requests.rejected} rejected</span>}
         />
       </div>
+
+      {analytics && (
+        <>
+          <div className="grid-2 mb-4">
+            <Card padded>
+              <div className="card-title-row">
+                <h3 className="card-title">Revenue</h3>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {RANGES.map((r) => (
+                    <Button key={r.value} size="sm" variant={range === r.value ? 'primary' : 'ghost'} onClick={() => setRange(r.value)}>
+                      {r.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              {analytics.revenueSeries.length === 0 ? (
+                <EmptyState title="No revenue yet" hint="Approved registration fees will appear here." />
+              ) : (
+                <AreaChart data={analytics.revenueSeries} color="#059669" width={520} height={200} />
+              )}
+              <div className="text-sm muted" style={{ marginTop: 8 }}>
+                Collected <strong style={{ color: 'var(--text)' }}>{npr(analytics.revenue.collected)}</strong> · Pending{' '}
+                <strong style={{ color: 'var(--text)' }}>{npr(analytics.revenue.pending)}</strong> · Next 30 days{' '}
+                <strong style={{ color: 'var(--text)' }}>{npr(analytics.projection.next30Days)}</strong>
+              </div>
+            </Card>
+
+            <Card padded>
+              <div className="card-title-row">
+                <h3 className="card-title">Registrations</h3>
+                <Link to="/master/analytics" className="btn btn-ghost btn-sm">
+                  Full analytics <ArrowRight size={14} />
+                </Link>
+              </div>
+              {analytics.registrationSeries.length === 0 ? (
+                <EmptyState title="No registrations yet" hint="New hospital registrations will appear here." />
+              ) : (
+                <BarChart data={analytics.registrationSeries} color="#0e7490" height={200} />
+              )}
+            </Card>
+          </div>
+
+          <div className="grid-2 mb-4">
+            <Card padded>
+              <h3 className="card-title mb-2">Registration Funnel</h3>
+              <DonutChart
+                data={[
+                  { label: 'Initiated', value: analytics.funnel.pending_payment + analytics.funnel.paid + analytics.funnel.approved + analytics.funnel.rejected },
+                  { label: 'Paid', value: analytics.funnel.paid + analytics.funnel.approved },
+                  { label: 'Approved', value: analytics.funnel.approved },
+                ]}
+                centerLabel="requests"
+                centerValue={String(analytics.funnel.pending_payment + analytics.funnel.paid + analytics.funnel.approved + analytics.funnel.rejected)}
+              />
+            </Card>
+
+            <Card padded>
+              <div className="card-title-row">
+                <h3 className="card-title">Top Hospitals</h3>
+                <Link to="/master/hospitals" className="btn btn-ghost btn-sm">
+                  Manage <ArrowRight size={14} />
+                </Link>
+              </div>
+              {analytics.top.length === 0 ? (
+                <EmptyState title="No active hospitals" hint="Approved hospitals appear here by activity." />
+              ) : (
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Hospital</th>
+                        <th>Patients</th>
+                        <th>Doctors</th>
+                        <th>Appts</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.top.slice(0, 5).map((h) => (
+                        <tr key={h.slug}>
+                          <td>
+                            <Link to={`/master/hospitals/${h.slug}`} className="font-semibold">{h.name}</Link>
+                          </td>
+                          <td>{h.patients}</td>
+                          <td>{h.doctors}</td>
+                          <td>{h.appointments}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          </div>
+        </>
+      )}
 
       <div className="grid-2">
         <Card padded>
@@ -164,7 +280,7 @@ export default function MasterDashboard() {
                   {stats.recentHospitals.map((h) => (
                     <tr key={h.slug}>
                       <td>
-                        <span className="font-semibold">{h.name}</span>
+                        <Link to={`/master/hospitals/${h.slug}`} className="font-semibold">{h.name}</Link>
                       </td>
                       <td>
                         <Badge tone={HOSPITAL_TONE[h.status] ?? 'gray'}>{h.status}</Badge>
@@ -178,22 +294,6 @@ export default function MasterDashboard() {
           )}
         </Card>
       </div>
-
-      {stats.requests.paid > 0 && (
-        <Card padded className="mt-4">
-          <h3 className="card-title">Approvals to process</h3>
-          <div className="flex" style={{ gap: 12 }}>
-            {stats.recentRequests
-              .filter((r) => r.status === 'paid')
-              .slice(0, 6)
-              .map((r) => (
-                <span key={r.regNo} className="chip">
-                  {r.regNo} — {r.hospitalName}
-                </span>
-              ))}
-          </div>
-        </Card>
-      )}
     </>
   )
 }

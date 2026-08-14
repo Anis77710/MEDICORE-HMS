@@ -56,11 +56,11 @@ export default function RegisterStatus() {
     <div className="lp-book">
       <nav className="lp-book-nav">
         <div className="lp-container lp-book-nav-inner">
-          <Link to="/" className="lp-book-brand">
+          <Link to="/home" className="lp-book-brand">
             <MedicoreLogo size={30} />
             Medicore HMS
           </Link>
-          <Link to="/" className="lp-book-back">
+          <Link to="/home" className="lp-book-back">
             <ArrowLeft size={16} /> Back to home
           </Link>
         </div>

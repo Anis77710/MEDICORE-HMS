@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer'
 import { env } from '../config/env.js'
+import { emailLayout, paragraph } from './emailTemplate.js'
 
 // ============================================================
 // Strict email delivery. The only transport that ever runs is
@@ -64,5 +65,12 @@ export async function sendOtpEmail(to: string, otp: string): Promise<void> {
     to,
     subject: 'Medicore HMS — Password reset code',
     text: `Your Medicore HMS password reset code is: ${otp}\nIt expires in 15 minutes. If you did not request this, you can safely ignore this email.`,
+    html: emailLayout({
+      title: 'Password reset code',
+      body:
+        paragraph(`Your Medicore HMS password reset code is:`) +
+        `<div style="margin:0 0 14px;padding:14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;text-align:center;font-family:'Courier New',monospace;font-size:26px;font-weight:700;letter-spacing:6px;color:#0e7490;">${otp}</div>` +
+        paragraph('It expires in 15 minutes. If you did not request this, you can safely ignore this email.', { muted: true }),
+    }),
   })
 }

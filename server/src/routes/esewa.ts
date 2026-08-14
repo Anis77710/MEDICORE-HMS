@@ -5,8 +5,8 @@ import { env } from '../config/env.js'
 import { validate } from '../middleware/validate.js'
 import { DoctorModel } from '../models/Doctor.js'
 import { PatientModel } from '../models/Patient.js'
-import { AppointmentModel } from '../models/Appointment.js'
-import { PaymentAttemptModel, type PaymentBooking } from '../models/PaymentAttempt.js'
+import { AppointmentModel, type Appointment } from '../models/Appointment.js'
+import { PaymentAttemptModel, type PaymentAttempt, type PaymentBooking } from '../models/PaymentAttempt.js'
 import { makeReadableId, parseDay } from '../models/Counter.js'
 import { isSlotFree, isWorkingDay, isPastSlot, dayFullName } from '../domain/availability.js'
 import { hospitalOf } from '../middleware/tenant.js'
@@ -16,8 +16,10 @@ import { notifyAppointmentEvent, notifyPaymentReceipt } from '../utils/appointme
 import {
   buildPaymentFields,
   esewaConfigured,
+  extractCallbackUuid,
   newTransactionUuid,
   verifyEsewaCallback,
+  checkEsewaStatus,
 } from '../utils/esewa.js'
 
 // ============================================================
@@ -35,13 +37,14 @@ const GENDERS = ['Male', 'Female', 'Other'] as const
 const TYPES = ['Checkup', 'Consultation', 'Follow-up', 'Emergency', 'Procedure'] as const
 
 const initiateBody = z.object({
+  hospital: z.string().trim().max(50).optional(),
   firstName: z.string().min(1, 'first name required'),
   lastName: z.string().min(1, 'last name required'),
   email: z
     .string()
     .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'valid email required')
     .default(''),
-  phone: z.string().default(''),
+  phone: z.string().regex(/^\d{10}$/, 'phone must be exactly 10 digits'),
   dob: z.string().default(''),
   gender: z.enum(GENDERS).default('Other'),
   address: z.string().default(''),
@@ -84,6 +87,93 @@ async function loadDoctorAndCheckSlot(booking: PaymentBooking) {
 
 function bookingFrom(attempt: { booking: PaymentBooking }): PaymentBooking {
   return attempt.booking
+}
+
+type AttemptDoc = PaymentAttempt & { _id: unknown }
+type AppointmentDoc = Appointment & { _id: unknown }
+
+/**
+ * Completes a paid booking: re-checks the slot, dedupes the patient by email,
+ * creates the patient + appointment and marks the attempt success. Used by the
+ * verified success callback and by the eSewa status-API reconciliation fallback.
+ */
+async function completeBooking(
+  attempt: AttemptDoc,
+  transactionCode: string,
+): Promise<{ appointment: AppointmentDoc; doctor: NonNullable<Awaited<ReturnType<typeof loadDoctorAndCheckSlot>>> }> {
+  const booking = bookingFrom(attempt)
+  const doctor = await loadDoctorAndCheckSlot(booking)
+
+  let patient = await PatientModel.findOne({ email: booking.email.toLowerCase() })
+  if (!patient) {
+    patient = await PatientModel.create({
+      firstName: booking.firstName,
+      lastName: booking.lastName,
+      email: booking.email,
+      phone: booking.phone,
+      dob: booking.dob,
+      gender: booking.gender,
+      address: booking.address,
+      bloodGroup: '',
+      emergencyContact: '',
+      insurance: '',
+      allergies: [],
+      status: 'Pending',
+      department: doctor.department,
+      assignedDoctorId: String(doctor._id),
+      lastVisit: '',
+      patientId: await makeReadableId('patient', booking.firstName),
+    })
+  }
+
+  const appointment = await AppointmentModel.create({
+    appointmentNo: await makeReadableId('appointment', patient.firstName, parseDay(booking.date)),
+    patientId: patient._id,
+    patientName: `${patient.firstName} ${patient.lastName}`,
+    doctorId: String(doctor._id),
+    doctorName: doctor.name,
+    department: doctor.department,
+    type: booking.type,
+    date: booking.date,
+    time: booking.time,
+    durationMin: booking.durationMin,
+    reason: booking.reason,
+    status: 'Pending',
+  })
+
+  await PaymentAttemptModel.findByIdAndUpdate(attempt._id, {
+    $set: {
+      status: 'success',
+      transactionCode,
+      patientId: String(patient._id),
+      appointmentId: String(appointment._id),
+      appointmentNo: appointment.appointmentNo,
+    },
+  })
+
+  void notifyAppointmentEvent(appointment, { kind: 'booked' })
+  void notifyPaymentReceipt({
+    email: booking.email,
+    patientName: appointment.patientName,
+    doctorName: doctor.name,
+    department: doctor.department,
+    appointmentNo: appointment.appointmentNo,
+    date: booking.date,
+    time: booking.time,
+    amount: attempt.amount,
+    transactionCode,
+  })
+
+  return { appointment, doctor }
+}
+
+/** Redirects the browser back to the frontend booking page with result params. */
+function redirectSuccess(res: Response, appointment: { appointmentNo: string }, doctor: { name: string }, booking: PaymentBooking) {
+  redirectToFrontend(
+    res,
+    `payment=success&ref=${encodeURIComponent(appointment.appointmentNo)}` +
+      `&doctor=${encodeURIComponent(doctor.name)}&date=${booking.date}&time=${booking.time}`,
+  )
 }
 
 // POST /public/payment/initiate — validates and returns the eSewa form fields.
@@ -168,12 +258,12 @@ async function handlePaymentSuccess(
       return
     }
     const verified = verifyEsewaCallback(data, signature)
-    if (!verified || !verified.transaction_uuid) {
+    const uuid = verified?.transaction_uuid ?? extractCallbackUuid(data)
+    if (!uuid) {
       redirectToFrontend(res, 'payment=error&message=invalid_signature')
       return
     }
 
-    const uuid = verified.transaction_uuid
     // Atomically claim the attempt so a replayed (or racing) callback
     // can never create a second booking.
     const attempt = await PaymentAttemptModel.findOneAndUpdate(
@@ -199,18 +289,33 @@ async function handlePaymentSuccess(
       return
     }
 
-    if (verified.status !== 'COMPLETE' || Number(verified.total_amount) !== attempt.amount) {
+    // The signed callback is the fast path; eSewa's transaction status API is
+    // the authoritative fallback. If the signature/status/amount check fails,
+    // ask eSewa directly whether the money moved — if it says COMPLETE, the
+    // booking must still be created (the payer was charged).
+    let transactionCode = verified?.transaction_code ?? ''
+    let paid =
+      Boolean(verified) &&
+      verified!.status === 'COMPLETE' &&
+      Number(verified!.total_amount) === attempt.amount
+    if (!paid) {
+      const status = await checkEsewaStatus(uuid, attempt.amount)
+      if (status.status === 'COMPLETE') {
+        paid = true
+        transactionCode = status.ref_id ?? status.transaction_code ?? transactionCode
+      }
+    }
+    if (!paid) {
       await PaymentAttemptModel.findByIdAndUpdate(attempt._id, {
-        $set: { status: 'failed', transactionCode: verified.transaction_code ?? '' },
+        $set: { status: 'failed', transactionCode },
       })
       redirectToFrontend(res, 'payment=failed')
       return
     }
 
-    const booking = bookingFrom(attempt)
-    let doctor: Awaited<ReturnType<typeof loadDoctorAndCheckSlot>> | null = null
     try {
-      doctor = await loadDoctorAndCheckSlot(booking)
+      const { appointment, doctor } = await completeBooking(attempt, transactionCode)
+      redirectSuccess(res, appointment, doctor, bookingFrom(attempt))
     } catch (err) {
       if (err instanceof ApiError && (err.status === 409 || err.status === 400)) {
         await PaymentAttemptModel.findByIdAndUpdate(attempt._id, { $set: { status: 'failed' } })
@@ -219,84 +324,15 @@ async function handlePaymentSuccess(
       }
       throw err
     }
-    if (!doctor) {
-      await PaymentAttemptModel.findByIdAndUpdate(attempt._id, { $set: { status: 'failed' } })
-      redirectToFrontend(res, 'payment=conflict&message=doctor_unavailable')
-      return
-    }
-
-    let patient = await PatientModel.findOne({ email: booking.email.toLowerCase() })
-    if (!patient) {
-      patient = await PatientModel.create({
-        firstName: booking.firstName,
-        lastName: booking.lastName,
-        email: booking.email,
-        phone: booking.phone,
-        dob: booking.dob,
-        gender: booking.gender,
-        address: booking.address,
-        bloodGroup: '',
-        emergencyContact: '',
-        insurance: '',
-        allergies: [],
-        status: 'Pending',
-        department: doctor.department,
-        assignedDoctorId: String(doctor._id),
-        lastVisit: '',
-        patientId: await makeReadableId('patient', booking.firstName),
-      })
-    }
-
-    const appointment = await AppointmentModel.create({
-      appointmentNo: await makeReadableId('appointment', patient.firstName, parseDay(booking.date)),
-      patientId: patient._id,
-      patientName: `${patient.firstName} ${patient.lastName}`,
-      doctorId: String(doctor._id),
-      doctorName: doctor.name,
-      department: doctor.department,
-      type: booking.type,
-      date: booking.date,
-      time: booking.time,
-      durationMin: booking.durationMin,
-      reason: booking.reason,
-      status: 'Pending',
-    })
-
-    await PaymentAttemptModel.findByIdAndUpdate(attempt._id, {
-      $set: {
-        status: 'success',
-        transactionCode: verified.transaction_code ?? '',
-        patientId: String(patient._id),
-        appointmentId: String(appointment._id),
-        appointmentNo: appointment.appointmentNo,
-      },
-    })
-
-    void notifyAppointmentEvent(appointment, { kind: 'booked' })
-    void notifyPaymentReceipt({
-      email: booking.email,
-      patientName: appointment.patientName,
-      doctorName: doctor.name,
-      department: doctor.department,
-      appointmentNo: appointment.appointmentNo,
-      date: booking.date,
-      time: booking.time,
-      amount: attempt.amount,
-      transactionCode: verified.transaction_code ?? '',
-    })
-
-    redirectToFrontend(
-      res,
-      `payment=success&ref=${encodeURIComponent(appointment.appointmentNo)}` +
-        `&doctor=${encodeURIComponent(doctor.name)}&date=${booking.date}&time=${booking.time}`,
-    )
   } catch (err) {
     next(err)
   }
 }
 
 // /public/payment/failure — eSewa's callback when the payer aborts or fails
-// (GET redirect with query params, or form POST).
+// (GET redirect with query params, or form POST). Even here the transaction
+// status API is consulted: a payment that eSewa reports as COMPLETE must still
+// produce a booking (the payer was charged).
 esewaRouter.all('/payment/failure', async (req, res, next) => {
   const slug = resolveCallbackSlug(req)
   try {
@@ -305,17 +341,110 @@ esewaRouter.all('/payment/failure', async (req, res, next) => {
         ...(req.query as { data?: string; signature?: string }),
         ...(req.body as { data?: string; signature?: string }),
       }
-      if (typeof data === 'string') {
-        const verified = verifyEsewaCallback(data, signature)
-        if (verified?.transaction_uuid) {
-          await PaymentAttemptModel.findOneAndUpdate(
-            { transactionUuid: verified.transaction_uuid, status: 'pending' },
-            { $set: { status: 'failed' as const, transactionCode: verified.transaction_code ?? '' } },
-          )
+      const verified = typeof data === 'string' ? verifyEsewaCallback(data, signature) : null
+      const uuid = verified?.transaction_uuid ?? (typeof data === 'string' ? extractCallbackUuid(data) : undefined)
+      if (uuid) {
+        // Claim the attempt atomically: if the signed success callback already
+        // claimed it (status processing/success), it is completing the booking
+        // — skip, a replayed or racing callback must never create a duplicate.
+        const claimed = await PaymentAttemptModel.findOneAndUpdate(
+          { transactionUuid: uuid, status: 'pending' },
+          { $set: { status: 'processing' as const } },
+          { new: true },
+        )
+        if (claimed) {
+          const status = await checkEsewaStatus(uuid, claimed.amount)
+          if (status.status === 'COMPLETE') {
+            try {
+              const { appointment, doctor } = await completeBooking(
+                claimed,
+                status.ref_id ?? status.transaction_code ?? '',
+              )
+              redirectSuccess(res, appointment, doctor, bookingFrom(claimed))
+              return
+            } catch (err) {
+              if (err instanceof ApiError && (err.status === 409 || err.status === 400)) {
+                await PaymentAttemptModel.findByIdAndUpdate(claimed._id, {
+                  $set: { status: 'failed' },
+                })
+                redirectToFrontend(res, 'payment=conflict&message=slot_unavailable')
+                return
+              }
+              throw err
+            }
+          }
+          await PaymentAttemptModel.findByIdAndUpdate(claimed._id, {
+            $set: { status: 'failed' as const, transactionCode: verified?.transaction_code ?? '' },
+          })
         }
       }
       redirectToFrontend(res, 'payment=failed')
     })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// /public/payment/reconcile — the frontend calls this when the user returns to
+// the booking page without a confirmed callback (e.g. the eSewa tab was closed,
+// the redirect never arrived, or the callback could not be verified). The
+// transaction status API is the authoritative source: if eSewa says COMPLETE
+// the booking is created right here, so a paid appointment is never lost.
+const reconcileBody = z.object({
+  hospital: z.string().trim().max(50).optional(),
+  attemptId: z.string().min(1, 'attempt id required'),
+})
+
+esewaRouter.post('/payment/reconcile', validate({ body: reconcileBody }), async (req, res, next) => {
+  try {
+    const { attemptId } = req.body as { attemptId: string }
+    const attempt = await PaymentAttemptModel.findById(attemptId)
+    if (!attempt) throw new ApiError('Payment attempt not found', 404)
+    if (attempt.status === 'success') {
+      res.json({ status: 'success', appointmentNo: attempt.appointmentNo })
+      return
+    }
+    // A 'processing' attempt is being completed by the signed eSewa callback
+    // right now — report pending so the frontend retries and then sees the
+    // success. Never complete the same attempt twice.
+    if ((attempt.status as string) === 'processing') {
+      res.json({ status: 'pending' })
+      return
+    }
+    // Atomically claim the attempt so a racing signed callback can never
+    // double-complete the booking (mirrors the success callback's claim).
+    const claimed = await PaymentAttemptModel.findOneAndUpdate(
+      { _id: attempt._id, status: 'pending' },
+      { $set: { status: 'processing' as const } },
+      { new: true },
+    )
+    const current = claimed ?? attempt
+    // eSewa's status API is the source of truth: an attempt may have been
+    // marked failed earlier (e.g. the callback arrived before eSewa's status
+    // API reflected the COMPLETE transaction), so re-check before giving up —
+    // a payment that actually moved money must still produce a booking.
+    const status = await checkEsewaStatus(current.transactionUuid, current.amount)
+    if (status.status !== 'COMPLETE') {
+      if (claimed) {
+        await PaymentAttemptModel.findByIdAndUpdate(attempt._id, { $set: { status: 'pending' as const } })
+      }
+      res.json({ status: 'pending' })
+      return
+    }
+    try {
+      const { appointment } = await completeBooking(
+        current,
+        status.ref_id ?? status.transaction_code ?? '',
+      )
+      res.json({ status: 'success', appointmentNo: appointment.appointmentNo })
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 409 || err.status === 400)) {
+        await PaymentAttemptModel.findByIdAndUpdate(attempt._id, { $set: { status: 'failed' } })
+        res.status(409).json({ message: err.message })
+        return
+      }
+      throw err
+    }
   } catch (err) {
     next(err)
   }

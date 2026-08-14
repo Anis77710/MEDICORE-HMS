@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -6,6 +6,7 @@ import {
   PlayCircle,
   Eye,
   CalendarDays,
+  CalendarClock,
   Clock,
   Info,
   CalendarRange,
@@ -19,6 +20,7 @@ import {
   getMyAppointments,
   confirmAppointment,
   cancelAppointment,
+  rescheduleAppointment,
   listConsultations,
 } from '../../api/services/doctorPortal'
 import type { Appointment, AppointmentStatus, AppointmentType, Consultation, Doctor } from '../../types'
@@ -29,6 +31,7 @@ import {
   StatusBadge,
   Button,
   ConfirmDialog,
+  Modal,
   PageHeader,
   Avatar,
 } from '../../components/ui'
@@ -36,6 +39,7 @@ import { fmtDate, fmtTime, todayLocal } from './utils'
 
 const TYPES: AppointmentType[] = ['Checkup', 'Consultation', 'Follow-up', 'Emergency', 'Procedure']
 const STATUSES: AppointmentStatus[] = ['Pending', 'Confirmed', 'Completed', 'Cancelled']
+const RESCHEDULE_REASONS = ['Emergency', 'Schedule conflict', 'Personal reasons', 'Other'] as const
 
 type View = 'pending' | 'today' | 'upcoming' | 'past' | 'all'
 
@@ -59,6 +63,7 @@ export default function MyAppointments() {
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null)
+  const [rescheduleTarget, setRescheduleTarget] = useState<Appointment | null>(null)
 
   const viewParam = params.get('view')
   const view: View =
@@ -156,11 +161,15 @@ export default function MyAppointments() {
     }
   }
 
+  function onRescheduled(updated: Appointment) {
+    setAppointments((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))
+  }
+
   function consultationFor(a: Appointment): Consultation | undefined {
     return consultations.find((c) => c.appointmentId === a.id)
   }
 
-  if (loading) return <Spinner label="Loading appointments…" />
+  if (loading) return <Spinner label="Loading appointmentsΓÇª" />
   if (error) return <div className="auth-error">{error}</div>
 
   return (
@@ -266,6 +275,7 @@ export default function MyAppointments() {
                 restricted={!!doctor && doctor.status !== 'Active'}
                 onConfirm={() => void onConfirm(a)}
                 onCancel={() => setCancelTarget(a)}
+                onReschedule={() => setRescheduleTarget(a)}
                 consultation={consultationFor(a)}
               />
             ))}
@@ -295,11 +305,18 @@ export default function MyAppointments() {
               restricted={!!doctor && doctor.status !== 'Active'}
               onConfirm={() => void onConfirm(a)}
               onCancel={() => setCancelTarget(a)}
+              onReschedule={() => setRescheduleTarget(a)}
               consultation={consultationFor(a)}
             />
           ))}
         </div>
       )}
+
+      <RescheduleModal
+        appointment={rescheduleTarget}
+        onClose={() => setRescheduleTarget(null)}
+        onRescheduled={onRescheduled}
+      />
 
       <ConfirmDialog
         open={cancelTarget !== null}
@@ -320,6 +337,7 @@ function AppointmentCard({
   restricted,
   onConfirm,
   onCancel,
+  onReschedule,
   consultation,
 }: {
   appointment: Appointment
@@ -328,6 +346,7 @@ function AppointmentCard({
   restricted: boolean
   onConfirm: () => void
   onCancel: () => void
+  onReschedule: () => void
   consultation?: Consultation
 }) {
   const rel = relativeLabel(a.date, today)
@@ -358,7 +377,7 @@ function AppointmentCard({
         <Avatar name={a.patientName} size="lg" />
         <div className="flex-column" style={{ gap: 1, minWidth: 0 }}>
           <strong>{a.patientName}</strong>
-          <span className="muted text-sm">{a.type} · {a.department}</span>
+          <span className="muted text-sm">{a.type} ┬╖ {a.department}</span>
         </div>
       </div>
 
@@ -386,6 +405,15 @@ function AppointmentCard({
                 <CheckCircle2 size={15} /> Confirm Appointment
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onReschedule}
+              title="Reschedule appointment"
+              aria-label="Reschedule appointment"
+            >
+              <CalendarClock size={16} />
+            </Button>
             <Button
               size="sm"
               variant="ghost"
@@ -422,6 +450,15 @@ function AppointmentCard({
             <Button
               size="sm"
               variant="outline"
+              onClick={onReschedule}
+              title="Reschedule appointment — patient will be notified by email"
+              aria-label="Reschedule appointment"
+            >
+              <CalendarClock size={16} />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={onCancel}
               title="Cancel appointment"
               aria-label="Cancel appointment"
@@ -453,5 +490,136 @@ function AppointmentCard({
         )}
       </div>
     </div>
+  )
+}
+
+function RescheduleModal({
+  appointment,
+  onClose,
+  onRescheduled,
+}: {
+  appointment: Appointment | null
+  onClose: () => void
+  onRescheduled: (updated: Appointment) => void
+}) {
+  const { push } = useToast()
+  const [date, setDate] = useState('')
+  const [time, setTime] = useState('')
+  const [durationMin, setDurationMin] = useState(30)
+  const [reason, setReason] = useState<string>(RESCHEDULE_REASONS[0])
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!appointment) return
+    setDate(appointment.date)
+    setTime(appointment.time)
+    setDurationMin(appointment.durationMin)
+    setReason(RESCHEDULE_REASONS[0])
+    setNote('')
+    setError('')
+  }, [appointment])
+
+  async function submit() {
+    if (!appointment) return
+    setError('')
+    setBusy(true)
+    try {
+      const updated = await rescheduleAppointment(appointment.id, {
+        date,
+        time,
+        durationMin,
+        reason,
+        note: note.trim(),
+      })
+      onRescheduled(updated)
+      onClose()
+      push(`Appointment rescheduled — email sent to ${appointment.patientName}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reschedule appointment')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={appointment !== null}
+      title={`Reschedule — ${appointment?.patientName ?? ''}`}
+      size="md"
+      onClose={busy ? () => {} : onClose}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button variant="primary" loading={busy} onClick={() => void submit()}>
+            <CalendarClock size={15} /> Reschedule & Email Patient
+          </Button>
+        </>
+      }
+    >
+      {error && <div className="auth-error">{error}</div>}
+      <p className="muted text-sm mb-2">
+        Currently scheduled for <strong>{fmtDate(appointment?.date ?? '')}</strong> at{' '}
+        <strong>{fmtTime(appointment?.time ?? '')}</strong>. The patient will be emailed with the
+        reason and the new time.
+      </p>
+      <div className="form-grid">
+        <div className="field">
+          <label>New date</label>
+          <input
+            type="date"
+            className="input"
+            min={todayLocal()}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+          />
+        </div>
+        <div className="field">
+          <label>New time</label>
+          <input
+            type="time"
+            className="input"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            required
+          />
+        </div>
+        <div className="field">
+          <label>Duration</label>
+          <select
+            className="input"
+            value={durationMin}
+            onChange={(e) => setDurationMin(Number(e.target.value))}
+          >
+            {[15, 30, 45, 60, 90].map((m) => (
+              <option key={m} value={m}>{m} minutes</option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label>Reason for rescheduling</label>
+          <select className="input" value={reason} onChange={(e) => setReason(e.target.value)}>
+            {RESCHEDULE_REASONS.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="field">
+        <label>Note to patient (optional)</label>
+        <textarea
+          className="input"
+          rows={3}
+          placeholder="e.g. An unexpected emergency came up — we will be available at the new time."
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          maxLength={500}
+        />
+      </div>
+    </Modal>
   )
 }

@@ -1,120 +1,118 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Printer, Receipt as ReceiptIcon } from 'lucide-react'
-import { masterApi, type RegistrationRequestItem } from '../../api/services/master'
-import { Card, Spinner, EmptyState, PageHeader, Button, Tabs } from '../../components/ui'
+import { useEffect, useState } from 'react'
+import { Printer, Banknote, Clock, RotateCcw } from 'lucide-react'
+import { masterApi, type ReceiptItem } from '../../api/services/master'
+import { Card, Spinner, EmptyState, Badge, PageHeader, Button, Tabs, StatCard } from '../../components/ui'
+const RECEIPT_TONE: Record<string, 'green' | 'amber' | 'red'> = {
+  approved: 'green',
+  paid: 'amber',
+  rejected: 'red',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  approved: 'Approved',
+  paid: 'Awaiting approval',
+  rejected: 'Rejected',
+}
 
 function npr(n: number): string {
   return `NPR ${n.toLocaleString('en-US')}`
 }
 
-function fmtDate(v?: string): string {
-  if (!v) return '—'
-  return new Date(v).toLocaleString('en-US', { dateStyle: 'long' })
+function fmtDate(s?: string): string {
+  if (!s) return '—'
+  return new Date(s).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-type Filter = 'approved' | 'paid' | 'rejected'
-
-function openReceiptWindow(r: RegistrationRequestItem): void {
-  const w = window.open('', '_blank', 'width=640,height=780')
+/** Opens the print dialog for a single receipt. */
+function printReceipt(r: ReceiptItem): void {
+  const w = window.open('', '_blank', 'width=640,height=860')
   if (!w) return
-  w.document.write(`<!doctype html><html><head><title>Receipt ${r.regNo}</title>
-<style>
-  body{font-family:'Segoe UI',Arial,sans-serif;margin:48px auto;max-width:520px;color:#0f172a;padding:0 24px}
-  .head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0e7490;padding-bottom:14px;margin-bottom:22px}
-  .brand h1{margin:0;font-size:20px;color:#0e7490}.brand p{margin:2px 0 0;color:#64748b;font-size:12px}
-  .receipt-tag{background:#0e7490;color:#fff;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-  .title{font-size:24px;font-weight:800;margin-bottom:4px}
-  .ref{color:#64748b;font-size:13px;margin-bottom:26px}
-  table{width:100%;border-collapse:collapse;margin-bottom:26px}
-  td{padding:10px 0;border-bottom:1px dashed #e2e8f0;font-size:14px;vertical-align:top}
-  td:first-child{color:#64748b;width:42%}
-  .total td{border-bottom:none;font-size:16px;font-weight:800}
-  .total td:last-child{color:#059669;text-align:right}
-  .status{display:inline-block;margin-top:4px;background:#dcfce7;color:#15803d;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
-  .foot{margin-top:34px;border-top:1px solid #e2e8f0;padding-top:16px;color:#94a3b8;font-size:12px;line-height:1.7}
-  @media print{.no-print{display:none}}
-</style></head><body>
-<div class="no-print" style="text-align:right;margin-bottom:18px"><button onclick="window.print()" style="padding:10px 18px;background:#0e7490;color:#fff;border:0;border-radius:8px;font-size:14px;cursor:pointer;font-weight:700">Print / Save as PDF</button></div>
-<div class="head"><div class="brand"><h1>MEDICORE HMS</h1><p>Payment receipt · Hospital registration</p></div><span class="receipt-tag">Receipt</span></div>
-<div class="title">${r.hospitalName}</div>
-<div class="ref">Registration reference: ${r.regNo}</div>
-<table>
-  <tr><td>Registered to</td><td>${r.admin.name}</td></tr>
-  <tr><td>Email</td><td>${r.admin.email}</td></tr>
-  <tr><td>Phone</td><td>${r.admin.phone || '—'}</td></tr>
-  <tr><td>Payment method</td><td>eSewa</td></tr>
-  <tr><td>Transaction UUID</td><td>${r.payment.transactionUuid}</td></tr>
-  <tr><td>Transaction code</td><td>${r.payment.transactionCode || '—'}</td></tr>
-  <tr><td>Paid on</td><td>${fmtDate(r.payment.paidAt)}</td></tr>
-  <tr><td>Status</td><td><span class="status">PAID</span></td></tr>
-</table>
-<table class="total">
-  <tr class="total"><td>Registration fee</td><td>${npr(r.payment.amount)}</td></tr>
-</table>
-<div class="foot">This receipt confirms payment for the one-time hospital registration fee. The hospital is provisioned only after platform approval. For support contact the address on the Medicore website.</div>
-</body></html>`)
+  w.document.write(`<!doctype html><html><head><title>Receipt ${r.regNo}</title><style>
+    body{font-family:Georgia,serif;color:#1e293b;max-width:520px;margin:40px auto;padding:0 24px}
+    h1{font-size:22px;margin:0} .muted{color:#64748b;font-size:12px}
+    .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0e7490;padding-bottom:16px}
+    .meta{width:100%;border-collapse:collapse;margin:20px 0}
+    .meta td{padding:8px 6px;border-bottom:1px dashed #e2e8f0;font-size:14px}
+    .meta td:last-child{text-align:right;font-weight:600}
+    .total{background:#f0f9ff;font-size:18px;font-weight:700}
+    .foot{margin-top:32px;text-align:center;color:#64748b;font-size:12px}
+  </style></head><body>
+    <div class="head">
+      <div><h1>Medicore HMS</h1><div class="muted">Hospital Registration Fee — Official Receipt</div></div>
+      <div class="muted">${fmtDate(r.paidAt)}</div>
+    </div>
+    <table class="meta">
+      <tr><td>Reference</td><td>${r.regNo}</td></tr>
+      <tr><td>Hospital</td><td>${r.hospitalName}</td></tr>
+      <tr><td>Payer</td><td>${r.payer} (${r.payerEmail})</td></tr>
+      <tr><td>eSewa Transaction</td><td>${r.transactionCode || '—'}</td></tr>
+      <tr><td>Status</td><td>${STATUS_LABEL[r.status] ?? r.status}</td></tr>
+      <tr class="total"><td>Amount Paid</td><td>${npr(r.amount)}</td></tr>
+    </table>
+    <div class="foot">This is a computer-generated receipt for the Medicore HMS hospital registration fee.<br/>Thank you for choosing Medicore HMS.</div>
+    <script>window.print()</script>
+  </body></html>`)
   w.document.close()
 }
 
 export default function MasterReceipts() {
-  const [items, setItems] = useState<RegistrationRequestItem[]>([])
-  const [counts, setCounts] = useState<Record<string, number>>({})
-  const [filter, setFilter] = useState<Filter>('approved')
+  const [tab, setTab] = useState<'all' | 'approved' | 'paid' | 'rejected'>('all')
+  const [items, setItems] = useState<ReceiptItem[]>([])
+  const [summary, setSummary] = useState({ approved: 0, paid: 0, rejected: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
 
   useEffect(() => {
     setLoading(true)
-    setError('')
     masterApi
-      .listRequests()
+      .receipts({ status: tab === 'all' ? undefined : tab, from: from || undefined, to: to || undefined })
       .then((res) => {
         setItems(res.items)
-        setCounts(res.counts)
+        setSummary(res.summary)
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load receipts'))
       .finally(() => setLoading(false))
-  }, [])
-
-  const money = useMemo(() => {
-    const approved = items.filter((r) => r.status === 'approved').reduce((a, r) => a + r.payment.amount, 0)
-    const paid = items.filter((r) => r.status === 'paid').reduce((a, r) => a + r.payment.amount, 0)
-    return { approved, paid }
-  }, [items])
-
-  const visible = items.filter((r) => r.status === filter)
+  }, [tab, from, to])
 
   return (
     <>
       <PageHeader
-        title="Payment Receipts"
-        subtitle="eSewa receipts for every paid hospital registration."
+        title="Revenue & Receipts"
+        subtitle="Every registration fee paid through eSewa, with printable receipts."
         actions={
-          <div className="flex" style={{ gap: 8 }}>
-            <span className="badge badge-green">Collected: {npr(money.approved + money.paid)}</span>
-            <span className="badge badge-blue">Approved: {npr(money.approved)}</span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="From date" />
+            <span className="muted">→</span>
+            <input type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} aria-label="To date" />
           </div>
         }
       />
 
-      <Card className="mb-4" padded>
-        <Tabs<Filter>
-          tabs={[
-            { value: 'approved', label: 'Approved', count: counts.approved ?? 0 },
-            { value: 'paid', label: 'Paid (awaiting approval)', count: counts.paid ?? 0 },
-            { value: 'rejected', label: 'Rejected', count: counts.rejected ?? 0 },
-          ]}
-          active={filter}
-          onChange={setFilter}
-        />
-      </Card>
+      <div className="grid-stats mb-4">
+        <StatCard label="Collected" value={npr(summary.approved)} icon={<Banknote size={20} />} tone="green" footer={<span>approved registrations</span>} />
+        <StatCard label="Pending" value={npr(summary.paid)} icon={<Clock size={20} />} tone="amber" footer={<span>paid, awaiting approval</span>} />
+        <StatCard label="To Refund" value={npr(summary.rejected)} icon={<RotateCcw size={20} />} tone="red" footer={<span>rejected — refund owed</span>} />
+      </div>
+
+      <Tabs<'all' | 'approved' | 'paid' | 'rejected'>
+        active={tab}
+        onChange={setTab}
+        tabs={[
+          { value: 'all', label: 'All' },
+          { value: 'approved', label: 'Approved' },
+          { value: 'paid', label: 'Awaiting approval' },
+          { value: 'rejected', label: 'Rejected' },
+        ]}
+      />
 
       <Card padded>
         {error && <div className="auth-error mb-4">{error}</div>}
         {loading ? (
           <Spinner label="Loading receipts…" />
-        ) : visible.length === 0 ? (
-          <EmptyState title="No receipts" hint="Paid registrations appear here once payment is confirmed." />
+        ) : items.length === 0 ? (
+          <EmptyState title="No receipts in this view" hint="Paid registration fees will appear here." />
         ) : (
           <div className="table-wrap">
             <table className="table">
@@ -123,30 +121,31 @@ export default function MasterReceipts() {
                   <th>Reference</th>
                   <th>Hospital</th>
                   <th>Payer</th>
-                  <th>Amount</th>
                   <th>Transaction</th>
                   <th>Paid</th>
-                  <th className="align-right">Receipt</th>
+                  <th className="align-right">Amount</th>
+                  <th>Status</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
-                {visible.map((r) => (
-                  <tr key={r._id}>
+                {items.map((r) => (
+                  <tr key={r.id}>
                     <td className="mono">{r.regNo}</td>
                     <td>
                       <div className="font-semibold">{r.hospitalName}</div>
-                      <div className="text-sm muted mono">/ {r.slug}</div>
+                      <div className="text-sm muted">{r.payer}</div>
                     </td>
-                    <td>{r.admin.name}</td>
-                    <td>{npr(r.payment.amount)}</td>
+                    <td className="text-sm muted">{r.payerEmail}</td>
+                    <td className="mono text-sm">{r.transactionCode || '—'}</td>
+                    <td className="text-sm">{fmtDate(r.paidAt)}</td>
+                    <td className="align-right font-semibold">{npr(r.amount)}</td>
                     <td>
-                      <div className="text-sm mono">{r.payment.transactionCode || '—'}</div>
-                      <div className="text-sm muted mono">{r.payment.transactionUuid.slice(0, 8)}…</div>
+                      <Badge tone={RECEIPT_TONE[r.status] ?? 'gray'}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
                     </td>
-                    <td className="text-sm">{fmtDate(r.payment.paidAt)}</td>
                     <td className="align-right">
-                      <Button size="sm" variant="outline" onClick={() => openReceiptWindow(r)}>
-                        <Printer size={14} /> View / Print
+                      <Button size="sm" variant="outline" onClick={() => printReceipt(r)}>
+                        <Printer size={14} /> Receipt
                       </Button>
                     </td>
                   </tr>
@@ -155,30 +154,6 @@ export default function MasterReceipts() {
             </table>
           </div>
         )}
-      </Card>
-
-      <Card padded className="mt-4">
-        <h3 className="card-title">
-          <ReceiptIcon size={18} /> Summary
-        </h3>
-        <div className="grid-stats">
-          <div className="stat-mini">
-            <span>Approved fees</span>
-            <strong>{npr(money.approved)}</strong>
-          </div>
-          <div className="stat-mini">
-            <span>Pending approval</span>
-            <strong>{npr(money.paid)}</strong>
-          </div>
-          <div className="stat-mini">
-            <span>Total collected</span>
-            <strong>{npr(money.approved + money.paid)}</strong>
-          </div>
-          <div className="stat-mini">
-            <span>Receipts</span>
-            <strong>{visible.length}</strong>
-          </div>
-        </div>
       </Card>
     </>
   )

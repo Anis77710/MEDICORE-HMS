@@ -117,6 +117,23 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   return http.get<DashboardStats>(ENDPOINTS.DASHBOARD_STATS)
 }
 
+// ---------- Platform announcements banner ----------
+export interface DashboardAnnouncement {
+  id: string
+  title: string
+  message: string
+  createdAt?: string
+}
+
+export async function getDashboardAnnouncements(): Promise<DashboardAnnouncement[]> {
+  if (USE_MOCK_API) {
+    await mockDelay(200)
+    return []
+  }
+  const res = await http.get<{ items: DashboardAnnouncement[] }>(ENDPOINTS.DASHBOARD_ANNOUNCEMENTS)
+  return res.items
+}
+
 // ---------- Reports ----------
 export async function getReports(): Promise<ReportSummary> {
   if (USE_MOCK_API) {
