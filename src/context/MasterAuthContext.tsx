@@ -1,9 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useReticleStore } from '@reticlehq/react/store'
 import { getMasterToken, setMasterToken } from '../api/masterClient'
 import { masterApi, type MasterAdminInfo } from '../api/services/master'
-import { signal } from '../reticle'
 
 interface MasterAuthContextValue {
   admin: MasterAdminInfo | null
@@ -18,7 +16,6 @@ const MasterAuthContext = createContext<MasterAuthContextValue | null>(null)
 export function MasterAuthProvider({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<MasterAdminInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  useReticleStore('masterAuth', { admin, isAuthenticated: !!admin, isLoading })
 
   useEffect(() => {
     const token = getMasterToken()
@@ -56,12 +53,10 @@ export function MasterAuthProvider({ children }: { children: ReactNode }) {
         } catch {
           setAdmin({ id: '', email: res.admin.email, name: res.admin.name })
         }
-        signal('master:login', { email })
       },
       logout: () => {
         setMasterToken(null)
         setAdmin(null)
-        signal('master:logout')
       },
     }),
     [admin, isLoading],

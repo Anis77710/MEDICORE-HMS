@@ -1,12 +1,10 @@
 // ============================================================
 // HealSync HMS — API endpoint registry
 // ------------------------------------------------------------
-// The demo runs on the built-in mock API (src/api/mock.ts) and
-// never touches these paths. To join a real backend later:
-// 1. Set VITE_USE_MOCK_API=false and VITE_API_BASE_URL in .env
-// 2. Implement the endpoints below using the same paths + JSON
-//    shapes found in `src/types` and `src/api/mock.ts`
-// 3. Every service in `src/api/services/*` already points here.
+// Every service in `src/api/services/*` resolves its requests
+// against these paths, prefixed by VITE_API_BASE_URL (see
+// `src/api/client.ts`). Keep paths and JSON shapes in sync with
+// the Express server (server/src/routes/*).
 // ============================================================
 
 export const ENDPOINTS = {
@@ -95,6 +93,7 @@ export const ENDPOINTS = {
   APPOINTMENT_DETAIL: '/appointments/:id',
   APPOINTMENT_CREATE: '/appointments',
   APPOINTMENT_UPDATE: '/appointments/:id',
+  APPOINTMENT_DELETE: '/appointments/:id',
   APPOINTMENT_CANCEL: '/appointments/:id/cancel',
   APPOINTMENT_CONFIRM: '/appointments/:id/confirm',
   APPOINTMENT_COMPLETE: '/appointments/:id/complete',

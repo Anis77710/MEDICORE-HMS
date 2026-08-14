@@ -79,7 +79,6 @@ export default function BookAppointmentPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [dateMsg, setDateMsg] = useState('')
-  const [sent, setSent] = useState(false)
   const [recovering, setRecovering] = useState(() => {
     try {
       return Boolean(sessionStorage.getItem('medicore_pay_attempt'))
@@ -210,7 +209,6 @@ export default function BookAppointmentPage() {
       cancelled = true
       if (timer) window.clearTimeout(timer)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payment])
 
   const pickHospital = (slug: string) => {
@@ -319,9 +317,7 @@ export default function BookAppointmentPage() {
         reason: form.reason,
       })
       if (!pay.formUrl) {
-        // No gateway (mock mode) — booked without a payment hop.
-        setSent(true)
-        return
+        throw new Error('Payment gateway is not configured — please try again later')
       }
       // Remember the attempt so the landing page can reconcile the payment
       // against eSewa's status API if the callback redirect is ever lost.
@@ -456,28 +452,6 @@ export default function BookAppointmentPage() {
                 </Link>,
               )}
             </>
-          ) : sent ? (
-            <div className="lp-book-card lp-form-success">
-              <div className="lp-form-success-icon tone-success">
-                <CheckCircle2 size={32} />
-              </div>
-              <div className="lp-form-success-title">Appointment requested!</div>
-              <div className="lp-form-success-sub">
-                {selectedDoctor?.name ?? 'Our team'} will confirm your booking for{' '}
-                {new Date(`${form.date}T${form.time}`).toLocaleString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
-                . A confirmation email has been sent to <strong>{form.email || 'your email'}</strong> — you'll be
-                notified there when it's approved, rescheduled or cancelled.
-              </div>
-              <Link to="/" className="lp-btn lp-btn-primary" style={{ marginTop: 8 }}>
-                Back to home
-              </Link>
-            </div>
           ) : (
             <div className="lp-book-grid">
               <aside className="lp-book-aside">

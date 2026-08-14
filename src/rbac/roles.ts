@@ -241,13 +241,3 @@ export const ROLE_META: Record<Role, RoleMeta> = {
     ],
   },
 }
-
-// ---------- Login helpers (demo credentials per role) ----------
-
-export const ROLE_DEMO_LOGINS: { role: Role; email: string; password: string; label: string }[] = [
-  { role: 'ADMIN', email: 'admin@medicore.health', password: 'admin123', label: 'Administrator' },
-  { role: 'DOCTOR', email: 'd.wright@medicore.health', password: 'doctor123', label: 'Doctor' },
-  { role: 'NURSE', email: 'e.wilson@medicore.health', password: 'nurse123', label: 'Nurse' },
-  { role: 'STAFF', email: 'o.martinez@medicore.health', password: 'staff123', label: 'Front Desk' },
-  { role: 'PATIENT', email: 'sarah.johnson@email.com', password: 'patient123', label: 'Patient' },
-]

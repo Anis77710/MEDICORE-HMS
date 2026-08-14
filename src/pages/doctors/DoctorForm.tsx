@@ -3,7 +3,6 @@ import { CheckCircle2, XCircle, RotateCcw } from 'lucide-react'
 import { createDoctor, updateDoctor } from '../../api/services/doctors'
 import type { Doctor } from '../../types'
 import { Field, Input, Button, FormActions } from '../../components/ui'
-import { useToast } from '../../context/ToastContext'
 
 const DEPARTMENTS = [
   'Cardiology',
@@ -31,7 +30,6 @@ export function DoctorForm({
   doctor: Doctor | null
   onDone: (saved: boolean) => void
 }) {
-  const { push } = useToast()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<DoctorResult | null>(null)

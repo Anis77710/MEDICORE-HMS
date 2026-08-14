@@ -15,7 +15,7 @@
   - [Prerequisites](#prerequisites)
   - [1. Run the backend](#1-run-the-backend)
   - [2. Run the frontend](#2-run-the-frontend)
-- [Demo Mode vs Real API](#demo-mode-vs-real-api)
+- [Backend API connection](#backend-api-connection)
 - [Seeded Accounts](#seeded-accounts)
 - [Available Scripts](#available-scripts)
 - [Testing](#testing)
@@ -60,11 +60,10 @@
 ```
 MedicoreHMS/
 ├── src/                        # Frontend
-│   ├── api/                    # HTTP client, endpoints registry, mock API, services
+│   ├── api/                    # HTTP client, endpoints registry, services
 │   │   ├── services/           # One service module per domain (auth, patients, ...)
 │   │   ├── client.ts           # fetch wrapper: Bearer token + refresh rotation
-│   │   ├── mock.ts             # in-memory demo API (exact same JSON shapes)
-│   │   └── store.ts            # mock data store
+│   │   └── availability.ts     # shared working-day helpers (calendar UI)
 │   ├── components/             # Shared UI (layout, ui primitives, logo)
 │   ├── context/                # AuthProvider, ToastProvider
 │   ├── pages/                  # Dashboard, patients, doctors, appointments,
@@ -80,7 +79,7 @@ MedicoreHMS/
     │   ├── models/             # Mongoose models
     │   ├── routes/             # API routes
     │   ├── seed/               # Database seeder
-    │   └── scripts/            # smoke tests, in-memory dev server
+    │   └── scripts/            # smoke tests (QA suite)
     ├── .env.example            # Server configuration template
     └── package.json
 ```
@@ -129,22 +128,14 @@ npm run dev                   # app on http://localhost:5173
 
 ---
 
-## Demo Mode vs Real API
+## Backend API connection
 
-`VITE_USE_MOCK_API` (see `.env.example`) controls the data source:
-
-| Setting | Behavior |
-| --- | --- |
-| unset or `true` | **Demo mode** — in-memory mock API, no backend needed |
-| `false` | Calls the real backend at `VITE_API_BASE_URL` |
+The frontend calls the real backend at `VITE_API_BASE_URL` (see `.env.example`):
 
 ```bash
-# Use the real backend:
 cp .env.example .env
-# .env: VITE_USE_MOCK_API=false
+# .env: VITE_API_BASE_URL=http://localhost:8080/api
 ```
-
-The mock implementation returns the exact same JSON shapes as the real API, so switching between the two is purely a `.env` change.
 
 ---
 
@@ -176,7 +167,6 @@ The seed also populates demo doctors, patients, appointments, staff, and billing
 | Script | Purpose |
 | --- | --- |
 | `npm run dev` | Dev server with hot reload (`tsx watch`) |
-| `npm run dev:memory` | Dev server on an **in-memory** MongoDB (no local DB needed) |
 | `npm run seed` | Wipe + reseed the database (`MONGO_URI` from `.env`) |
 | `npm run build` | Compile TypeScript to `dist/` |
 | `npm run start` | Run the compiled production server |
@@ -228,3 +218,12 @@ npm run build
 ```
 
 Deploy `dist/` to any static host (Vercel, Netlify, Nginx, ...) and point `VITE_API_BASE_URL` at the deployed API. **Never** use the default `JWT_SECRET` from `.env.example` in production.
+
+### Uptime monitoring (Render free tier)
+
+`GET /api/health` returns `{"status":"ok"}` with a 200 in constant time — no database, no
+authentication, no rate limiting, and it is excluded from request logs. Point an uptime
+monitor (e.g. UptimeRobot) at `https://<your-app>.onrender.com/api/health` and poll every
+few minutes to keep a Render Free Web Service from idling down. The server also starts
+listening even when MongoDB is unreachable and retries the connection in the background,
+so the probe keeps working through database outages.

@@ -629,7 +629,7 @@ try {
   const payDoctorBody = await json<{ id: string }>(payDoctor)
 
   const payBooking = {
-    firstName: 'Pay', lastName: 'Me', email: 'pay.me@test.dev', phone: '555 0101',
+    firstName: 'Pay', lastName: 'Me', email: 'pay.me@test.dev', phone: '5550101010',
     dob: '1990-01-01', gender: 'Male', doctorId: payDoctorBody.id, type: 'Consultation',
     date: inDays(30), time: '10:00', durationMin: 30, reason: 'Smoke esewa booking',
   }

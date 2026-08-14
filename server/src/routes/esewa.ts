@@ -306,6 +306,17 @@ async function handlePaymentSuccess(
       }
     }
     if (!paid) {
+      if (!verified) {
+        // The signature did not verify — this callback is not from eSewa.
+        // Leave the attempt pending so the genuine signed callback (or a
+        // later reconcile) can still complete the booking; the status API
+        // already confirmed the money did not move.
+        await PaymentAttemptModel.findByIdAndUpdate(attempt._id, {
+          $set: { status: 'pending' as const },
+        })
+        redirectToFrontend(res, 'payment=error&message=verification_failed')
+        return
+      }
       await PaymentAttemptModel.findByIdAndUpdate(attempt._id, {
         $set: { status: 'failed', transactionCode },
       })

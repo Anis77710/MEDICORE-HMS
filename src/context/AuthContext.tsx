@@ -1,10 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useReticleStore } from '@reticlehq/react/store'
 import type { AuthResponse, User } from '../types'
 import * as authApi from '../api/services/auth'
 import { getToken, setToken, setAuthExpiredHandler } from '../api/client'
-import { signal } from '../reticle'
 
 interface AuthContextValue {
   user: User | null
@@ -20,7 +18,6 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  useReticleStore('auth', { user, isAuthenticated: !!user, isLoading })
 
   useEffect(() => {
     const token = getToken()
@@ -62,19 +59,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await authApi.login({ email, password, remember })
         setToken(res.token)
         setUser(res.user)
-        signal('auth:login', { email })
       },
       register: async (input) => {
         const res = await authApi.register(input)
         setToken(res.token)
         setUser(res.user)
-        signal('auth:register', { email: input.email })
         return res
       },
       logout: async () => {
         await authApi.logout()
         setUser(null)
-        signal('auth:logout')
       },
     }),
     [user, isLoading],

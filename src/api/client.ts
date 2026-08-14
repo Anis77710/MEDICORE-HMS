@@ -12,9 +12,6 @@ const HOSPITAL_KEY = 'medicore_hospital'
 export const API_BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 
-export const USE_MOCK_API: boolean =
-  (import.meta.env.VITE_USE_MOCK_API as string | undefined) !== 'false'
-
 export class ApiError extends Error {
   status: number
   details?: unknown
