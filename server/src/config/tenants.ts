@@ -1,10 +1,10 @@
 // ============================================================
-// Hospital tenants — one MongoDB database per hospital.
+// Hospital tenants - one MongoDB database per hospital.
 //
 // The server keeps its default connection (the MONGO_URI database,
 // which acts as the first/default hospital) plus one lazily-created
 // mongoose connection per registered hospital database. A small
-// registry collection ("healsync_registry" on the same cluster)
+// registry collection ("medicore_registry" on the same cluster)
 // maps a hospital slug -> database name so any API call can resolve
 // which database it belongs to (via the x-hospital-slug header,
 // a subdomain, or the registration/login flows).
@@ -15,7 +15,7 @@ import { jsonTransform } from '../models/helpers.js'
 import { DEFAULT_SLUG } from '../models/registry.js'
 import { env } from './env.js'
 
-export const REGISTRY_DB = 'healsync_registry'
+export const REGISTRY_DB = 'medicore_registry'
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,49}$/
 
 // ------------------------------------------------------------
@@ -41,7 +41,7 @@ export function slugify(name: string): string {
 }
 
 export function dbNameFor(slug: string): string {
-  return `healsync_${slug}`
+  return `medicore_${slug}`
 }
 
 export function isValidSlug(slug: string): boolean {
@@ -49,13 +49,48 @@ export function isValidSlug(slug: string): boolean {
 }
 
 // ------------------------------------------------------------
-// Registry collection — which hospitals exist
+// Hospital code + login domain
+//
+// Every hospital has a short login code (e.g. "MH") that prefixes
+// staff login usernames, and a login email domain (e.g.
+// "medicore.hms") used for the synthetic usernames. Both live on
+// the registry record - never hardcoded per-request.
+// ------------------------------------------------------------
+
+export const DEFAULT_HOSPITAL_CODE = 'MH'
+export const DEFAULT_LOGIN_DOMAIN = 'medicore.hms'
+
+/** Username domain for a hospital whose record predates loginDomain. */
+export function defaultLoginDomain(slug: string): string {
+  return `${slug.replace(/[^a-z0-9]/g, '')}.hms`
+}
+
+/** Short login code derived from a hospital name (e.g. "Medicore Hospital" -> "MH"). */
+export function deriveHospitalCode(name: string): string {
+  const words = name
+    .replace(/[^a-z0-9 ]/gi, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+  if (words.length === 0) return 'H'
+  const significant = words.filter(
+    (w) => !['hospital', 'the', 'and', 'of', 'general', 'city', 'national'].includes(w.toLowerCase()),
+  )
+  const src = significant.length > 0 ? significant : words
+  let code = src.map((w) => w[0]).join('').toUpperCase()
+  if (code.length < 2) code = (src[0] ?? 'H').slice(0, 2).toUpperCase()
+  return code.slice(0, 4)
+}
+
+// ------------------------------------------------------------
+// Registry collection - which hospitals exist
 // ------------------------------------------------------------
 
 export interface HospitalRecord {
   slug: string
   dbName: string
   name: string
+  code?: string
+  loginDomain?: string
   adminEmail: string
   status: 'active' | 'suspended'
   listed?: boolean
@@ -69,6 +104,8 @@ const hospitalSchema = new Schema<HospitalRecord>(
     slug: { type: String, required: true, unique: true, index: true },
     dbName: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true, trim: true },
+    code: { type: String, unique: true, sparse: true, uppercase: true, trim: true },
+    loginDomain: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
     adminEmail: { type: String, required: true, lowercase: true, trim: true, index: true },
     status: { type: String, enum: ['active', 'suspended'], default: 'active' },
     listed: { type: Boolean, default: true },
@@ -94,7 +131,7 @@ export function hospitalRegistry(): Model<HospitalRecord> {
 }
 
 // In-memory cache of registered slugs (avoids a registry query per request).
-// Every hospital is cached — including suspended ones, so those requests can
+// Every hospital is cached - including suspended ones, so those requests can
 // be rejected with a clear 403 instead of a confusing "not found".
 const slugCache = new Map<string, HospitalRecord>()
 
@@ -114,7 +151,7 @@ export function cachedHospital(slug: string): HospitalRecord | undefined {
 
 export async function updateHospitalRegistry(
   slug: string,
-  patch: Partial<Pick<HospitalRecord, 'name' | 'adminEmail' | 'status' | 'listed'>>,
+  patch: Partial<Pick<HospitalRecord, 'name' | 'adminEmail' | 'status' | 'listed' | 'code' | 'loginDomain'>>,
 ): Promise<HospitalRecord | null> {
   const doc = await hospitalRegistry().findOneAndUpdate(
     { slug },
@@ -135,13 +172,34 @@ export async function findHospitalByAdminEmail(email: string): Promise<HospitalR
   return docs
 }
 
+/** The login code (e.g. "MH") for a hospital, from its registry record. */
+export function hospitalCode(slug: string): string {
+  const rec = cachedHospital(slug)
+  return (rec?.code || (slug === DEFAULT_SLUG ? DEFAULT_HOSPITAL_CODE : '')).toUpperCase()
+}
+
+/** The login email domain (e.g. "medicore.hms") for a hospital. */
+export function hospitalLoginDomain(slug: string): string {
+  const rec = cachedHospital(slug)
+  return rec?.loginDomain || (slug === DEFAULT_SLUG ? DEFAULT_LOGIN_DOMAIN : defaultLoginDomain(slug))
+}
+
 export async function registerTenant(
   slug: string,
   name: string,
   adminEmail: string,
+  opts: { code?: string; loginDomain?: string } = {},
 ): Promise<HospitalRecord> {
   const dbName = dbNameFor(slug)
-  const doc = await hospitalRegistry().create({ slug, dbName, name, adminEmail, listed: true })
+  const doc = await hospitalRegistry().create({
+    slug,
+    dbName,
+    name,
+    adminEmail,
+    code: opts.code,
+    loginDomain: opts.loginDomain,
+    listed: true,
+  })
   slugCache.set(slug, doc.toObject())
   return doc.toObject()
 }
@@ -169,11 +227,13 @@ export async function syncDefaultTenantToRegistry(): Promise<void> {
       slug: DEFAULT_SLUG,
       dbName,
       name: (settings?.name as string | undefined) ?? 'Medicore Hospital',
+      code: DEFAULT_HOSPITAL_CODE,
+      loginDomain: DEFAULT_LOGIN_DOMAIN,
       adminEmail: String(admin.email ?? '').toLowerCase(),
       status: 'active',
     })
   } catch {
-    // Registry unavailable (e.g. fresh cluster) — non-fatal at boot.
+    // Registry unavailable (e.g. fresh cluster) - non-fatal at boot.
   }
   await loadRegistry()
 }
@@ -227,7 +287,7 @@ export async function resolveHospitalSlug(
   if (explicit) {
     if (!isValidSlug(explicit)) throw new Error('Invalid hospital code')
     const rec = cachedHospital(explicit)
-    if (!rec) throw new Error('Hospital not found — check the hospital code')
+    if (!rec) throw new Error('Hospital not found - check the hospital code')
     return { slug: explicit, name: rec.name }
   }
 
@@ -239,7 +299,7 @@ export async function resolveHospitalSlug(
     if (!isValidSlug(slug)) throw new Error('Invalid hospital code')
     if (slug !== DEFAULT_SLUG) {
       const rec = cachedHospital(slug)
-      if (!rec) throw new Error('Hospital not found — check the hospital code')
+      if (!rec) throw new Error('Hospital not found - check the hospital code')
       return { slug, name: rec.name }
     }
   }

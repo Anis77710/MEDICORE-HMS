@@ -32,6 +32,8 @@ import {
   unregisterTenant,
   updateHospitalRegistry,
   hospitalRegistry,
+  defaultLoginDomain,
+  deriveHospitalCode,
 } from '../config/tenants.js'
 import {
   masterAdminModel,
@@ -53,7 +55,14 @@ import { HospitalSettingsModel } from '../models/Settings.js'
 import { DoctorModel } from '../models/Doctor.js'
 import { PatientModel } from '../models/Patient.js'
 import { AppointmentModel } from '../models/Appointment.js'
-import { loginUsername, defaultPassword, sendHospitalCredentialsEmail, sendRegistrationRejectedEmail } from '../utils/credentials.js'
+import {
+  loginUsername,
+  firstNameOf,
+  nextStaffId,
+  generateTempPassword,
+  sendHospitalCredentialsEmail,
+  sendRegistrationRejectedEmail,
+} from '../utils/credentials.js'
 import { buildPaymentFields, esewaConfigured, newTransactionUuid, verifyEsewaCallback } from '../utils/esewa.js'
 
 export const masterRouter = Router()
@@ -67,7 +76,7 @@ function redirectToFrontend(res: { redirect(status: number, url: string): void }
 // ---------- Registration flow ----------
 // Hospital registration is a PAID flow: POST /register/initiate validates
 // the details and stores a short-lived RegistrationAttempt keyed by the
-// payment's transaction_uuid (the callback URL stays short — eSewa rejects
+// payment's transaction_uuid (the callback URL stays short - eSewa rejects
 // long success_urls). The signed eSewa callback claims that attempt and
 // creates the registration request as "paid"; only then does any data
 // persist beyond the attempt. The master admin approves it, which
@@ -126,7 +135,7 @@ masterRouter.get('/me', requireMasterAuth, (req, res) => {
 })
 
 // ---------- POST /master/register/initiate ----------
-// Public — starts the paid hospital registration. Validates the details,
+// Public - starts the paid hospital registration. Validates the details,
 // reserves the hospital slug and returns the eSewa form for the
 // registration fee. Nothing is provisioned here: the applicant's details
 // are stored in a short-lived RegistrationAttempt keyed by the payment's
@@ -167,9 +176,9 @@ masterRouter.post(
       }
       const normalized = email.toLowerCase()
 
-      // Read-only duplicate checks — these never write to the database.
+      // Read-only duplicate checks - these never write to the database.
       if (cachedHospital(slug)) {
-        throw new ApiError('This hospital is already registered — please log in instead', 409)
+        throw new ApiError('This hospital is already registered - please log in instead', 409)
       }
       if ((await findHospitalByAdminEmail(normalized)).length > 0) {
         throw new ApiError('An account with this email is already registered to another hospital', 409)
@@ -187,7 +196,7 @@ masterRouter.post(
       // A payment may already be in flight for this hospital or this email.
       // A different applicant on the same hospital name (or a different
       // hospital on the same email) is blocked; the same applicant retrying
-      // is allowed — their stale attempts are replaced with a fresh one.
+      // is allowed - their stale attempts are replaced with a fresh one.
       const pending = await registrationAttemptModel().findOne({
         $or: [{ slug }, { 'admin.email': normalized }],
         status: 'pending',
@@ -236,7 +245,7 @@ masterRouter.post(
 )
 
 // ---------- /master/register/success ----------
-// eSewa's signed callback. Verifies the payment, then — and only then —
+// eSewa's signed callback. Verifies the payment, then - and only then -
 // claims the RegistrationAttempt stored at initiate time under the payment's
 // transaction_uuid and creates the registration request as "paid", then
 // redirects the browser to the status page. The hospital is only created
@@ -281,7 +290,7 @@ masterRouter.all('/register/success', async (req: Request, res: Response, next) 
       return
     }
     // Two completed payments for the same applicant (e.g. two tabs) must not
-    // create two requests — surface the existing one.
+    // create two requests - surface the existing one.
     const dup = await registrationRequestModel().findOne({
       $or: [{ slug: attempt.slug }, { 'admin.email': attempt.email }],
       status: { $in: ['paid', 'approved'] },
@@ -319,7 +328,7 @@ masterRouter.all('/register/success', async (req: Request, res: Response, next) 
 
 // ---------- /master/register/failure ----------
 // eSewa's callback when the payer aborts or fails. Nothing was provisioned
-// at initiate time and no charge was made — the applicant can simply retry.
+// at initiate time and no charge was made - the applicant can simply retry.
 // The abandoned RegistrationAttempt is left for the TTL to expire.
 masterRouter.all('/register/failure', async (_req: Request, res: Response, next) => {
   try {
@@ -394,14 +403,17 @@ masterRouter.post('/requests/:id/approve', requireMasterAuth, async (req, res, n
     }
 
     const conn = getTenantConnection(slug)
-    const username = loginUsername(admin.name)
-    const password = defaultPassword(admin.name, admin.birthYear)
+    const hospitalCode = deriveHospitalCode(hospitalName)
+    const loginDomain = defaultLoginDomain(slug)
+    const staffId = await nextStaffId('ADMIN')
+    const username = loginUsername({ hospitalCode, firstName: firstNameOf(admin.name), staffId, loginDomain })
+    const password = generateTempPassword()
     try {
       await withTenant(conn, slug, async () => {
         if (await UserModel.findOne({ username })) {
           throw new ApiError(`The login username ${username} is already taken`, 409)
         }
-        await registerTenant(slug, hospitalName, admin.email)
+        await registerTenant(slug, hospitalName, admin.email, { code: hospitalCode, loginDomain })
         await HospitalSettingsModel.findOneAndUpdate(
           { _id: 'hospital' },
           { $set: { name: hospitalName, email: admin.email, phone: admin.phone } },
@@ -411,9 +423,11 @@ masterRouter.post('/requests/:id/approve', requireMasterAuth, async (req, res, n
           name: admin.name,
           email: admin.email,
           username,
+          staffId,
           phone: admin.phone,
           role: 'ADMIN',
           passwordHash: password,
+          mustChangePassword: true,
         })
         request.status = 'approved'
         request.approvedAt = new Date()
@@ -447,7 +461,7 @@ masterRouter.post('/requests/:id/approve', requireMasterAuth, async (req, res, n
 
     res.json({
       request,
-      credentials: { username },
+      credentials: { username, password },
     })
   } catch (err) {
     next(err)
@@ -514,7 +528,7 @@ async function hospitalCounts(slug: string): Promise<{ patients: number; doctors
   }
 }
 
-// GET /master/hospitals?stats=true — every registered hospital.
+// GET /master/hospitals?stats=true - every registered hospital.
 masterRouter.get(
   '/hospitals',
   requireMasterAuth,
@@ -538,7 +552,7 @@ masterRouter.get(
   },
 )
 
-// GET /master/hospitals/:slug — detail + record counts.
+// GET /master/hospitals/:slug - detail + record counts.
 masterRouter.get('/hospitals/:slug', requireMasterAuth, async (req, res, next) => {
   try {
     const record = await hospitalRegistry().findOne({ slug: req.params.slug }).lean()
@@ -549,7 +563,7 @@ masterRouter.get('/hospitals/:slug', requireMasterAuth, async (req, res, next) =
   }
 })
 
-// PATCH /master/hospitals/:slug/status — suspend or activate.
+// PATCH /master/hospitals/:slug/status - suspend or activate.
 masterRouter.patch(
   '/hospitals/:slug/status',
   requireMasterAuth,
@@ -570,7 +584,7 @@ masterRouter.patch(
   },
 )
 
-// PATCH /master/hospitals/:slug/listed — show/hide in the public directory.
+// PATCH /master/hospitals/:slug/listed - show/hide in the public directory.
 masterRouter.patch(
   '/hospitals/:slug/listed',
   requireMasterAuth,
@@ -591,7 +605,7 @@ masterRouter.patch(
   },
 )
 
-// DELETE /master/hospitals/:slug — permanently removes the hospital
+// DELETE /master/hospitals/:slug - permanently removes the hospital
 // (drops its database). The request must confirm with "DELETE".
 masterRouter.delete(
   '/hospitals/:slug',
@@ -673,7 +687,7 @@ masterRouter.put(
   },
 )
 
-// ---------- GET /master/stats — dashboard ----------
+// ---------- GET /master/stats - dashboard ----------
 masterRouter.get('/stats', requireMasterAuth, async (_req, res, next) => {
   try {
     const [hospitals, requests, settings, recentRequests, recentHospitals] = await Promise.all([
@@ -829,7 +843,7 @@ masterRouter.get(
 )
 
 // ---------- GET /master/receipts ----------
-// Paid registrations (revenue): all requests that moved money —
+// Paid registrations (revenue): all requests that moved money -
 // approved (collected), paid awaiting approval (pending), rejected (refunded).
 masterRouter.get(
   '/receipts',
@@ -885,7 +899,7 @@ masterRouter.get(
 // ---------- Announcements ----------
 // Platform-wide banners shown inside every hospital dashboard.
 
-// GET /master/announcements — all banners, newest first.
+// GET /master/announcements - all banners, newest first.
 masterRouter.get('/announcements', requireMasterAuth, async (_req, res, next) => {
   try {
     const items = await platformAnnouncementModel().find({}).sort({ createdAt: -1 }).limit(100).lean()
@@ -906,7 +920,7 @@ masterRouter.get('/announcements', requireMasterAuth, async (_req, res, next) =>
   }
 })
 
-// POST /master/announcements — create a banner.
+// POST /master/announcements - create a banner.
 masterRouter.post(
   '/announcements',
   requireMasterAuth,
@@ -947,7 +961,7 @@ masterRouter.post(
   },
 )
 
-// PATCH /master/announcements/:id — activate / retire a banner.
+// PATCH /master/announcements/:id - activate / retire a banner.
 masterRouter.patch(
   '/announcements/:id',
   requireMasterAuth,
@@ -964,7 +978,7 @@ masterRouter.patch(
   },
 )
 
-// DELETE /master/announcements/:id — permanently remove a banner.
+// DELETE /master/announcements/:id - permanently remove a banner.
 masterRouter.delete('/announcements/:id', requireMasterAuth, async (req, res, next) => {
   try {
     const doc = await platformAnnouncementModel().findByIdAndDelete(req.params.id)
@@ -1066,7 +1080,7 @@ masterRouter.get(
   },
 )
 
-// PATCH /master/contacts/:id — mark done / reopen.
+// PATCH /master/contacts/:id - mark done / reopen.
 masterRouter.patch(
   '/contacts/:id',
   requireMasterAuth,
@@ -1093,7 +1107,7 @@ masterRouter.patch(
   },
 )
 
-// DELETE /master/contacts/:id — remove a contact message.
+// DELETE /master/contacts/:id - remove a contact message.
 masterRouter.delete('/contacts/:id', requireMasterAuth, async (req, res, next) => {
   try {
     const doc = await contactMessageModel().findByIdAndDelete(req.params.id)
@@ -1109,7 +1123,7 @@ masterRouter.delete('/contacts/:id', requireMasterAuth, async (req, res, next) =
 })
 
 // ---------- PUT /master/directory/order ----------
-// Reorders the public directory. Body: { slugs: string[] } — the final
+// Reorders the public directory. Body: { slugs: string[] } - the final
 // display order of listed hospitals; hidden hospitals keep their score.
 masterRouter.put(
   '/directory/order',

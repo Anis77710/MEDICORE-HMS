@@ -110,7 +110,7 @@ export default function Consultations() {
                     </td>
                     <td className="muted">{c.chiefComplaint}</td>
                     <td className="font-semibold">{c.diagnosis.primary}</td>
-                    <td className="muted font-mono">{c.prescriptionNo ?? c.prescriptionId ?? '—'}</td>
+                    <td className="muted font-mono">{c.prescriptionNo ?? c.prescriptionId ?? '-'}</td>
                     <td style={{ textAlign: 'right' }}>
                       <Link to={`/doctor/consultations/${c.id}`} className="btn btn-outline btn-sm">
                         View Details

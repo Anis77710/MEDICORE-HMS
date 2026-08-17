@@ -24,7 +24,7 @@ export default function Login() {
     setError('')
     setBusy(true)
     try {
-      // Platform administrator credentials are accepted on this screen too —
+      // Platform administrator credentials are accepted on this screen too -
       // sign them into the master panel instead of a hospital dashboard.
       try {
         await loginMaster(email, password)
@@ -32,9 +32,14 @@ export default function Login() {
         navigate('/master')
         return
       } catch {
-        // Not a platform admin — fall through to hospital sign-in.
+        // Not a platform admin - fall through to hospital sign-in.
       }
-      await loginHospital(email, password, remember)
+      const user = await loginHospital(email, password, remember)
+      if (user.mustChangePassword) {
+        push('Please set a permanent password to continue')
+        navigate('/change-password')
+        return
+      }
       push('Welcome back to Medicore HMS')
       navigate('/')
     } catch (err) {
@@ -79,7 +84,7 @@ export default function Login() {
             <div className="auth-form-inner">
               <h2 className="auth-title">Welcome Back</h2>
               <p className="auth-subtitle">
-                Sign in to your hospital dashboard — platform administrators are
+                Sign in to your hospital dashboard - platform administrators are
                 routed to the master panel automatically.
               </p>
 

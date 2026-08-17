@@ -1,5 +1,5 @@
 // ============================================================
-// HealSync HMS — Billing service
+// Medicore HMS - Billing service
 // ============================================================
 
 import { ENDPOINTS, withParams } from '../endpoints'
@@ -24,6 +24,21 @@ export async function getInvoice(id: string): Promise<Invoice> {
 
 export async function createInvoice(input: InvoiceInput): Promise<Invoice> {
   return http.post<Invoice>(ENDPOINTS.INVOICE_CREATE, input)
+}
+
+export interface InvoiceDraft {
+  patientId: string
+  patientName: string
+  items: { description: string; amount: number }[]
+  subtotal: number
+  tax: number
+  total: number
+}
+
+export async function autoDraftInvoice(patientId: string): Promise<InvoiceDraft> {
+  return http.get<InvoiceDraft>(ENDPOINTS.INVOICE_AUTO_DRAFT, {
+    params: { patientId },
+  })
 }
 
 export async function recordPayment(input: {

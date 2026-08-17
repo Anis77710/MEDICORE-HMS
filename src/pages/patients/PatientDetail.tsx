@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   HeartPulse,
@@ -46,7 +46,7 @@ const REFERENCE_TIME = Date.now()
 
 export default function PatientDetail() {
   const { id } = useParams<{ id: string }>()
-  const { can } = usePermissions()
+  const { can, canView } = usePermissions()
   const [patient, setPatient] = useState<Patient | null>(null)
   const [records, setRecords] = useState<MedicalRecord[]>([])
   const [appointments, setAppointments] = useState<Appointment[]>([])
@@ -65,7 +65,7 @@ export default function PatientDetail() {
       getPatient(id),
       getMedicalRecords(id),
       listAppointments({ search: undefined }),
-      listInvoices({}),
+      canView('billing') ? listInvoices({}) : Promise.resolve([]),
       listPrescriptions({}),
       getPatientDocuments(id),
     ])
@@ -87,7 +87,7 @@ export default function PatientDetail() {
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, canView])
 
   if (loading) return <Spinner label="Loading patient…" />
   if (error || !patient)
@@ -167,8 +167,8 @@ export default function PatientDetail() {
               <span>Insurance</span>
             </div>
             <div>
-              <strong>Rs. {totalBilled.toLocaleString()}</strong>
-              <span>Total billed · Rs. {totalPaid.toLocaleString()} paid</span>
+              <strong>NPR {totalBilled.toLocaleString()}</strong>
+              <span>Total billed · NPR {totalPaid.toLocaleString()} paid</span>
             </div>
           </div>
         </div>
@@ -189,7 +189,9 @@ export default function PatientDetail() {
           { value: 'records', label: 'Medical Records', count: records.length },
           { value: 'prescriptions', label: 'Prescriptions', count: prescriptions.length },
           { value: 'appointments', label: 'Appointments', count: appointments.length },
-          { value: 'billing', label: 'Billing', count: invoices.length },
+          ...(canView('billing')
+            ? [{ value: 'billing' as TabKey, label: 'Billing', count: invoices.length }]
+            : []),
           { value: 'documents', label: 'Documents', count: documents.length },
         ]}
         active={tab}
@@ -443,8 +445,8 @@ export default function PatientDetail() {
                         <td className="muted">{i.description}</td>
                         <td>{i.issuedAt}</td>
                         <td>{i.dueDate}</td>
-                        <td className="font-semibold">Rs. {i.total.toLocaleString()}</td>
-                        <td>Rs. {i.amountPaid.toLocaleString()}</td>
+                        <td className="font-semibold">NPR {i.total.toLocaleString()}</td>
+                        <td>NPR {i.amountPaid.toLocaleString()}</td>
                         <td>
                           <StatusBadge status={i.status} />
                         </td>

@@ -1,5 +1,5 @@
 // ============================================================
-// HealSync HMS — end-to-end API smoke test
+// Medicore HMS - end-to-end API smoke test
 // Boots the real Express app against an in-memory MongoDB and
 // exercises every route the frontend depends on.
 // Usage: npm run smoke
@@ -8,7 +8,7 @@
 import { MongoMemoryServer } from 'mongodb-memory-server'
 
 const mongod = await MongoMemoryServer.create()
-process.env.MONGO_URI = mongod.getUri('healsync_smoke')
+process.env.MONGO_URI = mongod.getUri('medicore_smoke')
 process.env.PORT = '0'
 process.env.EMAIL_TRANSPORT = 'log'
 process.env.ESEWA_ENV = 'test'
@@ -21,10 +21,11 @@ process.env.MASTER_ADMIN_PASSWORD = 'smokeMaster@2026'
 
 const { env } = await import('../config/env.js')
 const { connectDb, disconnectDb } = await import('../config/db.js')
+const { syncDefaultTenantToRegistry } = await import('../config/tenants.js')
+const { ensureMasterAdmin } = await import('../config/platform.js')
 const { app } = await import('../app.js')
 const { seedData } = await import('../seed/run.js')
 const { OtpModel } = await import('../models/Otp.js')
-const { ConsultationModel } = await import('../models/Consultation.js')
 const { PatientModel } = await import('../models/Patient.js')
 const { AppointmentModel } = await import('../models/Appointment.js')
 const { PaymentAttemptModel } = await import('../models/PaymentAttempt.js')
@@ -33,6 +34,10 @@ const { capturedEmails } = await import('../utils/email.js')
 
 await connectDb(env.MONGO_URI)
 await seedData()
+// The seed wipes the registry; re-provision what a fresh boot after
+// `npm run seed` would create (default hospital entry + master admin).
+await syncDefaultTenantToRegistry()
+await ensureMasterAdmin()
 
 const server = app.listen(0)
 const port = (server.address() as { port: number }).port
@@ -59,6 +64,7 @@ interface ApiOpts {
   json?: unknown
   cookie?: string
   origin?: string
+  hospital?: string
 }
 
 async function api(path: string, opts: ApiOpts = {}): Promise<Response> {
@@ -67,11 +73,12 @@ async function api(path: string, opts: ApiOpts = {}): Promise<Response> {
   if (opts.json !== undefined) headers['Content-Type'] = 'application/json'
   if (opts.cookie) headers.Cookie = opts.cookie
   if (opts.origin) headers.Origin = opts.origin
+  if (opts.hospital) headers['x-hospital-slug'] = opts.hospital
   return fetch(`${base}${path}`, {
     method: opts.method ?? (opts.json !== undefined ? 'POST' : 'GET'),
     headers,
     body: opts.json !== undefined ? JSON.stringify(opts.json) : undefined,
-    // Payment callbacks assert the 302 Location — never follow redirects.
+    // Payment callbacks assert the 302 Location - never follow redirects.
     redirect: 'manual',
   })
 }
@@ -106,7 +113,7 @@ async function waitForMail(
 
 try {
   // ---------- Health check (liveness probe for uptime monitors) ----------
-  // No auth token is sent — the endpoint must be public, return 200 with a
+  // No auth token is sent - the endpoint must be public, return 200 with a
   // minimal JSON body, and (being registered before tenant middleware) must
   // not touch the database or any application data.
   const health = await api('/health')
@@ -116,7 +123,7 @@ try {
   check('health response is minimal (no internals)', Object.keys(healthBody).length === 1)
 
   // ---------- Master admin + paid hospital registration ----------
-  // Free registration no longer exists — hospitals must pay the NPR 2,000
+  // Free registration no longer exists - hospitals must pay the NPR 2,000
   // registration fee (eSewa) and be approved by the master admin.
   const oldRegister = await api('/auth/register', {
     json: { hospitalName: 'Second Hospital', name: 'New Admin', email: 'newadmin@test.dev', phone: '', birthYear: 1990 },
@@ -191,8 +198,9 @@ try {
 
   const approveReq = await api(`/master/requests/${paidBody.items[0]!._id}/approve`, { method: 'POST', token: masterToken })
   check('POST /master/requests/:id/approve -> 200', approveReq.status === 200)
-  const approveBody = await json<{ credentials: { username: string }; request: { status: string; regNo: string } }>(approveReq)
-  check('approval provisions admin credentials (new@medicore.hms)', approveBody.credentials.username === 'new@medicore.hms')
+  const approveBody = await json<{ credentials: { username: string; password: string }; request: { status: string; regNo: string } }>(approveReq)
+  check('approval provisions admin credentials (SEnew.0001@secondhospital.hms)', approveBody.credentials.username === 'SEnew.0001@secondhospital.hms')
+  check('approval issues a strong temporary password', /^.{12,}$/.test(approveBody.credentials.password) && /[A-Z]/.test(approveBody.credentials.password) && /\d/.test(approveBody.credentials.password))
   check('request marked approved with regNo intact', approveBody.request.status === 'approved' && approveBody.request.regNo === regNo)
 
   const hospital = await api('/master/hospitals', { token: masterToken })
@@ -202,13 +210,15 @@ try {
   const credsMail = await waitForMail((m) => m.to === 'newadmin@test.dev' && /approved: login credentials & receipt/i.test(m.subject))
   check('approval email with credentials + receipt sent', Boolean(credsMail))
   check('receipt block contains fee + transaction code', Boolean(credsMail && credsMail.text.includes('NPR 2,000') && credsMail.text.includes('REGCODE123')))
+  check('credentials email includes the login username', Boolean(credsMail && credsMail.text.includes('SEnew.0001@secondhospital.hms')))
+  check('credentials email warns about forced change', Boolean(credsMail && /must change this temporary password/i.test(credsMail.text)))
 
-  const adminLogin = await api('/auth/login', { json: { email: 'newadmin@test.dev', password: 'new@1990' } })
+  const adminLogin = await api('/auth/login', { json: { email: 'newadmin@test.dev', password: approveBody.credentials.password } })
   check('new hospital admin logs in with emailed credentials', adminLogin.status === 200)
 
   // The approval email tells admins to sign in with the generated username,
   // so that must resolve to the new hospital's tenant (no header needed).
-  const tenantUsernameLogin = await api('/auth/login', { json: { email: 'new@medicore.hms', password: 'new@1990' } })
+  const tenantUsernameLogin = await api('/auth/login', { json: { email: 'SEnew.0001@secondhospital.hms', password: approveBody.credentials.password } })
   const tenantUsernameLoginBody = await json<{ hospital: { slug: string } }>(tenantUsernameLogin)
   check('new hospital admin logs in with emailed username', tenantUsernameLogin.status === 200)
   check('username login resolves the tenant hospital', tenantUsernameLoginBody.hospital?.slug === 'second-hospital')
@@ -238,14 +248,14 @@ try {
   // ---------- Master hospital management ----------
   const suspend = await api('/master/hospitals/second-hospital/status', { token: masterToken, method: 'PATCH', json: { status: 'suspended' } })
   check('suspend hospital -> 200', suspend.status === 200)
-  const suspendedLogin = await api('/auth/login', { json: { email: 'new@medicore.hms', password: 'new@1990', hospital: 'second-hospital' } })
+  const suspendedLogin = await api('/auth/login', { json: { email: 'SEnew.0001@secondhospital.hms', password: approveBody.credentials.password, hospital: 'second-hospital' } })
   check('suspended hospital login blocked -> 403', suspendedLogin.status === 403)
   const suspendedReq = await fetch(`${base}/public/doctors`, { headers: { 'x-hospital-slug': 'second-hospital' } })
   check('suspended hospital requests blocked -> 403', suspendedReq.status === 403)
 
   const activate = await api('/master/hospitals/second-hospital/status', { token: masterToken, method: 'PATCH', json: { status: 'active' } })
   check('activate hospital -> 200', activate.status === 200)
-  const reactivated = await api('/auth/login', { json: { email: 'new@medicore.hms', password: 'new@1990', hospital: 'second-hospital' } })
+  const reactivated = await api('/auth/login', { json: { email: 'SEnew.0001@secondhospital.hms', password: approveBody.credentials.password, hospital: 'second-hospital' } })
   check('reactivated hospital login allowed', reactivated.status === 200)
 
   // Hospital tokens must never access master endpoints.
@@ -271,7 +281,7 @@ try {
 
   // ---------- Auth ----------
 
-  const login = await api('/auth/login', { json: { email: 'admin@healsync.health', password: 'admin123' } })
+  const login = await api('/auth/login', { json: { email: 'admin@medicore.health', password: 'admin123' } })
   check('POST /auth/login (seeded admin) -> 200', login.status === 200)
   const loginBody = await json<{ user: { name: string; role: string }; token: string }>(login)
   check('login user is admin', loginBody.user.role === 'ADMIN')
@@ -279,8 +289,28 @@ try {
   const cookie = login.headers.getSetCookie()[0]?.split(';')[0] ?? ''
   check('refresh cookie set (httpOnly)', cookie.includes('hs_refresh'))
 
-  const usernameLogin = await api('/auth/login', { json: { email: 'sarah@medicore.hms', password: 'admin123' } })
-  check('login by username (firstname@medicore.hms) -> 200', usernameLogin.status === 200)
+  const usernameLogin = await api('/auth/login', { json: { email: 'MHsarah.0001@medicore.hms', password: 'admin123' } })
+  check('login by username (MHsarah.0001@medicore.hms) -> 200', usernameLogin.status === 200)
+
+  // Multi-hospital isolation: accounts and data live in separate databases.
+  const shAdminTempLogin = await api('/auth/login', { json: { email: 'SEnew.0001@secondhospital.hms', password: approveBody.credentials.password } })
+  const shAdminBody = await json<{ token: string }>(shAdminTempLogin)
+  check('SH admin username login resolves SH tenant', shAdminTempLogin.status === 200)
+  const shAdminChange = await api('/auth/change-password', { token: shAdminBody.token, hospital: 'second-hospital', json: { currentPassword: approveBody.credentials.password, newPassword: 'SHAdmin#2026' } })
+  check('SH admin completes forced password change', shAdminChange.status === 200)
+  const shCreateDoc = await api('/doctors', {
+    token: shAdminBody.token,
+    hospital: 'second-hospital',
+    json: { name: 'Dr. Sh Hospital', email: 'shdoc@test.dev', department: 'Cardiology', specialty: 'Cardiologist', consultationFee: 80, birthYear: 1978, schedule: FULL_WEEK },
+  })
+  const shDocBody = await json<{ credentials: { username: string; password: string } }>(shCreateDoc)
+  check('doctor in second hospital gets SE-prefixed username', shCreateDoc.status === 201 && shDocBody.credentials.username === 'SEsh.0001@secondhospital.hms')
+  const defaultDocs = await json<{ name: string }[]>(await api('/doctors', { token: loginBody.token }))
+  check('second-hospital doctor invisible to default hospital', !defaultDocs.some((d) => d.name === 'Dr. Sh Hospital'))
+  const shDocLogin = await api('/auth/login', { json: { email: shDocBody.credentials.username, password: shDocBody.credentials.password } })
+  const shDocLoginBody = await json<{ hospital: { slug: string }; user: { mustChangePassword: boolean } }>(shDocLogin)
+  check('SH username login resolves the SH tenant (domain-based)', shDocLogin.status === 200 && shDocLoginBody.hospital?.slug === 'second-hospital')
+  check('second-hospital doctor flagged for password change', shDocLoginBody.user.mustChangePassword === true)
 
   const me = await api('/auth/me', { token })
   check('GET /auth/me -> 200', me.status === 200)
@@ -339,11 +369,43 @@ try {
     json: { name: 'Dr. Smoke Test', email: 'smoke@doc.dev', department: 'Cardiology', specialty: 'Cardiologist', consultationFee: 100, birthYear: 1985, schedule: FULL_WEEK },
   })
   check('POST /doctors -> 201', createDoc.status === 201)
-  const doctor = await json<{ id: string; schedule: unknown[]; rating: number; credentials: { username: string; password: string } }>(createDoc)
+  const doctor = await json<{ id: string; staffId: string; schedule: unknown[]; rating: number; credentials: { username: string; password: string } }>(createDoc)
   check('doctor defaults (schedule, rating)', Array.isArray(doctor.schedule) && doctor.rating > 0)
-  check('doctor create returns credentials (smoke@medicore.hms)', doctor.credentials?.username === 'smoke@medicore.hms')
+  check('doctor staffId assigned (DOC-0001)', doctor.staffId === 'DOC-0001')
+  check('doctor credentials follow MH<first>.<staffId>@<domain> scheme', doctor.credentials?.username === 'MHsmoke.0001@medicore.hms')
+  check('doctor password is strong + random (12+ chars, mixed classes)', /^.{12,}$/.test(doctor.credentials.password) && /[A-Z]/.test(doctor.credentials.password) && /[a-z]/.test(doctor.credentials.password) && /\d/.test(doctor.credentials.password) && /[^A-Za-z0-9]/.test(doctor.credentials.password))
   const doctorLogin = await api('/auth/login', { json: { email: doctor.credentials.username, password: doctor.credentials.password } })
   check('new doctor can login with generated credentials', doctorLogin.status === 200)
+  const doctorLoginBody = await json<{ user: { mustChangePassword: boolean }; token: string }>(doctorLogin)
+  check('new doctor flagged to change password on first login', doctorLoginBody.user.mustChangePassword === true)
+
+  // Same name + same birth year must still get a distinct, unique username
+  // (staff ID is the primary identifier - names never identify an account).
+  const createDocTwin = await api('/doctors', {
+    token,
+    json: { name: 'Dr. Smoke Test', email: 'smoke2@doc.dev', department: 'Cardiology', specialty: 'Cardiologist', consultationFee: 100, birthYear: 1985, schedule: FULL_WEEK },
+  })
+  check('same name + same birth year allowed (distinct staff IDs)', createDocTwin.status === 201)
+  const doctorTwin = await json<{ staffId: string; credentials: { username: string } }>(createDocTwin)
+  check('twin gets next staff ID + distinct username', doctorTwin.staffId === 'DOC-0002' && doctorTwin.credentials.username === 'MHsmoke.0002@medicore.hms')
+
+  // Forced password change: dashboard/portal blocked until changed.
+  const docPortalBlockedPreChange = await api('/doctor-portal/me', { token: doctorLoginBody.token })
+  check('doctor portal blocked until temp password changed -> 403', docPortalBlockedPreChange.status === 403)
+  const weakChange = await api('/auth/change-password', { token: doctorLoginBody.token, json: { currentPassword: doctor.credentials.password, newPassword: 'weak' } })
+  check('weak new password rejected -> 400', weakChange.status === 400)
+  const wrongCurrent = await api('/auth/change-password', { token: doctorLoginBody.token, json: { currentPassword: 'wrong-temp', newPassword: 'SmokeNew#2026' } })
+  check('wrong current password rejected -> 400', wrongCurrent.status === 400)
+  const changePassword = await api('/auth/change-password', { token: doctorLoginBody.token, json: { currentPassword: doctor.credentials.password, newPassword: 'SmokeNew#2026' } })
+  check('forced change accepted with valid password', changePassword.status === 200)
+  const changeBody = await json<{ user: { mustChangePassword: boolean } }>(changePassword)
+  check('change clears mustChangePassword flag', changeBody.user.mustChangePassword === false)
+  const meAfterChange = await api('/auth/me', { token: doctorLoginBody.token })
+  check('same token works after change (session kept)', meAfterChange.status === 200 && (await json<{ mustChangePassword: boolean }>(meAfterChange)).mustChangePassword === false)
+  const portalAfterChange = await api('/doctor-portal/me', { token: doctorLoginBody.token })
+  check('doctor portal reachable after change -> 200', portalAfterChange.status === 200)
+  const oldTempLogin = await api('/auth/login', { json: { email: doctor.credentials.username, password: doctor.credentials.password } })
+  check('old temporary password rejected after change -> 401', oldTempLogin.status === 401)
 
   const listD = await api('/doctors?department=Cardiology', { token })
   check('GET /doctors?department -> 200', listD.status === 200)
@@ -440,7 +502,7 @@ try {
   check('POST /staff (admin) -> 201', createStaff.status === 201)
   const createStaffBody = await json<{ credentials: { username: string; password: string } }>(createStaff)
   check('staff create returns generated credentials', Boolean(createStaffBody.credentials?.username && createStaffBody.credentials?.password))
-  check('credentials follow firstname@medicore.hms scheme', createStaffBody.credentials.username === 'nurse@medicore.hms')
+  check('staff credentials follow MH<first>.<staffId>@<domain> scheme', createStaffBody.credentials.username === 'MHnurse.0001@medicore.hms')
 
   const audit = await api('/staff/audit-log', { token })
   check('GET /staff/audit-log (admin) -> 200', audit.status === 200)
@@ -450,37 +512,79 @@ try {
     json: { email: createStaffBody.credentials.username, password: createStaffBody.credentials.password },
   })
   check('new staff can login with generated username+password', nurseLogin.status === 200)
-  const nurseBody = await json<{ token: string }>(nurseLogin)
+  const nurseLoginBody = await json<{ user: { mustChangePassword: boolean }; token: string }>(nurseLogin)
+  check('new staff flagged to change password on first login', nurseLoginBody.user.mustChangePassword === true)
+  const nurseChange = await api('/auth/change-password', { token: nurseLoginBody.token, json: { currentPassword: createStaffBody.credentials.password, newPassword: 'NurseNew#2026' } })
+  check('staff completes forced password change', nurseChange.status === 200)
+  const nurseBody = nurseLoginBody
   const staffCreateStaff = await api('/staff', { token: nurseBody.token, json: { name: 'Nope', email: 'x@y.dev', role: 'NURSE', birthYear: 1991 } })
   check('non-admin staff create blocked -> 403', staffCreateStaff.status === 403)
 
-  // ---------- Doctor Portal ----------
-  const docLogin = await api('/auth/login', { json: { email: 'm.roberts@healsync.health', password: 'doctor123' } })
-  check('doctor login (seeded doctor account) -> 200', docLogin.status === 200)
-  const docBody = await json<{ user: { role: string }; token: string }>(docLogin)
-  check('doctor login role is DOCTOR', docBody.user.role === 'DOCTOR')
-  const docToken = docBody.token
+  // Billing is restricted to billing-assigned staff (ADMIN or Billing dept).
+  const nurseBilling = await api('/billing/invoices', { token: nurseBody.token })
+  check('non-billing staff blocked from billing -> 403', nurseBilling.status === 403)
+
+  const billingStaff = await api('/staff', { token, json: { name: 'Billing Smoke', email: 'billing@smoke.dev', role: 'STAFF', department: 'Billing', birthYear: 1991 } })
+  check('POST /staff billing member -> 201', billingStaff.status === 201)
+  const billingStaffBody = await json<{ credentials: { username: string; password: string } }>(billingStaff)
+  check('billing staff credentials follow scheme', billingStaffBody.credentials.username === 'MHbilling.0001@medicore.hms')
+  const billingLogin = await api('/auth/login', { json: { email: billingStaffBody.credentials.username, password: billingStaffBody.credentials.password } })
+  check('billing staff can login -> 200', billingLogin.status === 200)
+  const billingBody = await json<{ user: { role: string; department?: string }; token: string }>(billingLogin)
+  check('login exposes department', billingBody.user.role === 'STAFF' && billingBody.user.department === 'Billing')
+  const billingChange = await api('/auth/change-password', { token: billingBody.token, json: { currentPassword: billingStaffBody.credentials.password, newPassword: 'Billing#2026' } })
+  check('billing staff completes forced password change', billingChange.status === 200)
+  const billingList = await api('/billing/invoices', { token: billingBody.token })
+  check('billing-department staff can access billing -> 200', billingList.status === 200)
+
+  // ---------- Doctor account governance: reset + disable/enable ----------
+  const resetDoc = await api(`/doctors/${doctor.id}/reset-password`, { method: 'POST', token })
+  check('POST /doctors/:id/reset-password -> 200', resetDoc.status === 200)
+  const resetDocBody = await json<{ tempPassword: string }>(resetDoc)
+  check('reset returns a fresh temporary password', Boolean(resetDocBody.tempPassword) && resetDocBody.tempPassword !== doctor.credentials.password)
+  const resetLogin = await api('/auth/login', { json: { email: doctor.credentials.username, password: resetDocBody.tempPassword } })
+  const resetLoginBody = await json<{ user: { mustChangePassword: boolean }; token: string }>(resetLogin)
+  check('reset forces change again on next login', resetLogin.status === 200 && resetLoginBody.user.mustChangePassword === true)
+  const resetBlocked = await api('/doctor-portal/me', { token: resetLoginBody.token })
+  check('portal blocked after admin reset until changed -> 403', resetBlocked.status === 403)
+  await api('/auth/change-password', { token: resetLoginBody.token, json: { currentPassword: resetDocBody.tempPassword, newPassword: 'SmokeNew#2026' } })
+
+  const disableDoc = await api(`/doctors/${doctor.id}/disable-login`, { method: 'POST', token })
+  check('POST /doctors/:id/disable-login -> 200', disableDoc.status === 200)
+  const disabledLogin = await api('/auth/login', { json: { email: doctor.credentials.username, password: 'SmokeNew#2026' } })
+  check('disabled doctor login blocked -> 403', disabledLogin.status === 403)
+  const enableDoc = await api(`/doctors/${doctor.id}/enable-login`, { method: 'POST', token })
+  check('POST /doctors/:id/enable-login -> 200', enableDoc.status === 200)
+  const reEnabledLogin = await api('/auth/login', { json: { email: doctor.credentials.username, password: 'SmokeNew#2026' } })
+  check('re-enabled doctor can login -> 200', reEnabledLogin.status === 200)
+  const reEnabledBody = await json<{ token: string }>(reEnabledLogin)
+  const docToken = reEnabledBody.token
 
   const docPortalBlocked = await api('/doctor-portal/me', { token: nurseBody.token })
   check('non-doctor blocked from doctor portal -> 403', docPortalBlocked.status === 403)
 
   const docMe = await api('/doctor-portal/me', { token: docToken })
   const docMeBody = await json<{ email: string; name: string }>(docMe)
-  check('GET /doctor-portal/me resolves doctor profile', docMe.status === 200 && docMeBody.email === 'm.roberts@healsync.health' && docMeBody.name === 'Dr. Michael Roberts')
+  check('GET /doctor-portal/me resolves doctor profile', docMe.status === 200 && docMeBody.email === 'smoke@doc.dev' && docMeBody.name === 'Dr. Smoke Test')
 
   const myPatients = await api('/doctor-portal/patients', { token: docToken })
   const myPatientsBody = await json<{ patientId: string }[]>(myPatients)
-  check('doctor sees their own patients only', myPatients.status === 200 && myPatientsBody.some((p) => p.patientId.startsWith('Sarah-')) && myPatientsBody.length <= 3)
+  check('doctor sees their own patients only', myPatients.status === 200 && myPatientsBody.some((p) => p.patientId.startsWith('Test-')) && myPatientsBody.length <= 3)
+
+  // Two fresh appointments so the portal has pending work to act on.
+  await api('/appointments', { token, json: { patientId: patient.id, doctorId: doctor.id, type: 'Checkup', date: inDays(8), time: '09:00', reason: 'Smoke portal A' } })
+  const portalApptB = await api('/appointments', { token, json: { patientId: patient.id, doctorId: doctor.id, type: 'Follow-up', date: inDays(9), time: '10:00', reason: 'Smoke portal B' } })
+  const portalApptBId = await json<{ id: string }>(portalApptB)
 
   const myAppts = await api('/doctor-portal/appointments', { token: docToken })
   const myApptsBody = await json<{ doctorName: string; status: string; id: string }[]>(myAppts)
-  check('doctor appointments all belong to the doctor', myAppts.status === 200 && myApptsBody.length >= 2 && myApptsBody.every((a) => a.doctorName === 'Dr. Michael Roberts'))
+  check('doctor appointments all belong to the doctor', myAppts.status === 200 && myApptsBody.length >= 2 && myApptsBody.every((a) => a.doctorName === 'Dr. Smoke Test'))
   const pendingAppt = myApptsBody.find((a) => a.status === 'Pending' || a.status === 'Confirmed')
 
-  const confirmAppt = await api(`/doctor-portal/appointments/${myApptsBody[0]!.id}/confirm`, { method: 'POST', token: docToken })
+  const confirmAppt = await api(`/doctor-portal/appointments/${portalApptBId.id}/confirm`, { method: 'POST', token: docToken })
   check('doctor confirms own appointment', confirmAppt.status === 200 && (await json<{ status: string }>(confirmAppt)).status === 'Confirmed')
 
-  const portalApptDetail = await json<{ patientId: string }>(await api(`/appointments/${myApptsBody[0]!.id}`, { token }))
+  const portalApptDetail = await json<{ patientId: string }>(await api(`/appointments/${portalApptBId.id}`, { token }))
   const portalPatient = await json<{ email: string }>(await api(`/patients/${portalApptDetail.patientId}`, { token }))
   const portalApprovedMail = await waitForMail((m) => m.to === portalPatient.email && /confirmed/i.test(m.subject))
   check('doctor-portal approval emails the patient', Boolean(portalApprovedMail))
@@ -501,13 +605,15 @@ try {
   })
   check('consultation without patientId rejected -> 400', createConsult.status === 400)
 
-  const sarahAppts = await api(`/doctor-portal/appointments`, { token: docToken })
-  const sarahAppt = (await json<{ id: string; patientId: string; patientName: string }[]>(sarahAppts)).find((a) => a.patientName === 'Sarah Johnson')
+  const docAppts = await api(`/doctor-portal/appointments`, { token: docToken })
+  const activeAppt = (await json<{ id: string; patientId: string; patientName: string; status: string }[]>(docAppts)).find(
+    (a) => a.patientName === 'Test Patient' && (a.status === 'Pending' || a.status === 'Confirmed'),
+  )
   const createConsult2 = await api('/doctor-portal/consultations', {
     token: docToken,
     json: {
-      patientId: sarahAppt?.patientId,
-      appointmentId: sarahAppt?.id,
+      patientId: activeAppt?.patientId,
+      appointmentId: activeAppt?.id,
       chiefComplaint: 'Routine post-op review, patient feeling well.',
       symptoms: 'None',
       vitals: { bloodPressure: '122/78', heartRate: 70, temperature: 36.6, respiratoryRate: 15, spo2: 98, weightKg: 67, heightCm: 165, bmi: 24.6 },
@@ -515,28 +621,66 @@ try {
       diagnosis: { primary: 'Post-angioplasty review', additional: '', notes: '' },
       clinicalNotes: { assessment: 'Doing well', observations: '', reasoning: '', general: '' },
       treatmentPlan: { advice: 'Continue medications', diet: '', lifestyle: '', instructions: '' },
-      prescription: { medicines: [{ name: 'Aspirin 75mg', dosage: '75mg', frequency: 'Once daily', durationDays: 30, instructions: 'With food' }] },
+      prescription: { medicines: [{ name: 'SmokeMed 100mg', dosage: '100mg', frequency: 'Once daily', durationDays: 30, instructions: 'With food' }] },
     },
   })
   const consultBody = await json<{ id: string; status?: string; prescriptionId?: string; prescriptionNo?: string }>(createConsult2)
   check('POST /doctor-portal/consultations -> 201', createConsult2.status === 201)
   check('consultation links prescription', Boolean(consultBody.prescriptionId))
-  check('prescription has readable ID (no Mongo ObjectId)', /^Sarah-\d+-\d+-\d+-\d+$/.test(consultBody.prescriptionNo ?? ''))
+  check('prescription has readable ID (no Mongo ObjectId)', /^Test-\d+-\d+-\d+-\d+$/.test(consultBody.prescriptionNo ?? ''))
 
   const apptsAfter = await api('/doctor-portal/appointments', { token: docToken })
-  const apptAfter = (await json<{ id: string; status: string }[]>(apptsAfter)).find((a) => a.id === sarahAppt?.id)
+  const apptAfter = (await json<{ id: string; status: string }[]>(apptsAfter)).find((a) => a.id === activeAppt?.id)
   check('completed appointment after consultation', Boolean(apptAfter) && apptAfter!.status === 'Completed')
 
   const myConsults = await api('/doctor-portal/consultations', { token: docToken })
   check('GET /doctor-portal/consultations returns own records', (await json<unknown[]>(myConsults)).length >= 1)
 
-  const otherConsult = await ConsultationModel.findOne({ doctorName: 'Dr. Robert Nguyen' })
-  const forbiddenConsult = await api(`/doctor-portal/consultations/${otherConsult?._id}`, { token: docToken })
-  check('doctor cannot view another doctor\'s consultation -> 403', forbiddenConsult.status === 403)
+  // Auto-drafted invoice must derive line items from patient activity.
+  const noDraftPatient = await api('/billing/auto-draft', { token })
+  check('auto-draft without patient -> 400', noDraftPatient.status === 400)
+  const draft = await api(`/billing/auto-draft?patientId=${encodeURIComponent(patient.id)}`, { token })
+  const draftBody = await json<{ items: { description: string; amount: number }[]; subtotal: number; tax: number; total: number }>(draft)
+  check(
+    'auto-draft derives consultation + medicine lines',
+    draft.status === 200 &&
+      draftBody.items.some((i) => i.description === 'Consultation - Dr. Smoke Test' && i.amount === 100) &&
+      draftBody.items.some((i) => i.description === 'Medicine - SmokeMed 100mg' && i.amount === 5),
+  )
+  check('auto-draft totals correct (105 + 5.25 = 110.25)', draftBody.subtotal === 105 && draftBody.tax === 5.25 && draftBody.total === 110.25)
+
+  // Another doctor's consultation must be invisible to this one.
+  const otherDoc = await api('/doctors', {
+    token,
+    json: { name: 'Dr. Portal Other', email: 'other@doc.dev', department: 'Neurology', specialty: 'Neurologist', consultationFee: 90, birthYear: 1982, schedule: FULL_WEEK },
+  })
+  const otherDocBody = await json<{ id: string; credentials: { username: string; password: string } }>(otherDoc)
+  const otherLogin = await api('/auth/login', { json: { email: otherDocBody.credentials.username, password: otherDocBody.credentials.password } })
+  const otherBody = await json<{ token: string }>(otherLogin)
+  await api('/auth/change-password', { token: otherBody.token, json: { currentPassword: otherDocBody.credentials.password, newPassword: 'OtherNew#2026' } })
+  const otherAppt = await api('/appointments', { token, json: { patientId: patient.id, doctorId: otherDocBody.id, type: 'Checkup', date: inDays(10), time: '11:00', reason: 'Smoke other doc' } })
+  const otherApptBody = await json<{ id: string }>(otherAppt)
+  const otherConsult = await api('/doctor-portal/consultations', {
+    token: otherBody.token,
+    json: {
+      patientId: patient.id,
+      appointmentId: otherApptBody.id,
+      chiefComplaint: 'Other doctor consult',
+      symptoms: '',
+      vitals: { bloodPressure: '120/80', heartRate: 70 },
+      diagnosis: { primary: 'Other', additional: '', notes: '' },
+      clinicalNotes: { assessment: '', observations: '', reasoning: '', general: '' },
+      treatmentPlan: { advice: '', diet: '', lifestyle: '', instructions: '' },
+      prescription: { medicines: [{ name: 'SmokeMed 100mg', dosage: '100mg', frequency: 'Daily', durationDays: 3 }] },
+    },
+  })
+  const otherConsultBody = await json<{ id: string }>(otherConsult)
+  const forbiddenConsult = await api(`/doctor-portal/consultations/${otherConsultBody.id}`, { token: docToken })
+  check("doctor cannot view another doctor's consultation -> 403", forbiddenConsult.status === 403)
 
   const saveRx = await api('/doctor-portal/prescriptions', {
     token: docToken,
-    json: { patientId: sarahAppt?.patientId, medicines: [{ name: 'SmokeMed 100mg', dosage: '100mg', frequency: 'Daily', durationDays: 5 }] },
+    json: { patientId: activeAppt?.patientId, medicines: [{ name: 'SmokeMed 100mg', dosage: '100mg', frequency: 'Daily', durationDays: 5 }] },
   })
   check('POST /doctor-portal/prescriptions -> 201', saveRx.status === 201)
 
@@ -584,40 +728,40 @@ try {
   check('refresh rejected after logout', afterLogout.status === 401)
 
   // ---------- OTP password reset flow ----------
-  const forgot = await api('/auth/forgot-password', { json: { email: 'admin@healsync.health' } })
+  const forgot = await api('/auth/forgot-password', { json: { email: 'admin@medicore.health' } })
   check('POST /auth/forgot-password -> 200', forgot.status === 200)
-  const otpMail = await waitForMail((m) => m.to === 'admin@healsync.health' && /reset code/i.test(m.subject))
+  const otpMail = await waitForMail((m) => m.to === 'admin@medicore.health' && /reset code/i.test(m.subject))
   check('OTP email delivered', Boolean(otpMail))
 
-  const otpRec = await OtpModel.findOne({ email: 'admin@healsync.health' })
+  const otpRec = await OtpModel.findOne({ email: 'admin@medicore.health' })
   check('OTP stored for user', Boolean(otpRec))
 
-  const verifyFail = await api('/auth/verify-otp', { json: { email: 'admin@healsync.health', otp: '000000' } })
+  const verifyFail = await api('/auth/verify-otp', { json: { email: 'admin@medicore.health', otp: '000000' } })
   const verifyFailBody = await json<{ valid: boolean }>(verifyFail)
   check('wrong OTP invalid -> { valid: false }', verifyFailBody.valid === false)
 
   // A real reset requires the emailed code; smoke verifies the OTP is hashed,
   // then exercises the full verify → reset sequence with a code we mint directly.
-  await OtpModel.deleteMany({ email: 'admin@healsync.health' })
+  await OtpModel.deleteMany({ email: 'admin@medicore.health' })
   const { createHash } = await import('node:crypto')
   await OtpModel.create({
-    email: 'admin@healsync.health',
+    email: 'admin@medicore.health',
     codeHash: createHash('sha256').update('123456').digest('hex'),
     purpose: 'password-reset',
     expiresAt: new Date(Date.now() + 600000),
   })
-  const verifyOk = await api('/auth/verify-otp', { json: { email: 'admin@healsync.health', otp: '123456' } })
+  const verifyOk = await api('/auth/verify-otp', { json: { email: 'admin@medicore.health', otp: '123456' } })
   check('correct OTP valid -> { valid: true }', (await json<{ valid: boolean }>(verifyOk)).valid === true)
-  const resetOk = await api('/auth/reset-password', { json: { email: 'admin@healsync.health', otp: '123456', password: 'newpass123' } })
+  const resetOk = await api('/auth/reset-password', { json: { email: 'admin@medicore.health', otp: '123456', password: 'Newpass#2026' } })
   check('POST /auth/reset-password -> { success: true }', (await json<{ success: boolean }>(resetOk)).success === true)
-  const relogin = await api('/auth/login', { json: { email: 'admin@healsync.health', password: 'newpass123' } })
+  const relogin = await api('/auth/login', { json: { email: 'admin@medicore.health', password: 'Newpass#2026' } })
   check('login works with new password', relogin.status === 200)
-  const reloginOld = await api('/auth/login', { json: { email: 'admin@healsync.health', password: 'admin123' } })
+  const reloginOld = await api('/auth/login', { json: { email: 'admin@medicore.health', password: 'admin123' } })
   check('old password rejected after reset', reloginOld.status === 401)
 
   // Password reset bumps tokenVersion, revoking all previously issued tokens,
   // so the delete flow must re-authenticate with the new password.
-  const freshLogin = await api('/auth/login', { json: { email: 'admin@healsync.health', password: 'newpass123' } })
+  const freshLogin = await api('/auth/login', { json: { email: 'admin@medicore.health', password: 'Newpass#2026' } })
   const freshBody = await json<{ token: string }>(freshLogin)
   token = freshBody.token
 
@@ -646,7 +790,7 @@ try {
   })
   check('forged callback rejected -> redirect error', forged.status === 302 && Boolean(forged.headers.get('location')?.includes('payment=error')))
 
-  // The real signed callback — exactly what eSewa posts: the response body
+  // The real signed callback - exactly what eSewa posts: the response body
   // Base64-encoded, numeric total_amount, signed_field_names included in the
   // signature, and the signature embedded in the body (no separate POST field).
   const callbackBody = {
@@ -683,7 +827,7 @@ try {
   check('replay does not duplicate appointment', (await AppointmentModel.countDocuments({ appointmentNo: ref })) === 1)
 
   // eSewa actually delivers the callback as a browser GET redirect with
-  // data/signature query params — the route must accept that, not only POST.
+  // data/signature query params - the route must accept that, not only POST.
   const getInit = await api('/public/payment/initiate', { json: { ...payBooking, date: inDays(34), time: '10:30', firstName: 'Get', lastName: 'Redirect', email: 'get.redirect@test.dev' } })
   const getInitBody = await json<{ transactionUuid: string }>(getInit)
   const getFields = { status: 'COMPLETE', total_amount: '500', transaction_uuid: getInitBody.transactionUuid, product_code: 'EPAYTEST', signed_field_names: 'status,total_amount,transaction_uuid,product_code' }
@@ -726,7 +870,7 @@ try {
   const failUrl = await api('/public/payment/failure', { json: { data: JSON.stringify(failFields), signature: failSig } })
   check('POST /public/payment/failure -> redirect failed', failUrl.status === 302 && Boolean(failUrl.headers.get('location')?.includes('payment=failed')))
 
-  // /public/book no longer exists — payments are the only way to book.
+  // /public/book no longer exists - payments are the only way to book.
   const oldBook = await api('/public/book', { json: payBooking })
   check('POST /public/book removed -> 404', oldBook.status === 404)
 
@@ -734,7 +878,14 @@ try {
   // ---------- Delete flows ----------
   const delPatient = await api(`/patients/${patient.id}`, { token, method: 'DELETE' })
   check('DELETE /patients/:id -> 204', delPatient.status === 204)
-  const delDoctor = await api(`/doctors/${doctor.id}`, { token, method: 'DELETE' })
+  // A doctor with no appointments/patients can be deleted; doctors with
+  // active appointments are guarded elsewhere (409).
+  const throwawayDoc = await api('/doctors', {
+    token,
+    json: { name: 'Dr. Delete Me', email: 'delete@doc.dev', department: 'Cardiology', specialty: 'Cardiologist', consultationFee: 100, birthYear: 1993, schedule: FULL_WEEK },
+  })
+  const throwawayId = await json<{ id: string }>(throwawayDoc)
+  const delDoctor = await api(`/doctors/${throwawayId.id}`, { token, method: 'DELETE' })
   check('DELETE /doctors/:id -> 204', delDoctor.status === 204)
 
   // ---------- CORS ----------

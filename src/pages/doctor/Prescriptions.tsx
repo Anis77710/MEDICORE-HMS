@@ -104,7 +104,7 @@ export default function Prescriptions() {
                           <span key={`${rx.id}-${m.name}`} className="text-sm">
                             <strong>{m.name}</strong>{' '}
                             <span className="muted">
-                              — {m.dosage} · {m.frequency} · {m.durationDays} day(s)
+                              - {m.dosage} · {m.frequency} · {m.durationDays} day(s)
                             </span>
                             {m.instructions && (
                               <span className="muted"> · {m.instructions}</span>
@@ -113,7 +113,7 @@ export default function Prescriptions() {
                         ))}
                       </div>
                     </td>
-                    <td className="muted font-mono">{rx.appointmentId ?? '—'}</td>
+                    <td className="muted font-mono">{rx.appointmentId ?? '-'}</td>
                     <td>
                       <StatusBadge status={rx.status} />
                     </td>

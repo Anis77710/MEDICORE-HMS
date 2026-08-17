@@ -28,12 +28,12 @@ if (JWT_SECRET.length < 32) {
 export const env = {
   NODE_ENV: str('NODE_ENV', 'development'),
   PORT: num('PORT', 8080),
-  MONGO_URI: str('MONGO_URI', 'mongodb://127.0.0.1:27017/healsync'),
+  MONGO_URI: str('MONGO_URI', 'mongodb://127.0.0.1:27017/medicore'),
   CORS_ORIGIN: csv('CORS_ORIGIN', 'http://localhost:5173,http://localhost:5174'),
   JWT_SECRET,
   ACCESS_TOKEN_TTL_MIN: num('ACCESS_TOKEN_TTL_MIN', 15),
   REFRESH_TOKEN_TTL_DAYS: num('REFRESH_TOKEN_TTL_DAYS', 7),
-  // Email delivery. Default 'smtp' — all emails go through a real SMTP
+  // Email delivery. Default 'smtp' - all emails go through a real SMTP
   // server. 'log' is an explicit test-only escape hatch (captures messages
   // in memory and prints them); it must never be used in production.
   EMAIL_TRANSPORT: str('EMAIL_TRANSPORT', 'smtp') === 'log' ? 'log' : 'smtp',
@@ -43,7 +43,7 @@ export const env = {
   SMTP_PASS: str('SMTP_PASS', ''),
   EMAIL_FROM: str('EMAIL_FROM', 'Medicore HMS <no-reply@medicore.health>'),
   // eSewa online payments. Empty PRODUCT_CODE/SECRET_KEY means payments
-  // are not configured — the payment endpoint refuses to start (503) so
+  // are not configured - the payment endpoint refuses to start (503) so
   // a public booking can never be created without a verified payment.
   ESEWA_ENV: str('ESEWA_ENV', 'test') === 'live' ? 'live' : 'test',
   ESEWA_PRODUCT_CODE: str('ESEWA_PRODUCT_CODE', ''),

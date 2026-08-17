@@ -2,7 +2,7 @@ import type { Doctor } from '../models/Doctor.js'
 import type { Appointment } from '../models/Appointment.js'
 
 // ============================================================
-// Centralized scheduling rules — single source of truth for
+// Centralized scheduling rules - single source of truth for
 // working hours, slot generation and conflict detection.
 // Used by the public booking flow, admin calendar and the
 // doctor portal schedule. Work day: 09:00–17:00, 30-min slots.
@@ -98,7 +98,7 @@ export function bookedRanges(appointments: AppointmentLike[], date: string): Tim
 /**
  * Builds 09:00–17:00 slots for a doctor on a date.
  * `busy` is a list of { startMin, endMin } ranges to exclude
- * (from appointments — pass `excludeId` to skip one, e.g. when
+ * (from appointments - pass `excludeId` to skip one, e.g. when
  * rescheduling). When `requireDuration` is set, a slot is only
  * marked available if a block of that length is free.
  */

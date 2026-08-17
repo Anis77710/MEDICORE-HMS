@@ -8,9 +8,10 @@ interface AuthContextValue {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (email: string, password: string, remember?: boolean) => Promise<void>
+  login: (email: string, password: string, remember?: boolean) => Promise<User>
   register: (input: authApi.HospitalRegisterInput) => Promise<AuthResponse>
   logout: () => Promise<void>
+  updateUser: (user: User) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await authApi.login({ email, password, remember })
         setToken(res.token)
         setUser(res.user)
+        return res.user
       },
       register: async (input) => {
         const res = await authApi.register(input)
@@ -70,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await authApi.logout()
         setUser(null)
       },
+      updateUser: (next) => setUser(next),
     }),
     [user, isLoading],
   )

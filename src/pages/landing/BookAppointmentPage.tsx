@@ -148,7 +148,7 @@ export default function BookAppointmentPage() {
 
   // When the user lands back without a confirmed callback (payment=failed or
   // any other non-success state), reconcile the stored attempt against eSewa's
-  // status API — if the payment actually completed, show the success card.
+  // status API - if the payment actually completed, show the success card.
   // eSewa's status API can lag behind the actual charge, so keep retrying for
   // a few seconds before giving up.
   useEffect(() => {
@@ -170,7 +170,7 @@ export default function BookAppointmentPage() {
         hospital = stored.hospital
       }
     } catch {
-      /* malformed stored attempt — ignore */
+      /* malformed stored attempt - ignore */
     }
     if (!attemptId) {
       setRecovering(false)
@@ -233,7 +233,7 @@ export default function BookAppointmentPage() {
     const snapped = nextWorkingDay(form.date < TODAY ? TODAY : form.date, selectedDoctor.schedule)
     if (snapped !== form.date) {
       setForm((f) => ({ ...f, date: snapped }))
-      setDateMsg(`${selectedDoctor.name} does not work on ${dayOfWeek(form.date)} — the date was moved to ${snapped}. Working days: ${selectedDoctor.schedule.join(', ')}.`)
+      setDateMsg(`${selectedDoctor.name} does not work on ${dayOfWeek(form.date)} - the date was moved to ${snapped}. Working days: ${selectedDoctor.schedule.join(', ')}.`)
     } else {
       setDateMsg('')
     }
@@ -294,7 +294,7 @@ export default function BookAppointmentPage() {
       return
     }
     if (selectedDoctor && !selectedDoctor.schedule.includes(dayOfWeek(form.date))) {
-      setError(`${selectedDoctor.name} does not work on ${dayOfWeek(form.date)} — pick one of their working days: ${selectedDoctor.schedule.join(', ')}`)
+      setError(`${selectedDoctor.name} does not work on ${dayOfWeek(form.date)} - pick one of their working days: ${selectedDoctor.schedule.join(', ')}`)
       setBusy(false)
       return
     }
@@ -317,7 +317,7 @@ export default function BookAppointmentPage() {
         reason: form.reason,
       })
       if (!pay.formUrl) {
-        throw new Error('Payment gateway is not configured — please try again later')
+        throw new Error('Payment gateway is not configured - please try again later')
       }
       // Remember the attempt so the landing page can reconcile the payment
       // against eSewa's status API if the callback redirect is ever lost.
@@ -377,7 +377,7 @@ export default function BookAppointmentPage() {
             <h1>Book your visit in under a minute</h1>
             <p>
               Pick a doctor, choose a time that suits you, and secure your slot with a
-              quick eSewa payment — we'll email the confirmation right away.
+              quick eSewa payment - we'll email the confirmation right away.
             </p>
           </header>
 
@@ -391,14 +391,14 @@ export default function BookAppointmentPage() {
                   <div className="lp-form-success-title">Confirming your payment…</div>
                   <div className="lp-form-success-sub">
                     Please wait a moment while we verify your payment. This usually takes a few
-                    seconds — your appointment will appear right here once it is confirmed.
+                    seconds - your appointment will appear right here once it is confirmed.
                   </div>
                 </div>
               )}
               {!recovering && (payment === 'success' || recoveredRef) && successCard(
                 <CheckCircle2 size={32} />,
                 'success',
-                recoveredRef ? 'Payment confirmed — appointment requested!' : 'Payment successful — appointment requested!',
+                recoveredRef ? 'Payment confirmed - appointment requested!' : 'Payment successful - appointment requested!',
                 <>
                   {recoveredRef
                     ? 'We checked eSewa and confirmed your payment. Your appointment request'
@@ -417,7 +417,7 @@ export default function BookAppointmentPage() {
                     </>
                   ) : null}
                   . A receipt and a confirmation email are on their way to{' '}
-                  <strong>{form.email || 'your email'}</strong> — you'll be notified there when
+                  <strong>{form.email || 'your email'}</strong> - you'll be notified there when
                   the request is approved.
                 </>,
                 <Link to="/" className="lp-btn lp-btn-primary" style={{ marginTop: 8 }}>
@@ -446,7 +446,7 @@ export default function BookAppointmentPage() {
                 <XCircle size={32} />,
                 'error',
                 'Something went wrong',
-                'We could not confirm your payment. If any money was charged, it will be refunded — please contact the hospital front desk. No appointment was booked.',
+                'We could not confirm your payment. If any money was charged, it will be refunded - please contact the hospital front desk. No appointment was booked.',
                 <Link to="/book-appointment" className="lp-btn lp-btn-primary" style={{ marginTop: 8 }}>
                   Try again
                 </Link>,
@@ -495,7 +495,7 @@ export default function BookAppointmentPage() {
                     ))}
                   </select>
                   {hospitals.length === 0 && (
-                    <span className="lp-book-hint">No hospitals listed yet — please try again later.</span>
+                    <span className="lp-book-hint">No hospitals listed yet - please try again later.</span>
                   )}
                 </div>
                 <div className="lp-form-row">
@@ -685,7 +685,7 @@ export default function BookAppointmentPage() {
                   <CreditCard size={18} />
                   {busy ? 'Preparing payment…' : `Confirm & Pay${selectedDoctor && selectedDoctor.consultationFee > 0 ? ` ${formatNpr(selectedDoctor.consultationFee)}` : ''}`}
                 </button>
-                <p className="lp-book-secure"><ShieldCheck size={14} /> Your slot is held only while you complete payment — if the time is taken, eSewa refunds automatically.</p>
+                <p className="lp-book-secure"><ShieldCheck size={14} /> Your slot is held only while you complete payment - if the time is taken, eSewa refunds automatically.</p>
               </form>
             </div>
           )}

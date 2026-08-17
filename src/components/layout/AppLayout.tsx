@@ -16,7 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { canAccessModule, type AdminModule } from '../../rbac/roles'
+import { userCanAccessModule, type AdminModule } from '../../rbac/roles'
 import { Avatar } from '../ui'
 import { MedicoreLogo } from '../ui/MedicoreLogo'
 
@@ -36,7 +36,9 @@ const NAV_ITEMS: { to: string; label: string; icon: React.ComponentType<{ size?:
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuth()
-  const visible = NAV_ITEMS.filter((item) => canAccessModule(user?.role ?? 'STAFF', item.module))
+  const visible = NAV_ITEMS.filter((item) =>
+    userCanAccessModule({ role: user?.role ?? 'STAFF', department: user?.department }, item.module),
+  )
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">

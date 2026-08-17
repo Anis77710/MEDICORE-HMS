@@ -1,5 +1,5 @@
 // ============================================================
-// Medicore HMS — Public booking service (no auth required)
+// Medicore HMS - Public booking service (no auth required)
 // Used by the public "Book an Appointment" page.
 // ============================================================
 
@@ -97,7 +97,7 @@ export interface ReconcileResult {
 /**
  * Re-checks a pending payment attempt against eSewa's transaction status API.
  * The frontend calls this when the user returns from the eSewa hop without a
- * confirmed callback — if eSewa says the payment was COMPLETE, the booking is
+ * confirmed callback - if eSewa says the payment was COMPLETE, the booking is
  * created server-side and the user sees a success screen instead of a dead end.
  */
 export async function reconcileBookingPayment(input: {

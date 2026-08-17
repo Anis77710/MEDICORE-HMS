@@ -21,7 +21,7 @@ async function connectWithRetry(uri: string): Promise<void> {
     } catch (err) {
       const delay = Math.min(RETRY_MAX_MS, RETRY_BASE_MS * attempt)
       console.error(
-        `MongoDB connection failed (attempt ${attempt}) — retrying in ${delay / 1000}s:`,
+        `MongoDB connection failed (attempt ${attempt}) - retrying in ${delay / 1000}s:`,
         err instanceof Error ? err.message : err,
       )
       await new Promise((r) => setTimeout(r, delay))
@@ -32,7 +32,7 @@ async function connectWithRetry(uri: string): Promise<void> {
 export async function start(server = app, uri = env.MONGO_URI): Promise<void> {
   // Strict email policy: production refuses to run without real SMTP.
   // The log transport is a test-only escape hatch and is never allowed
-  // in production — authentic delivery only.
+  // in production - authentic delivery only.
   if (isProd && (env.EMAIL_TRANSPORT === 'log' || !env.SMTP_HOST)) {
     throw new Error(
       'Production boot blocked: real SMTP delivery is mandatory. ' +

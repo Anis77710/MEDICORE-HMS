@@ -7,7 +7,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js'
 import { validate, queryOf } from '../middleware/validate.js'
 
 // ============================================================
-// Admin clinical oversight — read-only access to every doctor's
+// Admin clinical oversight - read-only access to every doctor's
 // consultations and prescriptions. Viewing any patient's clinical
 // record is restricted to ADMIN so oversight stays auditable.
 // ============================================================
@@ -63,7 +63,7 @@ consultationsRouter.get('/', validate({ query: listQuery }), async (req, res, ne
   }
 })
 
-// GET /consultations/:id — full record, including the linked prescription
+// GET /consultations/:id - full record, including the linked prescription
 consultationsRouter.get(
   '/:id',
   validate({ params: z.object({ id: z.string() }) }),

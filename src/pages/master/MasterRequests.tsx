@@ -24,7 +24,7 @@ const TABS: { value: 'all' | RegistrationStatus; label: string }[] = [
 type Filter = 'all' | RegistrationStatus
 
 function fmtDate(v?: string): string {
-  if (!v) return '—'
+  if (!v) return '-'
   return new Date(v).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
@@ -78,7 +78,7 @@ export default function MasterRequests() {
       const res = await masterApi.approveRequest(r._id)
       setApproving(null)
       setCredentials(res.credentials)
-      push(`"${r.hospitalName}" approved — hospital is live.`)
+      push(`"${r.hospitalName}" approved - hospital is live.`)
       load('paid')
     } catch (err) {
       push(err instanceof Error ? err.message : 'Approval failed')
@@ -163,7 +163,7 @@ export default function MasterRequests() {
                     </td>
                     <td>
                       {r.status === 'pending_payment' ? (
-                        <span className="text-sm muted">—</span>
+                        <span className="text-sm muted">-</span>
                       ) : (
                         <span className="text-sm">{fmtDate(r.payment.paidAt)}</span>
                       )}

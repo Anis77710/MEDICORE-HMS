@@ -1,5 +1,5 @@
 // ============================================================
-// Master admin API service — platform-level operations.
+// Master admin API service - platform-level operations.
 // Hospital registration is paid (eSewa, one-time fee); the master
 // admin approves paid requests which provisions the hospital and
 // emails the admin credentials + receipt.

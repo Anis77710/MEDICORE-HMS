@@ -5,7 +5,7 @@ import { Card, Spinner, EmptyState, Badge, PageHeader, Button, Input, Field } fr
 import { useToast } from '../../context/ToastContext'
 
 function fmtDate(s?: string): string {
-  if (!s) return '—'
+  if (!s) return '-'
   return new Date(s).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
@@ -40,7 +40,7 @@ export default function MasterAnnouncements() {
     setCreating(true)
     try {
       await masterApi.createAnnouncement({ title: title.trim(), message: message.trim(), audience })
-      push('Announcement posted — it will appear in every hospital dashboard.')
+      push('Announcement posted - it will appear in every hospital dashboard.')
       setTitle('')
       setMessage('')
       setAudience('all')

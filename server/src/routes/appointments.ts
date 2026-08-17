@@ -70,7 +70,7 @@ appointmentsRouter.get(
   },
 )
 
-// POST /appointments — creates with patient/doctor names resolved server-side
+// POST /appointments - creates with patient/doctor names resolved server-side
 appointmentsRouter.post('/', validate({ body: appointmentBody }), async (req, res, next) => {
   try {
     const { patientId, doctorId, ...rest } = req.body as {
@@ -136,18 +136,18 @@ appointmentsRouter.put(
         if (!doctor) throw new ApiError('Doctor not found', 404)
         if (doctor.status !== 'Active') {
           throw new ApiError(
-            `Cannot schedule — ${doctor.name} is ${doctor.status.toLowerCase()}`,
+            `Cannot schedule - ${doctor.name} is ${doctor.status.toLowerCase()}`,
             409,
           )
         }
         if (!isWorkingDay(doctor, targetDate)) {
           throw new ApiError(
-            `${doctor.name} does not work on ${dayFullName(targetDate)} — choose a working day`,
+            `${doctor.name} does not work on ${dayFullName(targetDate)} - choose a working day`,
             409,
           )
         }
         if (isPastSlot(targetDate, targetTime)) {
-          throw new ApiError('Cannot schedule an appointment in the past — choose a future date and time', 400)
+          throw new ApiError('Cannot schedule an appointment in the past - choose a future date and time', 400)
         }
         const clashes = await AppointmentModel.find({
           doctorId: targetDoctorId,
@@ -156,7 +156,7 @@ appointmentsRouter.put(
         }).select('date time durationMin status')
         if (!isSlotFree(clashes, targetDate, targetTime, targetDuration, existing.id)) {
           throw new ApiError(
-            'This time slot is already booked for the doctor — choose a different time',
+            'This time slot is already booked for the doctor - choose a different time',
             409,
           )
         }
@@ -195,18 +195,18 @@ async function assertBookable(
 ): Promise<void> {
   if (doctor.status !== 'Active') {
     throw new ApiError(
-      `Cannot book — ${doctor.name} is currently ${doctor.status.toLowerCase()}. Choose another doctor or date.`,
+      `Cannot book - ${doctor.name} is currently ${doctor.status.toLowerCase()}. Choose another doctor or date.`,
       409,
     )
   }
   if (!isWorkingDay(doctor, date)) {
     throw new ApiError(
-      `${doctor.name} does not work on ${dayFullName(date)} — choose a working day`,
+      `${doctor.name} does not work on ${dayFullName(date)} - choose a working day`,
       409,
     )
   }
   if (isPastSlot(date, time)) {
-    throw new ApiError('Cannot book an appointment in the past — choose a future date and time', 400)
+    throw new ApiError('Cannot book an appointment in the past - choose a future date and time', 400)
   }
   const clashes = await AppointmentModel.find({
     doctorId: String(doctor._id),
@@ -214,7 +214,7 @@ async function assertBookable(
     status: { $ne: 'Cancelled' },
   }).select('date time durationMin status')
   if (!isSlotFree(clashes, date, time, durationMin)) {
-    throw new ApiError('This time slot is already booked for the doctor — choose a different time', 409)
+    throw new ApiError('This time slot is already booked for the doctor - choose a different time', 409)
   }
 }
 

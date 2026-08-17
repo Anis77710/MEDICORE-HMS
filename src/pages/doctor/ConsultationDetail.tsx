@@ -77,23 +77,23 @@ export default function ConsultationDetail() {
             </div>
             <div>
               <span>Symptoms</span>
-              <p>{c.symptoms || '—'}</p>
+              <p>{c.symptoms || '-'}</p>
             </div>
             <div>
               <span>Assessment</span>
-              <p>{c.clinicalNotes.assessment || '—'}</p>
+              <p>{c.clinicalNotes.assessment || '-'}</p>
             </div>
             <div>
               <span>Observations</span>
-              <p>{c.clinicalNotes.observations || '—'}</p>
+              <p>{c.clinicalNotes.observations || '-'}</p>
             </div>
             <div>
               <span>Reasoning</span>
-              <p>{c.clinicalNotes.reasoning || '—'}</p>
+              <p>{c.clinicalNotes.reasoning || '-'}</p>
             </div>
             <div>
               <span>General Notes</span>
-              <p>{c.clinicalNotes.general || '—'}</p>
+              <p>{c.clinicalNotes.general || '-'}</p>
             </div>
           </div>
         </Card>
@@ -132,35 +132,35 @@ export default function ConsultationDetail() {
             <div className="dp-kv mt-2">
               <div>
                 <span>Blood Pressure</span>
-                <strong>{c.vitals.bloodPressure || '—'}</strong>
+                <strong>{c.vitals.bloodPressure || '-'}</strong>
               </div>
               <div>
                 <span>Heart Rate</span>
-                <strong>{c.vitals.heartRate ? `${c.vitals.heartRate} bpm` : '—'}</strong>
+                <strong>{c.vitals.heartRate ? `${c.vitals.heartRate} bpm` : '-'}</strong>
               </div>
               <div>
                 <span>Temperature</span>
-                <strong>{c.vitals.temperature ? `${c.vitals.temperature} °C` : '—'}</strong>
+                <strong>{c.vitals.temperature ? `${c.vitals.temperature} °C` : '-'}</strong>
               </div>
               <div>
                 <span>Respiratory Rate</span>
-                <strong>{c.vitals.respiratoryRate ? `${c.vitals.respiratoryRate} /min` : '—'}</strong>
+                <strong>{c.vitals.respiratoryRate ? `${c.vitals.respiratoryRate} /min` : '-'}</strong>
               </div>
               <div>
                 <span>SpO₂</span>
-                <strong>{c.vitals.spo2 ? `${c.vitals.spo2} %` : '—'}</strong>
+                <strong>{c.vitals.spo2 ? `${c.vitals.spo2} %` : '-'}</strong>
               </div>
               <div>
                 <span>Weight</span>
-                <strong>{c.vitals.weightKg ? `${c.vitals.weightKg} kg` : '—'}</strong>
+                <strong>{c.vitals.weightKg ? `${c.vitals.weightKg} kg` : '-'}</strong>
               </div>
               <div>
                 <span>Height</span>
-                <strong>{c.vitals.heightCm ? `${c.vitals.heightCm} cm` : '—'}</strong>
+                <strong>{c.vitals.heightCm ? `${c.vitals.heightCm} cm` : '-'}</strong>
               </div>
               <div>
                 <span>BMI</span>
-                <strong>{c.vitals.bmi ? c.vitals.bmi.toFixed(1) : '—'}</strong>
+                <strong>{c.vitals.bmi ? c.vitals.bmi.toFixed(1) : '-'}</strong>
               </div>
             </div>
           ) : (
@@ -175,27 +175,27 @@ export default function ConsultationDetail() {
           <div className="dp-kv mt-2">
             <div>
               <span>General</span>
-              <p>{c.examination.general || '—'}</p>
+              <p>{c.examination.general || '-'}</p>
             </div>
             <div>
               <span>Cardiovascular</span>
-              <p>{c.examination.cardiovascular || '—'}</p>
+              <p>{c.examination.cardiovascular || '-'}</p>
             </div>
             <div>
               <span>Respiratory</span>
-              <p>{c.examination.respiratory || '—'}</p>
+              <p>{c.examination.respiratory || '-'}</p>
             </div>
             <div>
               <span>Neurological</span>
-              <p>{c.examination.neurological || '—'}</p>
+              <p>{c.examination.neurological || '-'}</p>
             </div>
             <div>
               <span>Abdominal</span>
-              <p>{c.examination.abdominal || '—'}</p>
+              <p>{c.examination.abdominal || '-'}</p>
             </div>
             <div>
               <span>Other</span>
-              <p>{c.examination.other || '—'}</p>
+              <p>{c.examination.other || '-'}</p>
             </div>
           </div>
         </Card>
@@ -208,19 +208,19 @@ export default function ConsultationDetail() {
         <div className="dp-kv mt-2">
           <div>
             <span>Advice</span>
-            <p>{c.treatmentPlan.advice || '—'}</p>
+            <p>{c.treatmentPlan.advice || '-'}</p>
           </div>
           <div>
             <span>Diet</span>
-            <p>{c.treatmentPlan.diet || '—'}</p>
+            <p>{c.treatmentPlan.diet || '-'}</p>
           </div>
           <div>
             <span>Lifestyle</span>
-            <p>{c.treatmentPlan.lifestyle || '—'}</p>
+            <p>{c.treatmentPlan.lifestyle || '-'}</p>
           </div>
           <div>
             <span>Instructions</span>
-            <p>{c.treatmentPlan.instructions || '—'}</p>
+            <p>{c.treatmentPlan.instructions || '-'}</p>
           </div>
         </div>
       </Card>

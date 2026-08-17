@@ -9,6 +9,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import Login from './pages/auth/Login'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import VerifyOtp from './pages/auth/VerifyOtp'
+import ChangePassword from './pages/auth/ChangePassword'
 import Dashboard from './pages/Dashboard'
 import Patients from './pages/patients/Patients'
 import PatientDetail from './pages/patients/PatientDetail'
@@ -27,7 +28,7 @@ import NotFound from './pages/NotFound'
 import StaffRoleDashboard from './pages/StaffRoleDashboard'
 import LandingPage from './pages/landing/LandingPage'
 import BookAppointmentPage from './pages/landing/BookAppointmentPage'
-import { canAccessModule, type AdminModule } from './rbac/roles'
+import { userCanAccessModule, type AdminModule } from './rbac/roles'
 import DoctorDashboard from './pages/doctor/DoctorDashboard'
 import MyAppointments from './pages/doctor/MyAppointments'
 import MyPatients from './pages/doctor/MyPatients'
@@ -62,7 +63,7 @@ function ScrollToTop() {
 }
 
 function ProtectedLayout() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
     return (
@@ -76,8 +77,40 @@ function ProtectedLayout() {
     return <Navigate to="/login" replace />
   }
 
+  // Users on a temporary password may only reach the change-password screen.
+  if (user?.mustChangePassword) {
+    return <Navigate to="/change-password" replace />
+  }
+
   return <AppLayout />
 }
+
+// Shows the change-password screen for users on a temporary password and
+// bounces everyone else to their role home.
+function ChangePasswordRoute() {
+  const { user, isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div className="auth-page">
+        <div className="spinner" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (!user?.mustChangePassword) {
+    return <Navigate to={user?.role === 'DOCTOR' ? '/doctor/dashboard' : '/dashboard'} replace />
+  }
+
+  return <ChangePassword />
+}
+
+// Backend-enforced anyway; this mirrors it in the UI so a user on a
+// temporary password never lands on a dashboard/portal screen.
 
 function PublicOnly({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -101,7 +134,7 @@ function RequireModule({ module, children }: { module: AdminModule; children: Re
     return <Navigate to="/login" replace />
   }
 
-  if (!canAccessModule(user!.role, module)) {
+  if (!userCanAccessModule(user!, module)) {
     return <Navigate to="/" replace />
   }
 
@@ -121,6 +154,10 @@ function RequireDoctor({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+
+  if (user!.mustChangePassword) {
+    return <Navigate to="/change-password" replace />
   }
 
   if (user!.role !== 'DOCTOR') {
@@ -143,6 +180,10 @@ function RoleHome() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+
+  if (user?.mustChangePassword) {
+    return <Navigate to="/change-password" replace />
   }
 
   if (user?.role === 'ADMIN') {
@@ -187,7 +228,7 @@ function AppRoutes() {
     <Routes>
       {/* Public landing page */}
       <Route path="/" element={<LandingRoute />} />
-      {/* Platform home — always shows the landing page, even for signed-in users
+      {/* Platform home - always shows the landing page, even for signed-in users
           (used by public pages like hospital registration whose "Back to home"
           must not get redirected to a hospital dashboard). */}
       <Route path="/home" element={<LandingPage />} />
@@ -197,8 +238,9 @@ function AppRoutes() {
       <Route path="/register" element={<Navigate to="/master/register" replace />} />
       <Route path="/forgot-password" element={<PublicOnly><ForgotPassword /></PublicOnly>} />
       <Route path="/verify-otp" element={<PublicOnly><VerifyOtp /></PublicOnly>} />
+      <Route path="/change-password" element={<ChangePasswordRoute />} />
 
-      {/* Master platform — sign-in happens on the shared /login screen */}
+      {/* Master platform - sign-in happens on the shared /login screen */}
       <Route path="/master/login" element={<Navigate to="/login" replace />} />
       <Route path="/master/register" element={<RegisterHospital />} />
       <Route path="/master/register/status" element={<RegisterStatus />} />

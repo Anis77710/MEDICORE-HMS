@@ -87,13 +87,13 @@ export default function ProfilePage() {
               <span>
                 <Mail size={14} /> Email
               </span>
-              <strong>{doctor.email || '—'}</strong>
+              <strong>{doctor.email || '-'}</strong>
             </div>
             <div>
               <span>
                 <Phone size={14} /> Phone
               </span>
-              <strong>{doctor.phone || '—'}</strong>
+              <strong>{doctor.phone || '-'}</strong>
             </div>
             <div>
               <span>
@@ -105,29 +105,29 @@ export default function ProfilePage() {
               <span>
                 <Stethoscope size={14} /> Specialty
               </span>
-              <strong>{doctor.specialty || '—'}</strong>
+              <strong>{doctor.specialty || '-'}</strong>
             </div>
             <div>
               <span>
                 <GraduationCap size={14} /> Qualification
               </span>
-              <strong>{doctor.qualification || '—'}</strong>
+              <strong>{doctor.qualification || '-'}</strong>
             </div>
             <div>
               <span>
                 <Briefcase size={14} /> Experience
               </span>
-              <strong>{doctor.experienceYears ? `${doctor.experienceYears} years` : '—'}</strong>
+              <strong>{doctor.experienceYears ? `${doctor.experienceYears} years` : '-'}</strong>
             </div>
             <div>
               <span>
                 <Award size={14} /> Rating
               </span>
-              <strong>{doctor.rating ? `${doctor.rating} / 5` : '—'}</strong>
+              <strong>{doctor.rating ? `${doctor.rating} / 5` : '-'}</strong>
             </div>
             <div>
               <span>Consultation Fee</span>
-              <strong>{doctor.consultationFee ? `Rs. ${doctor.consultationFee}` : '—'}</strong>
+              <strong>{doctor.consultationFee ? `NPR ${doctor.consultationFee}` : '-'}</strong>
             </div>
           </div>
         </Card>

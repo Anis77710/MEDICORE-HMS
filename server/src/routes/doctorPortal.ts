@@ -15,7 +15,7 @@ import { makeReadableId } from '../models/Counter.js'
 import { notifyAppointmentEvent } from '../utils/appointmentMailer.js'
 
 // ============================================================
-// Doctor Portal — every route is authenticated, restricted to the
+// Doctor Portal - every route is authenticated, restricted to the
 // DOCTOR role and scoped to the doctor profile that matches the
 // signed-in user's email. A doctor can never address another
 // doctor's patients, appointments, consultations or prescriptions.
@@ -47,7 +47,7 @@ async function resolveDoctor(req: import('express').Request): Promise<import('mo
 function assertCanServe(doctor: Pick<Doctor, 'status' | 'name'>): void {
   if (doctor.status !== 'Active') {
     throw new ApiError(
-      `Your profile is marked "${doctor.status}" — clinical actions (confirming appointments, consultations, prescriptions) are disabled until an administrator reactivates you.`,
+      `Your profile is marked "${doctor.status}" - clinical actions (confirming appointments, consultations, prescriptions) are disabled until an administrator reactivates you.`,
       403,
     )
   }
@@ -133,6 +133,34 @@ doctorPortalRouter.get('/me', async (req, res, next) => {
     next(err)
   }
 })
+
+// ---------- PATCH /doctor-portal/me/status ----------
+// Self-service availability. A doctor may mark themselves On Leave
+// (which disables clinical actions via assertCanServe) and return to
+// Active when back. 'Unavailable' stays admin-managed.
+const selfStatusBody = z.object({
+  status: z.enum(['Active', 'On Leave']),
+})
+
+doctorPortalRouter.patch(
+  '/me/status',
+  validate({ body: selfStatusBody }),
+  async (req, res, next) => {
+    try {
+      const doctor = await resolveDoctor(req)
+      const { status } = req.body as { status: 'Active' | 'On Leave' }
+      doctor.status = status
+      await doctor.save()
+      await writeAuditLog(req as AuthedRequest, 'update', 'doctor', String(doctor._id), {
+        status,
+        by: 'doctor-self',
+      })
+      res.json(doctor)
+    } catch (err) {
+      next(err)
+    }
+  },
+)
 
 // ---------- GET /doctor-portal/patients ----------
 doctorPortalRouter.get('/patients', validate({ query: listQuery }), async (req, res, next) => {
@@ -270,12 +298,12 @@ doctorPortalRouter.post(
       const targetDuration = body.durationMin ?? appointment.durationMin
       if (!isWorkingDay(doctor, body.date)) {
         throw new ApiError(
-          `You do not work on ${dayFullName(body.date)} — choose a working day`,
+          `You do not work on ${dayFullName(body.date)} - choose a working day`,
           409,
         )
       }
       if (isPastSlot(body.date, body.time)) {
-        throw new ApiError('Cannot reschedule to a past slot — choose a future date and time', 400)
+        throw new ApiError('Cannot reschedule to a past slot - choose a future date and time', 400)
       }
       const clashes = await AppointmentModel.find({
         doctorId: doctor._id.toString(),
@@ -284,7 +312,7 @@ doctorPortalRouter.post(
       }).select('date time durationMin status')
       if (!isSlotFree(clashes, body.date, body.time, targetDuration, String(appointment._id))) {
         throw new ApiError(
-          'This time slot is already booked — choose a different time',
+          'This time slot is already booked - choose a different time',
           409,
         )
       }

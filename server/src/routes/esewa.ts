@@ -23,7 +23,7 @@ import {
 } from '../utils/esewa.js'
 
 // ============================================================
-// Public eSewa payment flow — the only way to create a public
+// Public eSewa payment flow - the only way to create a public
 // booking. POST /payment/initiate validates the slot and returns
 // the eSewa form; the signed success callback then re-checks the
 // slot, dedupes the patient by email and creates the patient +
@@ -67,12 +67,12 @@ async function loadDoctorAndCheckSlot(booking: PaymentBooking) {
   }
   if (!isWorkingDay(doctor, booking.date)) {
     throw new ApiError(
-      `${doctor.name} does not work on ${dayFullName(booking.date)} — choose a working day`,
+      `${doctor.name} does not work on ${dayFullName(booking.date)} - choose a working day`,
       409,
     )
   }
   if (isPastSlot(booking.date, booking.time)) {
-    throw new ApiError('Cannot book an appointment in the past — choose a future date and time', 400)
+    throw new ApiError('Cannot book an appointment in the past - choose a future date and time', 400)
   }
   const clashes = await AppointmentModel.find({
     doctorId: booking.doctorId,
@@ -80,7 +80,7 @@ async function loadDoctorAndCheckSlot(booking: PaymentBooking) {
     status: { $ne: 'Cancelled' },
   }).select('date time durationMin status')
   if (!isSlotFree(clashes, booking.date, booking.time, booking.durationMin)) {
-    throw new ApiError('This time slot is already booked — please choose a different time', 409)
+    throw new ApiError('This time slot is already booked - please choose a different time', 409)
   }
   return doctor
 }
@@ -176,7 +176,7 @@ function redirectSuccess(res: Response, appointment: { appointmentNo: string }, 
   )
 }
 
-// POST /public/payment/initiate — validates and returns the eSewa form fields.
+// POST /public/payment/initiate - validates and returns the eSewa form fields.
 esewaRouter.post('/payment/initiate', validate({ body: initiateBody }), async (req, res, next) => {
   try {
     if (!esewaConfigured()) {
@@ -220,7 +220,7 @@ esewaRouter.post('/payment/initiate', validate({ body: initiateBody }), async (r
 const redirectToFrontend = (res: { redirect(status: number, url: string): void }, params: string) =>
   res.redirect(302, `${env.APP_BASE_URL}/book-appointment?${params}`)
 
-// /public/payment/success — eSewa's signed callback. eSewa redirects the
+// /public/payment/success - eSewa's signed callback. eSewa redirects the
 // browser here via GET with `data`/`signature` query params (form POST with
 // the same fields also accepted). Creates the booking only when the payment
 // is verified, the amount matches and the slot is still free, then redirects
@@ -291,7 +291,7 @@ async function handlePaymentSuccess(
 
     // The signed callback is the fast path; eSewa's transaction status API is
     // the authoritative fallback. If the signature/status/amount check fails,
-    // ask eSewa directly whether the money moved — if it says COMPLETE, the
+    // ask eSewa directly whether the money moved - if it says COMPLETE, the
     // booking must still be created (the payer was charged).
     let transactionCode = verified?.transaction_code ?? ''
     let paid =
@@ -307,7 +307,7 @@ async function handlePaymentSuccess(
     }
     if (!paid) {
       if (!verified) {
-        // The signature did not verify — this callback is not from eSewa.
+        // The signature did not verify - this callback is not from eSewa.
         // Leave the attempt pending so the genuine signed callback (or a
         // later reconcile) can still complete the booking; the status API
         // already confirmed the money did not move.
@@ -340,7 +340,7 @@ async function handlePaymentSuccess(
   }
 }
 
-// /public/payment/failure — eSewa's callback when the payer aborts or fails
+// /public/payment/failure - eSewa's callback when the payer aborts or fails
 // (GET redirect with query params, or form POST). Even here the transaction
 // status API is consulted: a payment that eSewa reports as COMPLETE must still
 // produce a booking (the payer was charged).
@@ -357,7 +357,7 @@ esewaRouter.all('/payment/failure', async (req, res, next) => {
       if (uuid) {
         // Claim the attempt atomically: if the signed success callback already
         // claimed it (status processing/success), it is completing the booking
-        // — skip, a replayed or racing callback must never create a duplicate.
+        // - skip, a replayed or racing callback must never create a duplicate.
         const claimed = await PaymentAttemptModel.findOneAndUpdate(
           { transactionUuid: uuid, status: 'pending' },
           { $set: { status: 'processing' as const } },
@@ -396,7 +396,7 @@ esewaRouter.all('/payment/failure', async (req, res, next) => {
   }
 })
 
-// /public/payment/reconcile — the frontend calls this when the user returns to
+// /public/payment/reconcile - the frontend calls this when the user returns to
 // the booking page without a confirmed callback (e.g. the eSewa tab was closed,
 // the redirect never arrived, or the callback could not be verified). The
 // transaction status API is the authoritative source: if eSewa says COMPLETE
@@ -416,7 +416,7 @@ esewaRouter.post('/payment/reconcile', validate({ body: reconcileBody }), async 
       return
     }
     // A 'processing' attempt is being completed by the signed eSewa callback
-    // right now — report pending so the frontend retries and then sees the
+    // right now - report pending so the frontend retries and then sees the
     // success. Never complete the same attempt twice.
     if ((attempt.status as string) === 'processing') {
       res.json({ status: 'pending' })
@@ -432,7 +432,7 @@ esewaRouter.post('/payment/reconcile', validate({ body: reconcileBody }), async 
     const current = claimed ?? attempt
     // eSewa's status API is the source of truth: an attempt may have been
     // marked failed earlier (e.g. the callback arrived before eSewa's status
-    // API reflected the COMPLETE transaction), so re-check before giving up —
+    // API reflected the COMPLETE transaction), so re-check before giving up -
     // a payment that actually moved money must still produce a booking.
     const status = await checkEsewaStatus(current.transactionUuid, current.amount)
     if (status.status !== 'COMPLETE') {

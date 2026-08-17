@@ -1,5 +1,5 @@
 // ============================================================
-// HealSync HMS — Doctors service
+// Medicore HMS - Doctors service
 // ============================================================
 
 import { ENDPOINTS, withParams } from '../endpoints'

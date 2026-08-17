@@ -1,8 +1,8 @@
 // ============================================================
-// Medicore HMS — master admin API client
+// Medicore HMS - master admin API client
 // A minimal fetch wrapper for the platform panel. Uses its own
 // bearer token (medicore_master_token) and deliberately does NOT
-// send the x-hospital-slug header — master routes are platform
+// send the x-hospital-slug header - master routes are platform
 // level, not tied to any single hospital.
 // ============================================================
 
@@ -53,7 +53,7 @@ export async function masterRequest<T>(
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch {
-    throw new ApiError('Network error — cannot reach the API', 0)
+    throw new ApiError('Network error - cannot reach the API', 0)
   }
 
   if (!response.ok) {

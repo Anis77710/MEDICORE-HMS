@@ -18,14 +18,14 @@ export interface HospitalSettings {
 const hospitalSettingsSchema = new Schema<HospitalSettings>(
   {
     _id: { type: String },
-    name: { type: String, default: 'HealSync General Hospital' },
+    name: { type: String, default: 'Medicore General Hospital' },
     tagline: { type: String, default: 'Smart Hospital Management' },
-    email: { type: String, default: 'info@healsync.health' },
+    email: { type: String, default: 'info@medicore.health' },
     phone: { type: String, default: '' },
     address: { type: String, default: '' },
     license: { type: String, default: '' },
     timezone: { type: String, default: 'UTC-5 (Eastern)' },
-    currency: { type: String, default: 'NPR (Rs.)' },
+    currency: { type: String, default: 'NPR (NPR)' },
     logoUrl: { type: String },
   },
   { timestamps: true, toJSON: { transform: jsonTransform }, toObject: { transform: jsonTransform } },

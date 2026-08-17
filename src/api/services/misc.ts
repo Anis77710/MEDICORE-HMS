@@ -1,5 +1,5 @@
 // ============================================================
-// Medicore HMS — Staff, Dashboard, Reports & Settings services
+// Medicore HMS - Staff, Dashboard, Reports & Settings services
 // ============================================================
 
 import { ENDPOINTS, withParams } from '../endpoints'
@@ -38,6 +38,31 @@ export async function updateStaff(id: string, input: Partial<StaffInput>): Promi
 
 export async function deleteStaff(id: string): Promise<void> {
   await http.delete(withParams(ENDPOINTS.STAFF_DELETE, { id }))
+}
+
+export interface AccountActionResult {
+  id: string
+  email: string
+  status: string
+  tempPassword?: string
+}
+
+export async function resetStaffPassword(
+  id: string,
+  password?: string,
+): Promise<{ success: boolean; email: string; tempPassword?: string }> {
+  return http.post<{ success: boolean; email: string; tempPassword?: string }>(
+    withParams(ENDPOINTS.STAFF_RESET_PASSWORD, { id }),
+    { password },
+  )
+}
+
+export async function disableStaffLogin(id: string): Promise<AccountActionResult> {
+  return http.post<AccountActionResult>(withParams(ENDPOINTS.STAFF_DISABLE_LOGIN, { id }))
+}
+
+export async function enableStaffLogin(id: string): Promise<AccountActionResult> {
+  return http.post<AccountActionResult>(withParams(ENDPOINTS.STAFF_ENABLE_LOGIN, { id }))
 }
 
 // ---------- Dashboard ----------

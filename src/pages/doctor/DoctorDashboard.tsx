@@ -268,7 +268,7 @@ export default function DoctorDashboard() {
                     <td className="muted">
                       {consultation ? new Date(consultation.createdAt).toLocaleDateString() : patient.lastVisit}
                     </td>
-                    <td className="font-semibold">{consultation?.diagnosis.primary ?? '—'}</td>
+                    <td className="font-semibold">{consultation?.diagnosis.primary ?? '-'}</td>
                     <td>
                       <StatusBadge status={patient.status} />
                     </td>

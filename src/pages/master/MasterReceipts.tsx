@@ -19,7 +19,7 @@ function npr(n: number): string {
 }
 
 function fmtDate(s?: string): string {
-  if (!s) return '—'
+  if (!s) return '-'
   return new Date(s).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
@@ -38,14 +38,14 @@ function printReceipt(r: ReceiptItem): void {
     .foot{margin-top:32px;text-align:center;color:#64748b;font-size:12px}
   </style></head><body>
     <div class="head">
-      <div><h1>Medicore HMS</h1><div class="muted">Hospital Registration Fee — Official Receipt</div></div>
+      <div><h1>Medicore HMS</h1><div class="muted">Hospital Registration Fee - Official Receipt</div></div>
       <div class="muted">${fmtDate(r.paidAt)}</div>
     </div>
     <table class="meta">
       <tr><td>Reference</td><td>${r.regNo}</td></tr>
       <tr><td>Hospital</td><td>${r.hospitalName}</td></tr>
       <tr><td>Payer</td><td>${r.payer} (${r.payerEmail})</td></tr>
-      <tr><td>eSewa Transaction</td><td>${r.transactionCode || '—'}</td></tr>
+      <tr><td>eSewa Transaction</td><td>${r.transactionCode || '-'}</td></tr>
       <tr><td>Status</td><td>${STATUS_LABEL[r.status] ?? r.status}</td></tr>
       <tr class="total"><td>Amount Paid</td><td>${npr(r.amount)}</td></tr>
     </table>
@@ -93,7 +93,7 @@ export default function MasterReceipts() {
       <div className="grid-stats mb-4">
         <StatCard label="Collected" value={npr(summary.approved)} icon={<Banknote size={20} />} tone="green" footer={<span>approved registrations</span>} />
         <StatCard label="Pending" value={npr(summary.paid)} icon={<Clock size={20} />} tone="amber" footer={<span>paid, awaiting approval</span>} />
-        <StatCard label="To Refund" value={npr(summary.rejected)} icon={<RotateCcw size={20} />} tone="red" footer={<span>rejected — refund owed</span>} />
+        <StatCard label="To Refund" value={npr(summary.rejected)} icon={<RotateCcw size={20} />} tone="red" footer={<span>rejected - refund owed</span>} />
       </div>
 
       <Tabs<'all' | 'approved' | 'paid' | 'rejected'>
@@ -137,7 +137,7 @@ export default function MasterReceipts() {
                       <div className="text-sm muted">{r.payer}</div>
                     </td>
                     <td className="text-sm muted">{r.payerEmail}</td>
-                    <td className="mono text-sm">{r.transactionCode || '—'}</td>
+                    <td className="mono text-sm">{r.transactionCode || '-'}</td>
                     <td className="text-sm">{fmtDate(r.paidAt)}</td>
                     <td className="align-right font-semibold">{npr(r.amount)}</td>
                     <td>

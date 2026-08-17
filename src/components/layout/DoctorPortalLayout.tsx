@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   CalendarDays,
@@ -90,6 +90,7 @@ export function DoctorPortalLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const { user } = useAuth()
   const [doctor, setDoctor] = useState<Doctor | null>(null)
+  const location = useLocation()
 
   useEffect(() => {
     let cancelled = false
@@ -101,7 +102,7 @@ export function DoctorPortalLayout() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [location.pathname])
 
   const restricted = doctor && doctor.status !== 'Active'
 

@@ -1,5 +1,5 @@
 // ============================================================
-// Medicore HMS — Appointments service
+// Medicore HMS - Appointments service
 // ============================================================
 
 import { ENDPOINTS, withParams } from '../endpoints'

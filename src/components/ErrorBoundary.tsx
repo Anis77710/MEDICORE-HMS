@@ -94,7 +94,7 @@ export class ErrorBoundary extends Component<Props, State> {
             try refreshing the page or return to the dashboard.
           </p>
 
-          {/* Error detail — collapsed, dev-friendly */}
+          {/* Error detail - collapsed, dev-friendly */}
           {this.state.error.message && (
             <details
               style={{

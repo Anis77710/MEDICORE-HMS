@@ -1,5 +1,4 @@
 import { Router } from 'express'
-import { randomBytes } from 'node:crypto'
 import { z } from 'zod'
 import { ApiError } from '../utils/ApiError.js'
 import { DoctorModel } from '../models/Doctor.js'
@@ -13,7 +12,16 @@ import { requireAuth, requireRole, type AuthedRequest } from '../middleware/auth
 import { validate, queryOf } from '../middleware/validate.js'
 import { writeAuditLog } from './staff.js'
 import { getAvailabilitySlots, isWorkingDay } from '../domain/availability.js'
-import { loginUsername, defaultPassword, sendCredentialsEmail } from '../utils/credentials.js'
+import {
+  firstNameOf,
+  generateTempPassword,
+  hospitalCredentialContext,
+  loginUsername,
+  nextStaffId,
+  PASSWORD_MIN,
+  sendCredentialsEmail,
+  sendPasswordResetEmail,
+} from '../utils/credentials.js'
 
 export const doctorsRouter = Router()
 
@@ -144,9 +152,12 @@ doctorsRouter.get(
 )
 
 // ---------- POST /doctors (admin) ----------
-// Adding a doctor also creates their login account automatically:
-// username = firstname@medicore.hms, password = firstname@birthYear.
-// The credentials are emailed to the doctor's Gmail address.
+// Adding a doctor also creates their login account automatically with
+// the hospital's credential scheme:
+//   staff ID  DOC-0042            (primary identifier)
+//   username  MHram.0042@medicore.hms
+//   password  random temporary password (must change on first login)
+// The temporary credentials are emailed to the doctor's address.
 doctorsRouter.post(
   '/',
   requireRole('ADMIN'),
@@ -154,34 +165,50 @@ doctorsRouter.post(
   async (req, res, next) => {
     try {
       const email = String(req.body.email).toLowerCase()
-      const username = loginUsername(String(req.body.name))
-      if (await UserModel.findOne({ username })) {
-        throw new ApiError(`The login username ${username} is already taken — the first name may need to differ`, 409)
-      }
       if (await DoctorModel.findOne({ email })) {
-        throw new ApiError('A doctor with this email already exists — use a different email address', 409)
+        throw new ApiError('A doctor with this email already exists - use a different email address', 409)
       }
-      const doctor = await DoctorModel.create(req.body)
-      let credentials: { username: string; password: string } | null = null
-      if (!(await UserModel.findOne({ email }))) {
-        const password = defaultPassword(doctor.name, (req.body as { birthYear: number }).birthYear)
-        await UserModel.create({
-          name: doctor.name,
-          email,
-          username,
-          phone: doctor.phone,
-          role: 'DOCTOR',
-          passwordHash: password,
-        })
-        await sendCredentialsEmail(email, { name: doctor.name, username, password })
-        credentials = { username, password }
+      if (await UserModel.findOne({ email })) {
+        throw new ApiError('An account with this email already exists - use a different email address', 409)
       }
+      const hospital = await hospitalCredentialContext()
+      const staffId = await nextStaffId('DOCTOR')
+      const username = loginUsername({
+        hospitalCode: hospital.code,
+        firstName: firstNameOf(String(req.body.name)),
+        staffId,
+        loginDomain: hospital.loginDomain,
+      })
+      if (await UserModel.findOne({ username })) {
+        throw new ApiError(`The login username ${username} is already taken`, 409)
+      }
+      const doctor = await DoctorModel.create({ ...req.body, staffId })
+      const password = generateTempPassword()
+      await UserModel.create({
+        name: doctor.name,
+        email,
+        username,
+        staffId,
+        phone: doctor.phone,
+        role: 'DOCTOR',
+        passwordHash: password,
+        mustChangePassword: true,
+      })
+      await sendCredentialsEmail(email, {
+        name: doctor.name,
+        role: 'Doctor',
+        username,
+        password,
+        hospitalName: hospital.name,
+      })
       await writeAuditLog(req as AuthedRequest, 'create', 'doctor', String(doctor._id), {
         name: doctor.name,
         department: doctor.department,
-        accountCreated: credentials !== null,
+        staffId,
+        username,
+        accountCreated: true,
       })
-      res.status(201).json({ ...doctor.toJSON(), credentials })
+      res.status(201).json({ ...doctor.toJSON(), credentials: { username, password } })
     } catch (err) {
       next(err)
     }
@@ -202,7 +229,7 @@ doctorsRouter.put(
         const email = body.email.toLowerCase()
         const clash = await DoctorModel.findOne({ email, _id: { $ne: req.params.id } })
         if (clash) {
-          throw new ApiError('Another doctor already uses this email — use a different email address', 409)
+          throw new ApiError('Another doctor already uses this email - use a different email address', 409)
         }
       }
       const doctor = await DoctorModel.findByIdAndUpdate(req.params.id, req.body, { new: true })
@@ -233,7 +260,7 @@ doctorsRouter.delete(
       const deps = await dependencyCounts(doctor._id.toString())
       if (deps.activeAppointments > 0 || deps.assignedPatients > 0) {
         throw new ApiError(
-          `Cannot delete ${doctor.name} — ${deps.activeAppointments} active appointment(s) and ${deps.assignedPatients} assigned patient(s). Reassign them first.`,
+          `Cannot delete ${doctor.name} - ${deps.activeAppointments} active appointment(s) and ${deps.assignedPatients} assigned patient(s). Reassign them first.`,
           409,
         )
       }
@@ -252,9 +279,11 @@ doctorsRouter.delete(
 // Account governance (admin)
 // ============================================================
 
-// ---------- POST /doctors/:id/account — create the login account ----------
-// Username is always firstname@medicore.hms; password is
-// firstname@birthYear unless an explicit password is provided.
+// ---------- POST /doctors/:id/account - create the login account ----------
+// Username follows the hospital's credential scheme (e.g.
+// MHram.0042@medicore.hms); a random temporary password is generated
+// (never a predictable one) unless an explicit password is provided.
+// New accounts must change their password on first login.
 doctorsRouter.post(
   '/:id/account',
   requireRole('ADMIN'),
@@ -262,8 +291,7 @@ doctorsRouter.post(
     params: z.object({ id: z.string() }),
     body: z.object({
       email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'valid email required'),
-      password: z.string().min(8, 'password must be at least 8 characters').optional(),
-      birthYear: z.coerce.number().int().min(1900).max(2100).optional(),
+      password: z.string().min(PASSWORD_MIN, `password must be at least ${PASSWORD_MIN} characters`).optional(),
     }),
   }),
   async (req, res, next) => {
@@ -274,24 +302,41 @@ doctorsRouter.post(
       if (await UserModel.findOne({ email })) {
         throw new ApiError('An account with this email already exists', 409)
       }
-      const username = loginUsername(doctor.name)
+      const hospital = await hospitalCredentialContext()
+      const staffId = doctor.staffId ?? (await nextStaffId('DOCTOR'))
+      const username = loginUsername({
+        hospitalCode: hospital.code,
+        firstName: firstNameOf(doctor.name),
+        staffId,
+        loginDomain: hospital.loginDomain,
+      })
       if (await UserModel.findOne({ username })) {
         throw new ApiError(`The login username ${username} is already taken`, 409)
       }
-      const body = req.body as { email: string; password?: string; birthYear?: number }
-      const password = body.password ?? defaultPassword(doctor.name, body.birthYear ?? doctor.birthYear)
+      const body = req.body as { email: string; password?: string }
+      const password = body.password ?? generateTempPassword()
       const user = await UserModel.create({
         name: doctor.name,
         email,
         username,
+        staffId,
         phone: doctor.phone,
         role: 'DOCTOR',
         passwordHash: password,
+        mustChangePassword: true,
       })
-      await sendCredentialsEmail(email, { name: doctor.name, username, password })
+      await sendCredentialsEmail(email, {
+        name: doctor.name,
+        role: 'Doctor',
+        username,
+        password,
+        hospitalName: hospital.name,
+      })
       await writeAuditLog(req as AuthedRequest, 'create', 'doctor-account', String(user._id), {
         doctorId: String(doctor._id),
         doctorName: doctor.name,
+        staffId,
+        username,
         generated: !body.password,
       })
       res.status(201).json({
@@ -308,15 +353,18 @@ doctorsRouter.post(
 )
 
 // ---------- POST /doctors/:id/reset-password ----------
-// Generates a strong temporary password when none is provided. Bumping
-// tokenVersion invalidates every existing session immediately.
+// Generates a cryptographically-random temporary password and forces a
+// change on the doctor's next login (unless the admin supplies an
+// explicit password, in which case the forced change is cleared). The
+// temporary password is emailed to the doctor. Bumping tokenVersion
+// invalidates every existing session immediately.
 doctorsRouter.post(
   '/:id/reset-password',
   requireRole('ADMIN'),
   validate({
     params: z.object({ id: z.string() }),
     body: z.object({
-      password: z.string().min(8, 'password must be at least 8 characters').optional(),
+      password: z.string().min(PASSWORD_MIN, `password must be at least ${PASSWORD_MIN} characters`).optional(),
     }),
   }),
   async (req, res, next) => {
@@ -325,22 +373,37 @@ doctorsRouter.post(
       if (!doctor) throw new ApiError('Doctor not found', 404)
       const user = await UserModel.findOne({ email: doctor.email.toLowerCase() })
       if (!user) throw new ApiError('No login account exists for this doctor yet', 404)
-      const tempPassword =
-        (req.body as { password?: string }).password ??
-        generateTempPassword()
+      const explicit = (req.body as { password?: string }).password
+      const tempPassword = explicit ?? generateTempPassword()
       user.passwordHash = tempPassword
+      user.mustChangePassword = !explicit
       user.tokenVersion += 1
       await user.save()
       await RefreshTokenModel.updateMany({ userId: String(user._id) }, { revokedAt: new Date() })
+      if (!explicit) {
+        const hospital = await hospitalCredentialContext()
+        await sendPasswordResetEmail(user.email, {
+          name: doctor.name,
+          role: 'Doctor',
+          username: user.username ?? loginUsername({
+            hospitalCode: hospital.code,
+            firstName: firstNameOf(doctor.name),
+            staffId: doctor.staffId ?? user.staffId ?? '0000',
+            loginDomain: hospital.loginDomain,
+          }),
+          password: tempPassword,
+          hospitalName: hospital.name,
+        })
+      }
       await writeAuditLog(req as AuthedRequest, 'reset-password', 'doctor-account', String(user._id), {
         doctorId: String(doctor._id),
         doctorName: doctor.name,
-        generated: !(req.body as { password?: string }).password,
+        generated: !explicit,
       })
       res.json({
         success: true,
         email: user.email,
-        ...((req.body as { password?: string }).password ? {} : { tempPassword }),
+        ...(explicit ? {} : { tempPassword }),
       })
     } catch (err) {
       next(err)
@@ -658,12 +721,3 @@ doctorsRouter.get(
     }
   },
 )
-
-function generateTempPassword(): string {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
-  let password = ''
-  for (let i = 0; i < 12; i += 1) {
-    password += alphabet[randomBytes(1)[0]! % alphabet.length]
-  }
-  return password
-}

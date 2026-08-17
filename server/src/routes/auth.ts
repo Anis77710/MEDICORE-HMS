@@ -23,6 +23,7 @@ import {
 import { hospitalOf } from '../middleware/tenant.js'
 import {
   cachedHospital,
+  defaultLoginDomain,
   findHospitalByAdminEmail,
   getTenantConnection,
   hospitalRegistry,
@@ -30,11 +31,11 @@ import {
   type HospitalInfo,
 } from '../config/tenants.js'
 import { validate } from '../middleware/validate.js'
+import { validatePasswordPolicy, PASSWORD_MIN } from '../utils/credentials.js'
 
 export const authRouter = Router()
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PASSWORD_MIN = 8
 const OTP_TTL_MIN = 15
 const OTP_MAX_ATTEMPTS = 5
 
@@ -47,11 +48,25 @@ function publicUser(u: {
   name: string
   email: string
   username?: string
+  staffId?: string
   phone: string
   role: string
+  department?: string
+  mustChangePassword?: boolean
   avatarUrl?: string
 }) {
-  return { id: String(u._id), name: u.name, email: u.email, username: u.username, phone: u.phone, role: u.role, avatarUrl: u.avatarUrl }
+  return {
+    id: String(u._id),
+    name: u.name,
+    email: u.email,
+    username: u.username,
+    staffId: u.staffId,
+    phone: u.phone,
+    role: u.role,
+    department: u.department || undefined,
+    mustChangePassword: !!u.mustChangePassword,
+    avatarUrl: u.avatarUrl,
+  }
 }
 
 /**
@@ -68,9 +83,9 @@ async function resolveLoginHospital(
   if (explicit) {
     if (!isValidSlug(explicit)) throw new ApiError('Invalid hospital code', 400)
     const rec = cachedHospital(explicit)
-    if (!rec) throw new ApiError('Hospital not found — check the hospital code', 404)
+    if (!rec) throw new ApiError('Hospital not found - check the hospital code', 404)
     if (rec.status === 'suspended') {
-      throw new ApiError('This hospital has been suspended — contact the platform administrator', 403)
+      throw new ApiError('This hospital has been suspended - contact the platform administrator', 403)
     }
     return { slug: rec.slug, name: rec.name }
   }
@@ -78,26 +93,36 @@ async function resolveLoginHospital(
   const matches = await findHospitalByAdminEmail(identifier)
   if (matches.length > 1) {
     throw new ApiError(
-      'This email is registered to more than one hospital — enter the hospital code to sign in',
+      'This email is registered to more than one hospital - enter the hospital code to sign in',
       409,
     )
   }
   const first = matches[0]
   if (first) {
     if (first.status === 'suspended') {
-      throw new ApiError('This hospital has been suspended — contact the platform administrator', 403)
+      throw new ApiError('This hospital has been suspended - contact the platform administrator', 403)
     }
     return { slug: first.slug, name: first.name }
   }
 
-  // Synthetic username (firstname@medicore.hms) — the credentials email tells
-  // admins to sign in with this, but it never matches a registry admin email.
-  // Find which registered hospital owns the username and sign into that
-  // tenant, instead of always falling back to the default hospital (which
-  // made username logins fail with "Invalid email or password" for every
-  // hospital admin/doctor/staff outside the default hospital).
-  if (identifier.endsWith('@medicore.hms')) {
+  // Synthetic login username (e.g. MHram.0042@medicore.hms) - the
+  // credentials email tells members to sign in with this, but it never
+  // matches a registry admin email. Resolve the hospital from the
+  // username's email domain (the login domain stored on the hospital's
+  // registry record), then fall back to scanning every tenant so legacy
+  // usernames (firstname@medicore.hms) keep working.
+  if (identifier.includes('@')) {
+    const domain = identifier.slice(identifier.lastIndexOf('@') + 1).toLowerCase()
     const hospitals = await hospitalRegistry().find({}).lean()
+    const byDomain = hospitals.find(
+      (h) => (h.loginDomain || defaultLoginDomain(h.slug)) === domain,
+    )
+    if (byDomain) {
+      if (byDomain.status === 'suspended') {
+        throw new ApiError('This hospital has been suspended - contact the platform administrator', 403)
+      }
+      return { slug: byDomain.slug, name: byDomain.name }
+    }
     const currentSlug = hospitalOf(req as Request).slug
     for (const h of hospitals) {
       if (h.slug === currentSlug) continue
@@ -106,7 +131,7 @@ async function resolveLoginHospital(
         .findOne({ username: identifier }, { projection: { _id: 1 } })
       if (owner) {
         if (h.status === 'suspended') {
-          throw new ApiError('This hospital has been suspended — contact the platform administrator', 403)
+          throw new ApiError('This hospital has been suspended - contact the platform administrator', 403)
         }
         return { slug: h.slug, name: h.name }
       }
@@ -118,10 +143,10 @@ async function resolveLoginHospital(
 
 // ---------- POST /auth/login ----------
 // The `email` field accepts either the user's Gmail address or the
-// synthetic username (firstname@medicore.hms). The `hospital` field
-// is optional: when omitted, the hospital is resolved from the
-// x-hospital-slug header, the admin email registry, or the default
-// hospital (the MONGO_URI database).
+// synthetic login username (e.g. MHram.0042@medicore.hms). The
+// `hospital` field is optional: when omitted, the hospital is resolved
+// from the x-hospital-slug header, the admin email registry, the
+// username's login domain, or the default hospital.
 authRouter.post(
   '/login',
   validate({
@@ -148,7 +173,7 @@ authRouter.post(
           throw new ApiError('Invalid email or password', 401)
         }
         if (user.status === 'Disabled') {
-          throw new ApiError('This account has been disabled — contact an administrator', 403)
+          throw new ApiError('This account has been disabled - contact an administrator', 403)
         }
         await UserModel.updateOne({ _id: user._id }, { lastLoginAt: new Date() })
         const familyId = randomUUID()
@@ -197,7 +222,7 @@ authRouter.post(
     next(
       new ApiError(
         'Hospital registration now requires a one-time eSewa payment. ' +
-          'Register through the paid flow at /master/register — your request will be ' +
+          'Register through the paid flow at /master/register - your request will be ' +
           'reviewed by the platform team and your login credentials will be emailed to you.',
         410,
       ),
@@ -211,11 +236,11 @@ authRouter.post('/refresh', async (req, res, next) => {
     const oldToken = (req.cookies as Record<string, string | undefined>)[REFRESH_COOKIE]
     if (!oldToken) throw new ApiError('No refresh token', 401)
     const rotated = await rotateRefreshToken(oldToken, req)
-    if (!rotated) throw new ApiError('Session expired — please sign in again', 401)
+    if (!rotated) throw new ApiError('Session expired - please sign in again', 401)
       const user = await UserModel.findById(rotated.userId)
-      if (!user) throw new ApiError('Session expired — please sign in again', 401)
+      if (!user) throw new ApiError('Session expired - please sign in again', 401)
       if (user.status === 'Disabled') {
-        throw new ApiError('This account has been disabled — contact an administrator', 403)
+        throw new ApiError('This account has been disabled - contact an administrator', 403)
       }
       setRefreshCookie(res, rotated.token)
       res.json({
@@ -256,6 +281,48 @@ authRouter.get('/me', requireAuth, async (req, res, next) => {
     next(err)
   }
 })
+
+// ---------- POST /auth/change-password ----------
+// Forced first-login password change (and reuseable for a voluntary
+// change). The current password must be verified, the new password must
+// satisfy the policy, and the hash is replaced. Once changed, the
+// mustChangePassword flag is cleared and the session continues.
+authRouter.post(
+  '/change-password',
+  requireAuth,
+  validate({
+    body: z.object({
+      currentPassword: z.string().min(1, 'current password required'),
+      newPassword: z.string().min(1, 'new password required'),
+    }),
+  }),
+  async (req, res, next) => {
+    try {
+      const { userId } = req as AuthedRequest
+      const { currentPassword, newPassword } = req.body as {
+        currentPassword: string
+        newPassword: string
+      }
+      const user = await UserModel.findById(userId)
+      if (!user) throw new ApiError('Account not found', 404)
+      if (!(await user.comparePassword(currentPassword))) {
+        throw new ApiError('Current password is incorrect', 400)
+      }
+      const policyError = validatePasswordPolicy(newPassword)
+      if (policyError) throw new ApiError(policyError, 400)
+      if (await user.comparePassword(newPassword)) {
+        throw new ApiError('New password must be different from the current password', 400)
+      }
+      user.passwordHash = newPassword
+      user.mustChangePassword = false
+      user.passwordChangedAt = new Date()
+      await user.save()
+      res.json({ success: true, user: publicUser(user) })
+    } catch (err) {
+      next(err)
+    }
+  },
+)
 
 // ---------- POST /auth/forgot-password ----------
 authRouter.post(
@@ -340,11 +407,13 @@ authRouter.post(
         usedAt: { $ne: null },
       })
       if (!rec || rec.expiresAt < new Date()) {
-        throw new ApiError('Code invalid or expired — please request a new one', 400)
+        throw new ApiError('Code invalid or expired - please request a new one', 400)
       }
       const user = await UserModel.findOne({ email: email.toLowerCase() })
       if (!user) throw new ApiError('Account not found', 404)
       user.passwordHash = password
+      user.mustChangePassword = false
+      user.passwordChangedAt = new Date()
       user.tokenVersion += 1
       await user.save()
       await OtpModel.deleteMany({ email: user.email, purpose: 'password-reset' })

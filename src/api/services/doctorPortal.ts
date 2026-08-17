@@ -1,5 +1,5 @@
 // ============================================================
-// Medicore HMS — Doctor Portal service
+// Medicore HMS - Doctor Portal service
 // Doctor-scoped clinical data. Real API: /doctor-portal/*
 // The logged-in doctor is always resolved server-side, so a doctor
 // can never address another doctor's records through this service.
@@ -19,6 +19,10 @@ import type {
 
 export async function getDoctorProfile(): Promise<Doctor> {
   return http.get<Doctor>(ENDPOINTS.DOCTOR_ME)
+}
+
+export async function setMyStatus(status: Doctor['status']): Promise<Doctor> {
+  return http.patch<Doctor>(ENDPOINTS.DOCTOR_ME_STATUS, { status })
 }
 
 export interface DoctorPatientQuery {

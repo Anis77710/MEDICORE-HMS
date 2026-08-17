@@ -1,5 +1,5 @@
 // ============================================================
-// Medicore HMS — Auth service
+// Medicore HMS - Auth service
 // Real API: POST {base}/auth/* (see ENDPOINTS)
 // ============================================================
 
@@ -13,7 +13,7 @@ export interface LoginInput {
   remember?: boolean
 }
 
-// Registration is for NEW HOSPITALS only — it creates the hospital
+// Registration is for NEW HOSPITALS only - it creates the hospital
 // profile plus the first ADMIN account with generated credentials.
 export interface HospitalRegisterInput {
   hospitalName: string
@@ -65,4 +65,16 @@ export async function resetPassword(
     { email, otp, password },
     { auth: false },
   )
+}
+
+// Forced first-login password change (and self-service change). Returns
+// the updated user so the app can drop the mustChangePassword gate.
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ success: boolean; user: User }> {
+  return http.post<{ success: boolean; user: User }>(ENDPOINTS.AUTH_CHANGE_PASSWORD, {
+    currentPassword,
+    newPassword,
+  })
 }

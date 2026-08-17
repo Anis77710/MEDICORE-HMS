@@ -5,6 +5,7 @@ import { registerSchema, proxyModel } from './registry.js'
 export interface StaffMember {
   name: string
   email: string
+  staffId?: string
   phone: string
   role: 'ADMIN' | 'DOCTOR' | 'NURSE' | 'STAFF' | 'PATIENT'
   department: string
@@ -19,6 +20,7 @@ const staffSchema = new Schema<StaffMember>(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, lowercase: true, trim: true },
+    staffId: { type: String, unique: true, sparse: true, uppercase: true, trim: true },
     phone: { type: String, default: '' },
     role: { type: String, enum: ['ADMIN', 'DOCTOR', 'NURSE', 'STAFF', 'PATIENT'], default: 'STAFF' },
     department: { type: String, default: 'General' },

@@ -125,7 +125,7 @@ export default function MasterHospitals() {
           </div>
         </div>
         {order.length === 0 ? (
-          <p className="text-sm muted">No hospitals are listed in the public directory yet — use <b>List</b> below.</p>
+          <p className="text-sm muted">No hospitals are listed in the public directory yet - use <b>List</b> below.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {order.map((slug, i) => {
@@ -198,7 +198,7 @@ export default function MasterHospitals() {
                           </span>
                         </div>
                       ) : (
-                        <span className="text-sm muted">—</span>
+                        <span className="text-sm muted">-</span>
                       )}
                     </td>
                     <td className="align-right">
@@ -241,7 +241,7 @@ export default function MasterHospitals() {
         {deleting && (
           <div className="confirm-message">
             Deleting <strong>{deleting.name}</strong> ({deleting.slug}) permanently drops its entire
-            database — every patient, doctor, appointment, billing and pharmacy record. This cannot be
+            database - every patient, doctor, appointment, billing and pharmacy record. This cannot be
             undone.
           </div>
         )}

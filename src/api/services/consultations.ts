@@ -1,5 +1,5 @@
 // ============================================================
-// HealSync HMS — Admin clinical oversight (consultations)
+// Medicore HMS - Admin clinical oversight (consultations)
 // Read-only access to every doctor's consultations + prescriptions.
 // ============================================================
 

@@ -142,7 +142,7 @@ export default function MedicalRecords() {
                       {p.firstName} {p.lastName}
                     </strong>
                     <span className="muted text-xs">
-                      {p.patientId} · {ageFromDob(p.dob) ?? '—'} yrs
+                      {p.patientId} · {ageFromDob(p.dob) ?? '-'} yrs
                     </span>
                   </div>
                 </button>
@@ -172,8 +172,8 @@ export default function MedicalRecords() {
                         {selected.firstName} {selected.lastName}
                       </h3>
                       <div className="muted text-sm">
-                        {selected.patientId} · {ageFromDob(selected.dob) ?? '—'} yrs ·{' '}
-                        {selected.gender} · {selected.bloodGroup || '—'}
+                        {selected.patientId} · {ageFromDob(selected.dob) ?? '-'} yrs ·{' '}
+                        {selected.gender} · {selected.bloodGroup || '-'}
                       </div>
                       <div className="muted text-sm">
                         Last visit: {selected.lastVisit ? fmtDate(selected.lastVisit) : 'Never'}
@@ -268,15 +268,15 @@ function OverviewSection({ records, patient }: { records: MedicalRecord[]; patie
       <div className="dp-kv mt-4">
         <div>
           <span>Blood Group</span>
-          <strong>{patient.bloodGroup || '—'}</strong>
+          <strong>{patient.bloodGroup || '-'}</strong>
         </div>
         <div>
           <span>Insurance</span>
-          <strong>{patient.insurance || '—'}</strong>
+          <strong>{patient.insurance || '-'}</strong>
         </div>
         <div>
           <span>Emergency Contact</span>
-          <strong>{patient.emergencyContact || '—'}</strong>
+          <strong>{patient.emergencyContact || '-'}</strong>
         </div>
       </div>
     </Card>
@@ -418,7 +418,7 @@ function PrescriptionsSection({ prescriptions }: { prescriptions: Prescription[]
                       <strong>{m.name}</strong>
                       <span className="muted">
                         {' '}
-                        — {m.dosage}, {m.frequency}, {m.durationDays} day(s)
+                        - {m.dosage}, {m.frequency}, {m.durationDays} day(s)
                       </span>
                     </div>
                   ))}

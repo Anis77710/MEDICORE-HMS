@@ -11,7 +11,7 @@ const HOSPITAL_TONE: Record<string, 'green' | 'gray'> = {
 }
 
 function fmtDate(s?: string): string {
-  if (!s) return '—'
+  if (!s) return '-'
   return new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
@@ -173,7 +173,7 @@ export default function MasterHospitalDetail() {
         onConfirm={doDelete}
       >
         <div className="confirm-message">
-          Deleting <strong>{hospital.name}</strong> ({hospital.slug}) permanently drops its entire database — every
+          Deleting <strong>{hospital.name}</strong> ({hospital.slug}) permanently drops its entire database - every
           patient, doctor, appointment, billing and pharmacy record. This cannot be undone.
         </div>
       </ConfirmDialog>

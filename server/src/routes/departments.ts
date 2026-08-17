@@ -15,7 +15,7 @@ departmentsRouter.use(requireAuth)
 // A patient occupies a bed only while admitted or critical (inpatient).
 const OCCUPYING_STATUSES = ['Admitted', 'Critical']
 
-// Live occupancy derived from registered patients — the stored occupiedBeds
+// Live occupancy derived from registered patients - the stored occupiedBeds
 // field is never treated as the source of truth.
 async function occupancyByDepartment(): Promise<Map<string, number>> {
   const patients = await PatientModel.find({}, { status: 1, department: 1 })

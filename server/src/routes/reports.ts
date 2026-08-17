@@ -16,7 +16,7 @@ function monthLabel(d = new Date()): string {
   return d.toLocaleString('en-US', { month: 'long', year: 'numeric' })
 }
 
-// GET /reports — summary + list of generated reports
+// GET /reports - summary + list of generated reports
 reportsRouter.get('/', async (_req, res, next) => {
   try {
     const today = new Date().toISOString().slice(0, 10)

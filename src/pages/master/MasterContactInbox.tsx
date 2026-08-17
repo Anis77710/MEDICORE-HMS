@@ -5,7 +5,7 @@ import { Card, Spinner, EmptyState, Badge, PageHeader, Button, Tabs } from '../.
 import { useToast } from '../../context/ToastContext'
 
 function fmtDate(s?: string): string {
-  if (!s) return '—'
+  if (!s) return '-'
   return new Date(s).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -451,7 +451,7 @@ function AppointmentCard({
               size="sm"
               variant="outline"
               onClick={onReschedule}
-              title="Reschedule appointment — patient will be notified by email"
+              title="Reschedule appointment - patient will be notified by email"
               aria-label="Reschedule appointment"
             >
               <CalendarClock size={16} />
@@ -535,7 +535,7 @@ function RescheduleModal({
       })
       onRescheduled(updated)
       onClose()
-      push(`Appointment rescheduled — email sent to ${appointment.patientName}`)
+      push(`Appointment rescheduled - email sent to ${appointment.patientName}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reschedule appointment')
     } finally {
@@ -546,7 +546,7 @@ function RescheduleModal({
   return (
     <Modal
       open={appointment !== null}
-      title={`Reschedule — ${appointment?.patientName ?? ''}`}
+      title={`Reschedule - ${appointment?.patientName ?? ''}`}
       size="md"
       onClose={busy ? () => {} : onClose}
       footer={
@@ -614,7 +614,7 @@ function RescheduleModal({
         <textarea
           className="input"
           rows={3}
-          placeholder="e.g. An unexpected emergency came up — we will be available at the new time."
+          placeholder="e.g. An unexpected emergency came up - we will be available at the new time."
           value={note}
           onChange={(e) => setNote(e.target.value)}
           maxLength={500}

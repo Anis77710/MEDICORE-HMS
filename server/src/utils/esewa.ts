@@ -2,11 +2,11 @@ import { createHmac, randomUUID } from 'node:crypto'
 import { env } from '../config/env.js'
 
 // ============================================================
-// eSewa payment integration — v2 form API.
+// eSewa payment integration - v2 form API.
 // The browser posts the hidden form to the eSewa payment page;
 // after the payment eSewa redirects the browser (GET) back to
 // our success/failure URL with `data` and `signature` query
-// params — `data` is a JSON string (Base64-encoded) signed with
+// params - `data` is a JSON string (Base64-encoded) signed with
 // base64 HMAC-SHA256 over the fields listed in
 // data.signed_field_names (in that exact order, as "key=value"
 // pairs joined by commas). A form POST with the same fields is
@@ -133,7 +133,7 @@ export function verifyEsewaCallback(
 
 /**
  * Extracts the transaction_uuid from a callback payload WITHOUT verifying the
- * signature — used only to reconcile against eSewa's transaction status API,
+ * signature - used only to reconcile against eSewa's transaction status API,
  * which is the authoritative record of whether the money actually moved.
  */
 export function extractCallbackUuid(dataPayload: string): string | undefined {
@@ -156,7 +156,14 @@ export async function checkEsewaStatus(
   url.searchParams.set('product_code', env.ESEWA_PRODUCT_CODE)
   url.searchParams.set('total_amount', String(totalAmount))
   url.searchParams.set('transaction_uuid', transactionUuid)
-  const res = await fetch(url)
-  if (!res.ok) return {}
-  return (await res.json()) as { status?: string; ref_id?: string | null; transaction_code?: string }
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
+    if (!res.ok) return {}
+    return (await res.json()) as { status?: string; ref_id?: string | null; transaction_code?: string }
+  } catch {
+    // eSewa's status API unreachable - treat as "unknown", never throw: a
+    // callback must redirect the browser and leave the attempt pending
+    // rather than fail the request (the reconcile endpoint retries later).
+    return {}
+  }
 }

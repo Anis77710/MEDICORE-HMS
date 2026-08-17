@@ -706,7 +706,7 @@ export default function ConsultationPage() {
                   <strong>{patient.firstName} {patient.lastName}</strong>
                   <div className="muted text-sm">{patient.patientId}</div>
                   <div className="muted text-sm">
-                    {ageFromDob(patient.dob) ?? '—'} yrs · {patient.gender} · {patient.bloodGroup || '—'}
+                    {ageFromDob(patient.dob) ?? '-'} yrs · {patient.gender} · {patient.bloodGroup || '-'}
                   </div>
                 </div>
               </div>
@@ -942,7 +942,7 @@ function ReviewSummary({
       <div>
         <span>Patient</span>
         <strong>
-          {patient ? `${patient.firstName} ${patient.lastName}` : '—'}
+          {patient ? `${patient.firstName} ${patient.lastName}` : '-'}
         </strong>
       </div>
       <div>

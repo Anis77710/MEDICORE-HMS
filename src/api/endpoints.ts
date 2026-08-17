@@ -1,5 +1,5 @@
 // ============================================================
-// HealSync HMS — API endpoint registry
+// Medicore HMS - API endpoint registry
 // ------------------------------------------------------------
 // Every service in `src/api/services/*` resolves its requests
 // against these paths, prefixed by VITE_API_BASE_URL (see
@@ -16,6 +16,7 @@ export const ENDPOINTS = {
   AUTH_FORGOT_PASSWORD: '/auth/forgot-password',
   AUTH_VERIFY_OTP: '/auth/verify-otp',
   AUTH_RESET_PASSWORD: '/auth/reset-password',
+  AUTH_CHANGE_PASSWORD: '/auth/change-password',
   AUTH_ME: '/auth/me',
 
   // ---------- Public (no auth) ----------
@@ -120,6 +121,7 @@ export const ENDPOINTS = {
   INVOICE_DETAIL: '/billing/invoices/:id',
   INVOICE_CREATE: '/billing/invoices',
   INVOICE_UPDATE: '/billing/invoices/:id',
+  INVOICE_AUTO_DRAFT: '/billing/auto-draft',
   PAYMENTS: '/billing/payments',
   PAYMENT_CREATE: '/billing/payments',
   INVOICE_DOWNLOAD: '/billing/invoices/:id/download',
@@ -130,6 +132,9 @@ export const ENDPOINTS = {
   STAFF_CREATE: '/staff',
   STAFF_UPDATE: '/staff/:id',
   STAFF_DELETE: '/staff/:id',
+  STAFF_RESET_PASSWORD: '/staff/:id/reset-password',
+  STAFF_DISABLE_LOGIN: '/staff/:id/disable-login',
+  STAFF_ENABLE_LOGIN: '/staff/:id/enable-login',
 
   // ---------- Reports ----------
   REPORTS: '/reports',
@@ -147,6 +152,7 @@ export const ENDPOINTS = {
 
   // ---------- Doctor Portal ----------
   DOCTOR_ME: '/doctor-portal/me',
+  DOCTOR_ME_STATUS: '/doctor-portal/me/status',
   DOCTOR_PATIENTS: '/doctor-portal/patients',
   DOCTOR_APPOINTMENTS: '/doctor-portal/appointments',
   DOCTOR_APPOINTMENT_CONFIRM: '/doctor-portal/appointments/:id/confirm',

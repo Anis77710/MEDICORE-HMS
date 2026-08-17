@@ -63,14 +63,14 @@ app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
 app.use(
   morgan(isProd ? 'combined' : 'dev', {
-    // UptimeRobot polls /api/health every minute — don't flood request logs.
+    // UptimeRobot polls /api/health every minute - don't flood request logs.
     skip: (req) => req.path === '/api/health',
   }),
 )
 
 // Lightweight liveness probe for external uptime monitors (UptimeRobot).
 // Must stay registered BEFORE the /api rate limiter and tenant middleware:
-// no rate limiting, no tenant/DB resolution, no auth — returns in constant
+// no rate limiting, no tenant/DB resolution, no auth - returns in constant
 // time even when MongoDB is temporarily unreachable. Never add DB queries,
 // user data, or internals to this response.
 app.get('/api/health', (_req, res) => {

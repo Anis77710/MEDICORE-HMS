@@ -18,7 +18,7 @@ export const settingsRouter = Router()
 
 settingsRouter.use(requireAuth)
 
-// GET /settings/hospital — auto-creates the singleton settings doc on first access
+// GET /settings/hospital - auto-creates the singleton settings doc on first access
 settingsRouter.get('/hospital', async (_req, res, next) => {
   try {
     let settings = await HospitalSettingsModel.findById('hospital')
@@ -61,7 +61,7 @@ settingsRouter.put(
   },
 )
 
-// GET /settings/profile — the signed-in user's own profile
+// GET /settings/profile - the signed-in user's own profile
 settingsRouter.get('/profile', async (req, res, next) => {
   try {
     const { userId } = req as AuthedRequest
@@ -73,7 +73,7 @@ settingsRouter.get('/profile', async (req, res, next) => {
   }
 })
 
-// PUT /settings/profile — update own name/phone
+// PUT /settings/profile - update own name/phone
 settingsRouter.put(
   '/profile',
   validate({
@@ -94,7 +94,7 @@ settingsRouter.put(
   },
 )
 
-// GET /settings/users (admin) — accounts in the system
+// GET /settings/users (admin) - accounts in the system
 settingsRouter.get('/users', requireRole('ADMIN'), async (_req, res, next) => {
   try {
     const users = await UserModel.find().sort({ createdAt: -1 }).limit(200)
@@ -114,7 +114,7 @@ settingsRouter.get('/users', requireRole('ADMIN'), async (_req, res, next) => {
   }
 })
 
-// GET /settings/audit-log (admin) — filterable audit trail
+// GET /settings/audit-log (admin) - filterable audit trail
 settingsRouter.get(
   '/audit-log',
   requireRole('ADMIN'),
@@ -159,7 +159,7 @@ settingsRouter.get(
   },
 )
 
-// GET /settings/backup (admin) — JSON snapshot of the whole database
+// GET /settings/backup (admin) - JSON snapshot of the whole database
 settingsRouter.get('/backup', requireRole('ADMIN'), async (_req, res, next) => {
   try {
     const [users, patients, doctors, departments, appointments, invoices, medicines, staff] =

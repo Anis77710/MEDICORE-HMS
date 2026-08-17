@@ -36,7 +36,7 @@ export function withTenant<T>(conn: Connection, slug: string, fn: () => Promise<
 }
 
 // ------------------------------------------------------------
-// Schema registry — model files call registerSchema() at module
+// Schema registry - model files call registerSchema() at module
 // load so any connection can compile the schemas on demand
 // (avoids circular imports between models and this module).
 // ------------------------------------------------------------
@@ -65,7 +65,7 @@ function ensureModel(conn: Connection, name: string): Model<unknown> {
 }
 
 // ------------------------------------------------------------
-// Proxy model — forwards every property access to the model
+// Proxy model - forwards every property access to the model
 // compiled on the connection that is active for this request.
 // ------------------------------------------------------------
 

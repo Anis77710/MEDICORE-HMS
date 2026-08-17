@@ -24,7 +24,7 @@ export default function RegisterStatus() {
       title: 'Payment received',
       body:
         regNo
-          ? `Your registration request ${regNo} is now in review. The platform team will verify your payment and approve your hospital — you'll receive your login credentials and payment receipt by email.`
+          ? `Your registration request ${regNo} is now in review. The platform team will verify your payment and approve your hospital - you'll receive your login credentials and payment receipt by email.`
           : 'Your payment was received and your registration request is now in review. You will receive your login credentials by email once approved.',
     },
     failed: {
@@ -32,7 +32,7 @@ export default function RegisterStatus() {
       tone: 'bad',
       title: 'Payment did not go through',
       body:
-        'No amount was charged. You can safely try again — if you were asked to pay but the transaction shows as completed with your bank, contact us before retrying.',
+        'No amount was charged. You can safely try again - if you were asked to pay but the transaction shows as completed with your bank, contact us before retrying.',
     },
     error: {
       icon: <ShieldAlert size={44} />,
@@ -41,7 +41,7 @@ export default function RegisterStatus() {
       body:
         message === 'invalid_signature'
           ? 'The return link was not recognised. If your payment succeeded, quote the transaction ID from your eSewa history when you contact us.'
-          : 'The return link was incomplete. If you were charged, your registration was not created — please try again or contact us.',
+          : 'The return link was incomplete. If you were charged, your registration was not created - please try again or contact us.',
     },
     unknown: {
       icon: <Clock4 size={44} />,

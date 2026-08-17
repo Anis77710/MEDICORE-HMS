@@ -160,7 +160,7 @@ export function DoctorForm({
               <strong>{result.credentials.password}</strong>
             </div>
             <div className="doctor-result-credentials-hint">
-              Share these with the doctor — they can change them after first login.
+              Share these with the doctor - they must change the temporary password at their first sign-in.
             </div>
           </div>
         )}

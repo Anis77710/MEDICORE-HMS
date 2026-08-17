@@ -1,6 +1,6 @@
-﻿import { useEffect, useMemo, useState } from 'react'
-import { Receipt, Plus, Download, CreditCard, Banknote, HandCoins, Wallet, Building2 } from 'lucide-react'
-import { listInvoices, recordPayment, createInvoice } from '../../api/services/billing'
+import { useEffect, useMemo, useState } from 'react'
+import { Receipt, Plus, Download, CreditCard, Banknote, HandCoins, Wallet, Building2, Wand2 } from 'lucide-react'
+import { listInvoices, recordPayment, createInvoice, autoDraftInvoice } from '../../api/services/billing'
 import { listPatients } from '../../api/services/patients'
 import type { Invoice, PaymentRecord } from '../../types'
 import {
@@ -42,6 +42,7 @@ export default function Billing() {
   })
   const [payForm, setPayForm] = useState({ amount: 0, method: 'Card' as (typeof METHODS)[number] })
   const [payBusy, setPayBusy] = useState(false)
+  const [autoBusy, setAutoBusy] = useState(false)
   const [patients, setPatients] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
@@ -101,6 +102,32 @@ export default function Billing() {
     push('Invoice created')
   }
 
+  const handleAutoFill = async () => {
+    if (!form.patientId) {
+      push('Select a patient first', 'error')
+      return
+    }
+    setAutoBusy(true)
+    try {
+      const draft = await autoDraftInvoice(form.patientId)
+      if (draft.items.length === 0) {
+        push('No billable activity found for this patient', 'error')
+        return
+      }
+      const text = draft.items.map((i) => `${i.description}, ${i.amount}`).join('\n')
+      setForm((f) => ({
+        ...f,
+        itemsText: text,
+        description: f.description || `Invoice for ${draft.patientName}`,
+      }))
+      push(`Auto-filled ${draft.items.length} item(s) - total NPR ${draft.total.toLocaleString()}`)
+    } catch (err) {
+      push(err instanceof Error ? err.message : 'Auto-fill failed', 'error')
+    } finally {
+      setAutoBusy(false)
+    }
+  }
+
   const submitPayment = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!paying) return
@@ -116,7 +143,7 @@ export default function Billing() {
       push(
         invoice.status === 'Paid'
           ? 'Invoice fully paid'
-          : `Payment recorded (Rs. ${payForm.amount.toLocaleString()})`,
+          : `Payment recorded (NPR ${payForm.amount.toLocaleString()})`,
       )
     } catch (err) {
       push(err instanceof Error ? err.message : 'Payment failed', 'error')
@@ -143,19 +170,19 @@ export default function Billing() {
       <div className="grid-stats mb-4">
         <StatCard
           label="Total Billed"
-          value={`Rs. ${totals.billed.toLocaleString()}`}
+          value={`NPR ${totals.billed.toLocaleString()}`}
           icon={<Receipt size={20} />}
           tone="teal"
         />
         <StatCard
           label="Collected"
-          value={`Rs. ${totals.collected.toLocaleString()}`}
+          value={`NPR ${totals.collected.toLocaleString()}`}
           icon={<Wallet size={20} />}
           tone="green"
         />
         <StatCard
           label="Outstanding"
-          value={`Rs. ${totals.outstanding.toLocaleString()}`}
+          value={`NPR ${totals.outstanding.toLocaleString()}`}
           icon={<CreditCard size={20} />}
           tone="amber"
         />
@@ -214,10 +241,10 @@ export default function Billing() {
                       <td className="muted">{i.description}</td>
                       <td className="muted">{i.issuedAt}</td>
                       <td className="muted">{i.dueDate}</td>
-                      <td className="font-semibold">Rs. {i.total.toLocaleString()}</td>
-                      <td>Rs. {i.amountPaid.toLocaleString()}</td>
+                      <td className="font-semibold">NPR {i.total.toLocaleString()}</td>
+                      <td>NPR {i.amountPaid.toLocaleString()}</td>
                       <td className={balance > 0 ? 'text-danger font-semibold' : 'muted'}>
-                        ${balance.toLocaleString()}
+                        NPR {balance.toLocaleString()}
                       </td>
                       <td>
                         <StatusBadge status={i.status} />
@@ -275,6 +302,11 @@ export default function Billing() {
           <Field
             label="Line Items"
             hint="One per line: description, amount (e.g. Consultation, 120)"
+            action={
+              <Button type="button" size="sm" variant="outline" onClick={handleAutoFill} disabled={autoBusy || !form.patientId}>
+                <Wand2 size={14} /> {autoBusy ? 'Computing…' : 'Auto-fill from patient activity'}
+              </Button>
+            }
           >
             <textarea
               className="textarea"
@@ -315,7 +347,7 @@ export default function Billing() {
       {/* Record payment */}
       <Modal
         open={!!paying}
-        title={`Record Payment — ${paying?.invoiceNo ?? ''}`}
+        title={`Record Payment - ${paying?.invoiceNo ?? ''}`}
         size="sm"
         onClose={() => setPaying(null)}
       >
@@ -324,16 +356,16 @@ export default function Billing() {
             <div className="pay-summary">
               <div>
                 <span className="muted text-sm">Total</span>
-                <strong>Rs. {paying.total.toLocaleString()}</strong>
+                <strong>NPR {paying.total.toLocaleString()}</strong>
               </div>
               <div>
                 <span className="muted text-sm">Paid so far</span>
-                <strong>Rs. {paying.amountPaid.toLocaleString()}</strong>
+                <strong>NPR {paying.amountPaid.toLocaleString()}</strong>
               </div>
               <div>
                 <span className="muted text-sm">Balance</span>
                 <strong className="text-danger">
-                  ${(paying.total - paying.amountPaid).toLocaleString()}
+                  NPR {(paying.total - paying.amountPaid).toLocaleString()}
                 </strong>
               </div>
             </div>

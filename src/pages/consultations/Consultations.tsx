@@ -44,8 +44,8 @@ function Detail({ c }: { c: Consultation }) {
         <h4 className="card-title mb-2" style={{ fontSize: 14 }}>Diagnosis</h4>
         <div className="info-rows mb-3">
           <div className="info-row"><span className="muted">Primary</span><strong>{c.diagnosis.primary}</strong></div>
-          <div className="info-row"><span className="muted">Additional</span><strong>{c.diagnosis.additional || '—'}</strong></div>
-          <div className="info-row"><span className="muted">Notes</span><strong>{c.diagnosis.notes || '—'}</strong></div>
+          <div className="info-row"><span className="muted">Additional</span><strong>{c.diagnosis.additional || '-'}</strong></div>
+          <div className="info-row"><span className="muted">Notes</span><strong>{c.diagnosis.notes || '-'}</strong></div>
         </div>
 
         <h4 className="card-title mb-2" style={{ fontSize: 14 }}>Vitals</h4>
@@ -62,19 +62,19 @@ function Detail({ c }: { c: Consultation }) {
       <div>
         <h4 className="card-title mb-2" style={{ fontSize: 14 }}>Examination</h4>
         <div className="info-rows mb-3">
-          <div className="info-row"><span className="muted">General</span><strong>{c.examination.general || '—'}</strong></div>
-          <div className="info-row"><span className="muted">Cardiovascular</span><strong>{c.examination.cardiovascular || '—'}</strong></div>
-          <div className="info-row"><span className="muted">Respiratory</span><strong>{c.examination.respiratory || '—'}</strong></div>
-          <div className="info-row"><span className="muted">Abdominal</span><strong>{c.examination.abdominal || '—'}</strong></div>
-          <div className="info-row"><span className="muted">Neurological</span><strong>{c.examination.neurological || '—'}</strong></div>
+          <div className="info-row"><span className="muted">General</span><strong>{c.examination.general || '-'}</strong></div>
+          <div className="info-row"><span className="muted">Cardiovascular</span><strong>{c.examination.cardiovascular || '-'}</strong></div>
+          <div className="info-row"><span className="muted">Respiratory</span><strong>{c.examination.respiratory || '-'}</strong></div>
+          <div className="info-row"><span className="muted">Abdominal</span><strong>{c.examination.abdominal || '-'}</strong></div>
+          <div className="info-row"><span className="muted">Neurological</span><strong>{c.examination.neurological || '-'}</strong></div>
         </div>
 
         <h4 className="card-title mb-2" style={{ fontSize: 14 }}>Treatment Plan</h4>
         <div className="info-rows mb-3">
-          <div className="info-row"><span className="muted">Advice</span><strong>{c.treatmentPlan.advice || '—'}</strong></div>
-          <div className="info-row"><span className="muted">Diet</span><strong>{c.treatmentPlan.diet || '—'}</strong></div>
-          <div className="info-row"><span className="muted">Lifestyle</span><strong>{c.treatmentPlan.lifestyle || '—'}</strong></div>
-          <div className="info-row"><span className="muted">Instructions</span><strong>{c.treatmentPlan.instructions || '—'}</strong></div>
+          <div className="info-row"><span className="muted">Advice</span><strong>{c.treatmentPlan.advice || '-'}</strong></div>
+          <div className="info-row"><span className="muted">Diet</span><strong>{c.treatmentPlan.diet || '-'}</strong></div>
+          <div className="info-row"><span className="muted">Lifestyle</span><strong>{c.treatmentPlan.lifestyle || '-'}</strong></div>
+          <div className="info-row"><span className="muted">Instructions</span><strong>{c.treatmentPlan.instructions || '-'}</strong></div>
         </div>
 
         <h4 className="card-title mb-2" style={{ fontSize: 14 }}>Prescription</h4>
@@ -220,7 +220,7 @@ export default function AdminConsultations() {
                     <td className="muted">{c.chiefComplaint}</td>
                     <td className="font-semibold">{c.diagnosis.primary}</td>
                     <td className="muted">{fmtDate(c.createdAt)}</td>
-                    <td>{c.prescriptionId ? <Badge tone="purple">Rx</Badge> : <Badge tone="gray">—</Badge>}</td>
+                    <td>{c.prescriptionId ? <Badge tone="purple">Rx</Badge> : <Badge tone="gray">-</Badge>}</td>
                     <td style={{ textAlign: 'right' }}>
                       <button className="btn btn-outline btn-sm" onClick={() => void openDetail(c.id)}>
                         <Stethoscope size={14} /> View Record

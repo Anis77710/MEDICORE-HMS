@@ -1,9 +1,9 @@
 {
-  "name": "healsync-server",
+  "name": "medicore-server",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "HealSync HMS API — Express + TypeScript + MongoDB",
+  "description": "Medicore HMS API - Express + TypeScript + MongoDB",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -12,6 +12,7 @@
     "seed": "tsx src/seed/run.ts",
     "smoke": "tsx src/scripts/smoke.ts",
     "ensure-doctors": "tsx src/scripts/ensure-doctor-users.ts",
+    "migrate-credentials": "tsx src/scripts/migrate-credentials.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -101,7 +101,7 @@ export default function Doctors() {
             <div>
               <h3 className="card-title">Doctors needing attention</h3>
               <p className="card-subtitle">
-                Pending appointment confirmations — oldest first. Open a doctor to action or reassign.
+                Pending appointment confirmations - oldest first. Open a doctor to action or reassign.
               </p>
             </div>
             <Link to="/appointments?status=Pending" className="text-sm font-semibold">
@@ -189,25 +189,25 @@ export default function Doctors() {
                   <div className="doctor-card-metrics">
                     <div className="text-sm">
                       <span className="muted">Patients</span>
-                      <strong>{m?.patientsCount ?? '—'}</strong>
+                      <strong>{m?.patientsCount ?? '-'}</strong>
                     </div>
                     <div className="text-sm">
                       <span className="muted">Today</span>
-                      <strong>{m?.appointmentsToday ?? '—'}</strong>
+                      <strong>{m?.appointmentsToday ?? '-'}</strong>
                     </div>
                     <div className="text-sm">
                       <span className="muted">Pending</span>
-                      <strong>{m?.pendingAppointments ?? '—'}</strong>
+                      <strong>{m?.pendingAppointments ?? '-'}</strong>
                     </div>
                     <div className="text-sm">
                       <span className="muted">Consults</span>
-                      <strong>{m?.consultationsCount ?? '—'}</strong>
+                      <strong>{m?.consultationsCount ?? '-'}</strong>
                     </div>
                   </div>
                   <div className="doctor-card-foot">
                     <div className="text-sm">
                       <span className="muted">Fee</span>{' '}
-                      <strong>Rs. {d.consultationFee}</strong>
+                      <strong>NPR {d.consultationFee}</strong>
                     </div>
                     <div className="text-sm">
                       <span className="muted">Schedule</span>{' '}
@@ -278,7 +278,7 @@ export default function Doctors() {
             setEditing(null)
             setRefreshKey((k) => k + 1)
             if (saved)
-              push(editing ? 'Doctor updated' : 'Doctor added — login credentials sent to their email')
+              push(editing ? 'Doctor updated' : 'Doctor added - login credentials sent to their email')
           }}
         />
       </Modal>

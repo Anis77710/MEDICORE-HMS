@@ -1,7 +1,7 @@
 // ============================================================
-// Platform-level data — master admin, hospital registration
+// Platform-level data - master admin, hospital registration
 // requests and platform settings. These live in the registry
-// database (healsync_registry), i.e. they are shared across all
+// database (medicore_registry), i.e. they are shared across all
 // hospitals and are managed by the master admin panel, not by
 // any single hospital tenant.
 // ============================================================
@@ -71,16 +71,16 @@ export async function ensureMasterAdmin(): Promise<void> {
       passwordHash: password,
     })
     console.log(
-      `[platform] Master admin created — email: ${env.MASTER_ADMIN_EMAIL}  password: ${password}\n` +
+      `[platform] Master admin created - email: ${env.MASTER_ADMIN_EMAIL}  password: ${password}\n` +
         `[platform] Sign in at ${env.APP_BASE_URL}/master/login`,
     )
   } catch {
-    // Registry unavailable at boot — non-fatal, retried next boot.
+    // Registry unavailable at boot - non-fatal, retried next boot.
   }
 }
 
 // ------------------------------------------------------------
-// Registration requests — hospitals queue up here after paying
+// Registration requests - hospitals queue up here after paying
 // the registration fee; the master admin approves or rejects.
 // ------------------------------------------------------------
 
@@ -145,11 +145,11 @@ export function registrationRequestModel(): Model<RegistrationRequest> {
 }
 
 // ------------------------------------------------------------
-// Registration attempts — pending hospital applications created at
+// Registration attempts - pending hospital applications created at
 // initiate time and carried through the eSewa payment. The attempt
 // holds the applicant's details under the payment's transaction_uuid
 // (which eSewa returns inside the signed callback), so the callback
-// URL stays short — eSewa rejects success_urls longer than a few
+// URL stays short - eSewa rejects success_urls longer than a few
 // hundred characters with a generic "Service is currently
 // unavailable" error. Nothing is provisioned until the signed
 // callback verifies the payment; abandoned attempts expire via TTL.
@@ -184,7 +184,7 @@ const registrationAttemptSchema = new Schema<RegistrationAttempt>(
   },
   {
     timestamps: true,
-    // Abandoned attempts expire 24h after creation — no manual cleanup.
+    // Abandoned attempts expire 24h after creation - no manual cleanup.
     expireAfterSeconds: 24 * 60 * 60,
     toJSON: { transform: jsonTransform },
     toObject: { transform: jsonTransform },
@@ -201,7 +201,7 @@ export function registrationAttemptModel(): Model<RegistrationAttempt> {
 }
 
 // ------------------------------------------------------------
-// Platform settings — single document, _id "platform"
+// Platform settings - single document, _id "platform"
 // ------------------------------------------------------------
 
 export interface PlatformSettings {
@@ -243,7 +243,7 @@ export async function getPlatformSettings(): Promise<import('mongoose').Hydrated
 }
 
 // ------------------------------------------------------------
-// Platform counters — readable registration numbers
+// Platform counters - readable registration numbers
 // ("HREG-2026-8-11-1") shared across the platform.
 // ------------------------------------------------------------
 
@@ -281,7 +281,7 @@ export async function nextPlatformId(kind: string): Promise<string> {
 }
 
 // ------------------------------------------------------------
-// Audit log — every master admin action (approve, reject, suspend,
+// Audit log - every master admin action (approve, reject, suspend,
 // delete, settings change, announcement, contact handling …).
 // ------------------------------------------------------------
 
@@ -366,7 +366,7 @@ export async function logAudit(entry: {
 }
 
 // ------------------------------------------------------------
-// Announcements — platform-wide banners shown inside every
+// Announcements - platform-wide banners shown inside every
 // hospital dashboard; created by the master admin.
 // ------------------------------------------------------------
 
@@ -407,7 +407,7 @@ export function platformAnnouncementModel(): Model<PlatformAnnouncement> {
 }
 
 // ------------------------------------------------------------
-// Contact messages — inquiries submitted from the public landing
+// Contact messages - inquiries submitted from the public landing
 // page contact form, received by the master admin.
 // ------------------------------------------------------------
 

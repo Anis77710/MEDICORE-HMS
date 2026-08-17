@@ -142,7 +142,7 @@ export default function HospitalCalendar() {
                     return (
                       <td key={day}>
                         {!working ? (
-                          <span className="muted text-xs">—</span>
+                          <span className="muted text-xs">-</span>
                         ) : cell.count === 0 ? (
                           <Badge tone="green">Free</Badge>
                         ) : (

@@ -1,5 +1,5 @@
 // ============================================================
-// Medicore HMS — Domain types
+// Medicore HMS - Domain types
 // These mirror the backend API contract (REST/JSON).
 // ============================================================
 
@@ -10,15 +10,17 @@ export interface User {
   name: string
   email: string
   username?: string
+  staffId?: string
   role: Role
   avatarUrl?: string
   phone?: string
   department?: string
+  mustChangePassword?: boolean
 }
 
-// Auto-generated login credentials (firstname@medicore.hms /
-// firstname@birthYear). Returned once when an account is created and
-// emailed to the member's Gmail address.
+// Auto-generated login credentials (MH-ram.0042@medicore.hms + a random
+// temporary password). Returned once when an account is created/reset and
+// emailed to the member's address.
 export interface MemberCredentials {
   username: string
   password: string

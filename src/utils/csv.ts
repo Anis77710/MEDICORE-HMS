@@ -1,4 +1,4 @@
-// Client-side CSV export — builds a downloadable .csv file from rows.
+// Client-side CSV export - builds a downloadable .csv file from rows.
 
 export function toCsv(rows: Record<string, string | number | undefined>[]): string {
   if (rows.length === 0) return ''

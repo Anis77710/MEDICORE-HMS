@@ -5,6 +5,7 @@ import { registerSchema, proxyModel } from './registry.js'
 export interface Doctor {
   name: string
   email: string
+  staffId?: string
   phone: string
   department: string
   specialty: string
@@ -22,6 +23,7 @@ const doctorSchema = new Schema<Doctor>(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    staffId: { type: String, unique: true, sparse: true, uppercase: true, trim: true },
     phone: { type: String, default: '' },
     department: { type: String, required: true, index: true },
     specialty: { type: String, required: true },

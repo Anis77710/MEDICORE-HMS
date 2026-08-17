@@ -24,7 +24,27 @@ export interface AuthedRequest extends Request {
   userId: string
   userRole: UserRole
   userName: string
+  userEmail: string
+  userDepartment?: string
+  userStaffId?: string
+  userMustChangePassword: boolean
   userStatus: 'Active' | 'Disabled'
+}
+
+// The only endpoints a user with a temporary password may touch until
+// they change it: change the password itself, read the current user
+// (so the app can boot straight onto the change-password screen) and
+// sign out. Everything else - dashboards, portals, admin APIs - is
+// blocked at the backend, so bypassing the frontend is impossible.
+const PASSWORD_CHANGE_ALLOWED = new Set([
+  '/api/auth/change-password',
+  '/api/auth/me',
+  '/api/auth/logout',
+])
+
+function isPasswordChangeRoute(req: Request): boolean {
+  const path = req.originalUrl.split('?')[0] ?? ''
+  return PASSWORD_CHANGE_ALLOWED.has(path)
 }
 
 function sha256(value: string): string {
@@ -62,12 +82,12 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
   try {
     payload = jwt.verify(header.slice(7), env.JWT_SECRET) as JwtPayload
   } catch {
-    next(new ApiError('Session expired — please sign in again', 401))
+    next(new ApiError('Session expired - please sign in again', 401))
     return
   }
   // A token is only valid inside the hospital database it was issued for.
   if (payload.hospital && payload.hospital !== hospitalOf(req).slug) {
-    next(new ApiError('Session expired — please sign in again', 401))
+    next(new ApiError('Session expired - please sign in again', 401))
     return
   }
   // Load the account so status changes and password resets take effect
@@ -75,17 +95,28 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
   UserModel.findById(payload.sub)
     .then((user) => {
       if (!user || user.status === 'Disabled') {
-        next(new ApiError('This account has been disabled — contact an administrator', 403))
+        next(new ApiError('This account has been disabled - contact an administrator', 403))
         return
       }
       if ((payload.ver ?? 0) !== user.tokenVersion) {
-        next(new ApiError('Session expired — please sign in again', 401))
+        next(new ApiError('Session expired - please sign in again', 401))
+        return
+      }
+      // A user on a temporary password must change it before accessing
+      // any dashboard/portal/API. Only the password-change endpoints are
+      // reachable until then (backend-enforced, cannot be bypassed).
+      if (user.mustChangePassword && !isPasswordChangeRoute(req)) {
+        next(new ApiError('You must change your temporary password before continuing', 403))
         return
       }
       const authed = req as AuthedRequest
       authed.userId = String(user._id)
       authed.userRole = user.role
       authed.userName = user.name
+      authed.userEmail = user.email
+      authed.userDepartment = user.department
+      authed.userStaffId = user.staffId
+      authed.userMustChangePassword = user.mustChangePassword
       authed.userStatus = user.status
       next()
     })

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { createStaff, updateStaff } from '../../api/services/misc'
 import type { StaffMember } from '../../types'
 import { Field, Input, Button, FormActions } from '../../components/ui'
-import { useToast } from '../../context/ToastContext'
 
 const DEPARTMENTS = [
   'Administration',
@@ -27,7 +26,6 @@ export function StaffForm({
   member: StaffMember | null
   onDone: (saved: boolean) => void
 }) {
-  const { push } = useToast()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
@@ -69,7 +67,7 @@ export function StaffForm({
     try {
       if (member) {
         await updateStaff(member.id, { ...form, birthYear: form.birthYear ? Number(form.birthYear) : undefined })
-        push('Staff member updated')
+        onDone(true)
       } else {
         const year = parseInt(form.birthYear, 10)
         if (Number.isNaN(year) || year < 1900 || year > 2100) {
@@ -78,6 +76,7 @@ export function StaffForm({
           return
         }
         await createStaff({ ...form, birthYear: year })
+        onDone(true)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save staff member')

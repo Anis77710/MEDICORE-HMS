@@ -1,5 +1,5 @@
 // ============================================================
-// Medicore HMS — API client
+// Medicore HMS - API client
 // Thin fetch wrapper with Bearer auth, single-flight refresh
 // (httpOnly cookie rotation) and auth-expiry signalling.
 // ============================================================
@@ -111,7 +111,7 @@ async function doFetch(
       credentials: 'include',
     })
   } catch {
-    throw new ApiError('Network error — cannot reach the API', 0)
+    throw new ApiError('Network error - cannot reach the API', 0)
   }
 }
 

@@ -25,7 +25,7 @@ export function tenantMiddleware(req: Request, _res: Response, next: NextFunctio
       const rec = cachedHospital(hospital.slug)
       if (rec && rec.status === 'suspended') {
         throw new ApiError(
-          'This hospital has been suspended — contact the platform administrator',
+          'This hospital has been suspended - contact the platform administrator',
           403,
         )
       }

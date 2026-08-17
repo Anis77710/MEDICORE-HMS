@@ -10,7 +10,7 @@ export default function LabPage() {
         <div className="dp-coming-soon-icon">
           <FlaskConical size={44} />
         </div>
-        <h2>Lab &amp; Investigations — Coming Soon</h2>
+        <h2>Lab &amp; Investigations - Coming Soon</h2>
         <p className="muted">
           Order lab tests, track sample status and review investigation reports. This module is
           currently under development.

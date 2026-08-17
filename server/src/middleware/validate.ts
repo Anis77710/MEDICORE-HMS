@@ -27,7 +27,7 @@ export function validate(schemas: ValidationSchemas) {
       if (err instanceof Error && 'issues' in err) {
         const issues = (err as { issues: { path: string[]; message: string }[] }).issues
         const message = issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
-        next(new ApiError(`Invalid input — ${message}`, 400, issues))
+        next(new ApiError(`Invalid input - ${message}`, 400, issues))
         return
       }
       next(new ApiError('Invalid input', 400))

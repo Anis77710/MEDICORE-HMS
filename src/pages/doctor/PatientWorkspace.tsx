@@ -90,7 +90,7 @@ export default function PatientWorkspace() {
     <>
       <PageHeader
         title={`${patient.firstName} ${patient.lastName}`}
-        subtitle={`${patient.patientId} · ${ageFromDob(patient.dob) ?? '—'} yrs · ${patient.gender}`}
+        subtitle={`${patient.patientId} · ${ageFromDob(patient.dob) ?? '-'} yrs · ${patient.gender}`}
         backTo="/doctor/patients"
         actions={
           <Link
@@ -137,16 +137,16 @@ export default function PatientWorkspace() {
           <div className="dp-kv mt-2">
             <div>
               <Phone size={14} />
-              <span>{patient.phone || '—'}</span>
+              <span>{patient.phone || '-'}</span>
             </div>
             <div>
               <Mail size={14} />
-              <span>{patient.email || '—'}</span>
+              <span>{patient.email || '-'}</span>
             </div>
             <div className="muted text-sm">{patient.address || 'No address recorded'}</div>
             <div>
               <span>Emergency Contact</span>
-              <strong>{patient.emergencyContact || '—'}</strong>
+              <strong>{patient.emergencyContact || '-'}</strong>
             </div>
           </div>
         </Card>
@@ -266,7 +266,7 @@ function OverviewSection({ patient }: { patient: Patient }) {
         </div>
         <div>
           <span>Age</span>
-          <strong>{ageFromDob(patient.dob) ?? '—'} yrs</strong>
+          <strong>{ageFromDob(patient.dob) ?? '-'} yrs</strong>
         </div>
         <div>
           <span>Gender</span>
@@ -274,11 +274,11 @@ function OverviewSection({ patient }: { patient: Patient }) {
         </div>
         <div>
           <span>Blood Group</span>
-          <strong>{patient.bloodGroup || '—'}</strong>
+          <strong>{patient.bloodGroup || '-'}</strong>
         </div>
         <div>
           <span>Department</span>
-          <strong>{patient.department || '—'}</strong>
+          <strong>{patient.department || '-'}</strong>
         </div>
         <div>
           <span>Assigned Doctor</span>
@@ -286,7 +286,7 @@ function OverviewSection({ patient }: { patient: Patient }) {
         </div>
         <div>
           <span>Insurance</span>
-          <strong>{patient.insurance || '—'}</strong>
+          <strong>{patient.insurance || '-'}</strong>
         </div>
       </div>
     </Card>
@@ -432,7 +432,7 @@ function PrescriptionsSection({ prescriptions }: { prescriptions: Prescription[]
                       <strong>{m.name}</strong>
                       <span className="muted">
                         {' '}
-                        — {m.dosage}, {m.frequency}, {m.durationDays} day(s)
+                        - {m.dosage}, {m.frequency}, {m.durationDays} day(s)
                       </span>
                     </div>
                   ))}

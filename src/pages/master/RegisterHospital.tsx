@@ -84,7 +84,7 @@ export default function RegisterHospital() {
             <p>
               Pay the one-time registration fee by eSewa, and
               the platform team will review your request. Once approved, your hospital goes live
-              and your login credentials — along with your payment receipt — are emailed to you.
+              and your login credentials - along with your payment receipt - are emailed to you.
             </p>
           </header>
 

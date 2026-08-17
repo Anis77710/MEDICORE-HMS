@@ -1,5 +1,5 @@
 // ============================================================
-// Medicore HMS — Role-Based Access Control (RBAC)
+// Medicore HMS - Role-Based Access Control (RBAC)
 // Every user belongs to exactly one role. Each role has a fixed
 // set of modules it can open and, per module, the actions it can
 // perform. ADMIN has full access; all other roles are granted
@@ -83,6 +83,21 @@ export const ROLE_CAPS: Record<Role, Partial<Record<AdminModule, Permission[]>>>
 
 export function canAccessModule(role: Role, module: AdminModule): boolean {
   return (ROLE_CAPS[role][module]?.length ?? 0) > 0
+}
+
+// Billing is restricted to billing-assigned staff only: ADMIN plus STAFF
+// members whose department is 'Billing'. Nurses, doctors and staff from
+// other departments cannot handle billing.
+export function canAccessBilling(role: Role, department?: string): boolean {
+  return role === 'ADMIN' || (role === 'STAFF' && department === 'Billing')
+}
+
+export function userCanAccessModule(
+  user: { role: Role; department?: string },
+  module: AdminModule,
+): boolean {
+  if (module === 'billing') return canAccessBilling(user.role, user.department)
+  return canAccessModule(user.role, module)
 }
 
 export function can(role: Role, module: AdminModule, perm: Permission): boolean {

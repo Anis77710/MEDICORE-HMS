@@ -14,7 +14,7 @@ import {
 } from './emailTemplate.js'
 
 // ============================================================
-// Patient appointment notifications — every booking lifecycle
+// Patient appointment notifications - every booking lifecycle
 // event produces a real email to the patient: request received,
 // approved, cancelled, rescheduled.
 // Delivery failures are logged loudly but never allowed to break
@@ -63,7 +63,7 @@ function buildMessage(
   ])
 
   if (event.kind === 'booked') {
-    const subject = `Appointment request received — ${appointment.doctorName}`
+    const subject = `Appointment request received - ${appointment.doctorName}`
     const text = `Hello ${appointment.patientName},
 
 We have received your ${appointment.type.toLowerCase()} appointment request:
@@ -82,7 +82,7 @@ Medicore HMS`
         greeting(appointment.patientName) +
         paragraphHtml(
           `We have received your ${emphasis(escHtml(appointment.type.toLowerCase()))} appointment request. ` +
-            `It is now ${emphasis('awaiting approval')} — you will receive a confirmation email as soon as it is approved.`,
+            `It is now ${emphasis('awaiting approval')} - you will receive a confirmation email as soon as it is approved.`,
         ) +
         appointmentCard,
     })
@@ -90,10 +90,10 @@ Medicore HMS`
   }
 
   if (event.kind === 'approved') {
-    const subject = `Your appointment is confirmed — ${appointment.doctorName}`
+    const subject = `Your appointment is confirmed - ${appointment.doctorName}`
     const text = `Hello ${appointment.patientName},
 
-Great news — your appointment has been APPROVED:
+Great news - your appointment has been APPROVED:
 
   Doctor:     ${appointment.doctorName}
   Department: ${appointment.department}
@@ -107,7 +107,7 @@ Medicore HMS`
       title: 'Your appointment is confirmed',
       body:
         greeting(appointment.patientName) +
-        paragraphHtml(`Great news — your appointment has been ${emphasis('approved')}:`) +
+        paragraphHtml(`Great news - your appointment has been ${emphasis('approved')}:`) +
         appointmentCard +
         paragraph('Please arrive 10 minutes early and bring a valid ID. To cancel or reschedule, contact the hospital front desk.', {
           muted: true,
@@ -117,7 +117,7 @@ Medicore HMS`
   }
 
   if (event.kind === 'cancelled') {
-    const subject = `Your appointment has been cancelled — ${appointment.doctorName}`
+    const subject = `Your appointment has been cancelled - ${appointment.doctorName}`
     const text = `Hello ${appointment.patientName},
 
 Your appointment has been CANCELLED:
@@ -145,7 +145,7 @@ Medicore HMS`
     return { subject, text, html }
   }
 
-  const subject = `Your appointment has been rescheduled — ${appointment.doctorName}`
+  const subject = `Your appointment has been rescheduled - ${appointment.doctorName}`
   const previous = event.previous
     ? `  Previously: ${fmtDate(event.previous.date)} at ${fmtTime(event.previous.time)}${event.previous.doctorName ? ` (${event.previous.doctorName})` : ''}\n`
     : ''
@@ -208,7 +208,7 @@ export async function notifyAppointmentEvent(
   try {
     const patient = await PatientModel.findById(appointment.patientId)
     if (!patient || !patient.email) {
-      console.error(`[mail] No patient email for appointment ${appointment.id} — ${event.kind} notification skipped`)
+      console.error(`[mail] No patient email for appointment ${appointment.id} - ${event.kind} notification skipped`)
       return
     }
     const message = buildMessage(appointment, event)
@@ -240,7 +240,7 @@ export interface PaymentReceiptDetails {
 export async function notifyPaymentReceipt(details: PaymentReceiptDetails): Promise<void> {
   try {
     const amount = `NPR ${details.amount.toLocaleString('en-US')}`
-    const subject = `Payment received — ${details.appointmentNo} (${amount})`
+    const subject = `Payment received - ${details.appointmentNo} (${amount})`
     const text = `Hello ${details.patientName},
 
 We received your eSewa payment of ${amount} for the appointment below.
@@ -251,7 +251,7 @@ We received your eSewa payment of ${amount} for the appointment below.
   Department:     ${details.department}
   When:           ${fmtDate(details.date)} at ${fmtTime(details.time)}
 
-Your appointment request is now awaiting approval — you will receive a
+Your appointment request is now awaiting approval - you will receive a
 confirmation email as soon as it is approved.
 
 Medicore HMS`
@@ -273,14 +273,14 @@ Medicore HMS`
             { label: 'Amount Paid', value: formatNpr(details.amount), total: true },
           ],
           {
-            subtitle: 'eSewa Payment — Official Receipt',
+            subtitle: 'eSewa Payment - Official Receipt',
             date: formatPaidAt(new Date()),
             footer:
               'This is a computer-generated receipt for your Medicore HMS appointment fee.<br/>Thank you for choosing Medicore HMS.',
           },
         ) +
         paragraph(
-          'Your appointment request is now awaiting approval — you will receive a confirmation email as soon as it is approved.',
+          'Your appointment request is now awaiting approval - you will receive a confirmation email as soon as it is approved.',
           { muted: true },
         ),
     })

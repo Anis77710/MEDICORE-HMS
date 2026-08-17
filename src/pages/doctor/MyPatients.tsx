@@ -128,7 +128,7 @@ export default function MyPatients() {
                     <td className="muted">
                       {ageFromDob(p.dob)} yrs · {p.gender}
                     </td>
-                    <td className="muted">{p.bloodGroup || '—'}</td>
+                    <td className="muted">{p.bloodGroup || '-'}</td>
                     <td className="muted">{p.lastVisit ? fmtDate(p.lastVisit) : 'Never'}</td>
                     <td>
                       <StatusBadge status={p.status} />

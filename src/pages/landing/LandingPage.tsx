@@ -77,7 +77,7 @@ function Navbar() {
 function Hero() {
   return (
     <section id="home" className="lp-hero">
-      {/* LEFT — copy */}
+      {/* LEFT - copy */}
       <div className="lp-hero-left">
         <div className="lp-hero-left-inner">
           <h1 className="lp-hero-h1">
@@ -127,7 +127,7 @@ function Hero() {
         </div>
       </div>
 
-      {/* RIGHT — custom brand illustration */}
+      {/* RIGHT - custom brand illustration */}
       <div className="lp-hero-right">
         <HeroIllustration />
       </div>
@@ -181,7 +181,7 @@ function HeroIllustration() {
         <rect x="90" y="210" width="200" height="134" rx="10" fill="url(#screenGrad)" />
         <rect x="97" y="217" width="186" height="120" rx="7" fill="#0a1e28" />
 
-        {/* Screen content — simplified EHR */}
+        {/* Screen content - simplified EHR */}
         <rect x="104" y="224" width="80" height="7" rx="2" fill="#22d3ee" opacity="0.8" />
         <rect x="104" y="236" width="172" height="5" rx="2" fill="#1e4a5c" />
         <rect x="104" y="245" width="140" height="5" rx="2" fill="#1e4a5c" />
@@ -217,7 +217,7 @@ function HeroIllustration() {
         <rect x="170" y="472" width="30" height="12" rx="5" fill="#1a1a2e" />
         <rect x="196" y="472" width="30" height="12" rx="5" fill="#1a1a2e" />
 
-        {/* Body — teal scrubs */}
+        {/* Body - teal scrubs */}
         <rect x="163" y="300" width="70" height="128" rx="18" fill="url(#scrubDoctor)" />
 
         {/* White coat over scrubs */}
@@ -254,14 +254,14 @@ function HeroIllustration() {
         <rect x="132" y="385" width="18" height="3" rx="2" fill="#94a3b8" />
         <rect x="132" y="391" width="26" height="3" rx="2" fill="#0e7490" opacity="0.3" />
 
-        {/* Right hand — pointing at screen */}
+        {/* Right hand - pointing at screen */}
         <ellipse cx="252" cy="348" rx="10" ry="8" fill="#f5c5a3" />
 
         {/* Neck & head */}
         <rect x="186" y="270" width="24" height="34" rx="8" fill="#f5c5a3" />
         {/* Head */}
         <ellipse cx="198" cy="252" rx="30" ry="32" fill="#f5c5a3" />
-        {/* Hair — short dark */}
+        {/* Hair - short dark */}
         <ellipse cx="198" cy="227" rx="30" ry="14" fill="#2d1b0e" />
         <rect x="168" y="227" width="60" height="16" rx="0" fill="#2d1b0e" />
         {/* Ears */}
@@ -295,7 +295,7 @@ function HeroIllustration() {
         <rect x="378" y="472" width="32" height="12" rx="5" fill="#1a1a2e" />
         <rect x="406" y="472" width="32" height="12" rx="5" fill="#1a1a2e" />
 
-        {/* Body — white nurse uniform */}
+        {/* Body - white nurse uniform */}
         <rect x="372" y="298" width="76" height="128" rx="18" fill="url(#scrubNurse)" stroke="#d0e8f0" strokeWidth="1.5" />
 
         {/* Nurse cross emblem */}
@@ -315,7 +315,7 @@ function HeroIllustration() {
         <rect x="350" y="300" width="26" height="68" rx="12" fill="#e8f4f8" stroke="#d0e8f0" strokeWidth="1.5" />
         <rect x="444" y="300" width="26" height="68" rx="12" fill="#e8f4f8" stroke="#d0e8f0" strokeWidth="1.5" />
 
-        {/* Left hand — holding tablet */}
+        {/* Left hand - holding tablet */}
         <rect x="334" y="356" width="38" height="52" rx="6" fill="#1e293b" />
         <rect x="337" y="359" width="32" height="44" rx="4" fill="#0a1e28" />
         {/* Tablet screen content */}
@@ -332,7 +332,7 @@ function HeroIllustration() {
         <rect x="396" y="268" width="24" height="34" rx="8" fill="#e8b89a" />
         {/* Head */}
         <ellipse cx="408" cy="250" rx="30" ry="32" fill="#e8b89a" />
-        {/* Hair — longer, pulled back */}
+        {/* Hair - longer, pulled back */}
         <ellipse cx="408" cy="224" rx="30" ry="16" fill="#6b3a1f" />
         <rect x="378" y="224" width="60" height="20" rx="0" fill="#6b3a1f" />
         {/* Bun */}
@@ -733,7 +733,7 @@ function Directory() {
         setHospitals(list)
       })
       .catch(() => {
-        /* directory is optional — hide on failure */
+        /* directory is optional - hide on failure */
       })
       .finally(() => {
         if (!cancelled) setLoaded(true)
@@ -800,7 +800,7 @@ function Contact() {
       await masterApi.submitContact({ name: name.trim(), email: email.trim(), hospital: form.hospital.trim(), message: message.trim() })
       setSent(true)
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Could not send your message — please try again.')
+      setFormError(err instanceof Error ? err.message : 'Could not send your message - please try again.')
     } finally {
       setBusy(false)
     }

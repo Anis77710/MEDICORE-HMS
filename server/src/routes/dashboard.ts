@@ -16,7 +16,7 @@ export const dashboardRouter = Router()
 
 dashboardRouter.use(requireAuth)
 
-// GET /dashboard/stats — aggregated metrics for the landing dashboard
+// GET /dashboard/stats - aggregated metrics for the landing dashboard
 dashboardRouter.get('/stats', async (_req, res, next) => {
   try {
     const today = new Date().toISOString().slice(0, 10)
@@ -126,7 +126,7 @@ dashboardRouter.get('/stats', async (_req, res, next) => {
   }
 })
 
-// GET /dashboard/announcements — platform announcements the master admin
+// GET /dashboard/announcements - platform announcements the master admin
 // posted. "all" reaches every hospital; "active" only active ones.
 dashboardRouter.get('/announcements', async (req, res, next) => {
   try {

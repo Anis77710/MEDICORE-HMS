@@ -264,11 +264,11 @@ export default function DoctorDetail() {
               </div>
               <div className="info-rows">
                 <div className="info-row"><span className="muted">Email</span><strong>{doctor.email}</strong></div>
-                <div className="info-row"><span className="muted">Phone</span><strong>{doctor.phone || '—'}</strong></div>
-                <div className="info-row"><span className="muted">Qualification</span><strong>{doctor.qualification || '—'}</strong></div>
+                <div className="info-row"><span className="muted">Phone</span><strong>{doctor.phone || '-'}</strong></div>
+                <div className="info-row"><span className="muted">Qualification</span><strong>{doctor.qualification || '-'}</strong></div>
                 <div className="info-row"><span className="muted">Experience</span><strong>{doctor.experienceYears} years</strong></div>
-                <div className="info-row"><span className="muted">Consultation fee</span><strong>Rs. {doctor.consultationFee}</strong></div>
-                <div className="info-row"><span className="muted">Working days</span><strong>{doctor.schedule.join(', ') || '—'}</strong></div>
+                <div className="info-row"><span className="muted">Consultation fee</span><strong>NPR {doctor.consultationFee}</strong></div>
+                <div className="info-row"><span className="muted">Working days</span><strong>{doctor.schedule.join(', ') || '-'}</strong></div>
               </div>
             </Card>
 
@@ -345,7 +345,7 @@ export default function DoctorDetail() {
                 <div className="info-rows">
                   <div className="info-row"><span className="muted">Email</span><strong>{doctor.email}</strong></div>
                   <div className="info-row"><span className="muted">Status</span><Badge tone={account.status === 'Disabled' ? 'red' : 'green'}>{account.status}</Badge></div>
-                  <div className="info-row"><span className="muted">Created</span><strong>{account.createdAt ? new Date(account.createdAt).toLocaleDateString() : '—'}</strong></div>
+                  <div className="info-row"><span className="muted">Created</span><strong>{account.createdAt ? new Date(account.createdAt).toLocaleDateString() : '-'}</strong></div>
                 </div>
               )}
               <div className="flex gap-2 mt-3 flex-wrap">
@@ -360,7 +360,7 @@ export default function DoctorDetail() {
                       try {
                         const res = await resetDoctorPassword(id)
                         setTempPassword(res.tempPassword ?? '')
-                        push(res.tempPassword ? 'Password reset — temporary password generated' : 'Password reset')
+                        push(res.tempPassword ? 'Password reset - temporary password generated' : 'Password reset')
                         await refreshDoctor()
                       } catch (err) {
                         push(err instanceof Error ? err.message : 'Reset failed', 'error')
@@ -448,8 +448,8 @@ export default function DoctorDetail() {
                 <Field label="Email">
                   <Input type="email" required value={accountEmail} onChange={(e) => setAccountEmail(e.target.value)} placeholder="doctor@medicore.health" />
                 </Field>
-                <Field label="Temporary Password (min 8 chars)">
-                  <Input type="text" required minLength={8} value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} placeholder="Set a temporary password" />
+                <Field label="Temporary Password (min 12 chars)">
+                  <Input type="text" required minLength={12} value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} placeholder="Set a temporary password" />
                 </Field>
               </div>
               <FormActions>

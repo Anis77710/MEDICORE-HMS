@@ -1,7 +1,7 @@
 // ============================================================
 // Master admin authentication.
 // The master admin signs in at /api/master/login and receives a
-// JWT with role "MASTER_ADMIN" and no hospital claim — it is a
+// JWT with role "MASTER_ADMIN" and no hospital claim - it is a
 // platform-level identity, valid across every hospital. Hospital
 // tokens (requireAuth) never satisfy this middleware, and master
 // tokens never satisfy requireAuth (they carry no hospital and
@@ -42,11 +42,11 @@ export function requireMasterAuth(req: Request, _res: Response, next: NextFuncti
   try {
     payload = jwt.verify(header.slice(7), env.JWT_SECRET) as MasterJwtPayload
   } catch {
-    next(new ApiError('Session expired — please sign in again', 401))
+    next(new ApiError('Session expired - please sign in again', 401))
     return
   }
   if (payload.role !== MASTER_ROLE) {
-    next(new ApiError('Session expired — please sign in again', 401))
+    next(new ApiError('Session expired - please sign in again', 401))
     return
   }
   masterAdminModel()

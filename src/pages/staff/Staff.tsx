@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Pencil, Trash2, UserPlus } from 'lucide-react'
-import { listStaff, deleteStaff } from '../../api/services/misc'
+import { KeyRound, Pencil, Trash2, UserPlus } from 'lucide-react'
+import {
+  listStaff,
+  deleteStaff,
+  resetStaffPassword,
+  disableStaffLogin,
+  enableStaffLogin,
+} from '../../api/services/misc'
 import type { StaffMember } from '../../types'
 import {
   PageHeader,
@@ -38,6 +44,10 @@ export default function Staff() {
   const [editing, setEditing] = useState<StaffMember | null>(null)
   const [deleting, setDeleting] = useState<StaffMember | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [account, setAccount] = useState<StaffMember | null>(null)
+  const [loginStatus, setLoginStatus] = useState<'Active' | 'Disabled' | null>(null)
+  const [tempPassword, setTempPassword] = useState('')
+  const [accountBusy, setAccountBusy] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -56,6 +66,54 @@ export default function Staff() {
       cancelled = true
     }
   }, [search, role, refreshKey])
+
+  const openAccount = (m: StaffMember) => {
+    setAccount(m)
+    setLoginStatus(null)
+    setTempPassword('')
+  }
+
+  const onReset = async () => {
+    if (!account) return
+    setAccountBusy(true)
+    try {
+      const res = await resetStaffPassword(account.id)
+      setTempPassword(res.tempPassword ?? '')
+      push('Temporary password sent to their email')
+    } catch (err) {
+      push(err instanceof Error ? err.message : 'Reset failed', 'error')
+    } finally {
+      setAccountBusy(false)
+    }
+  }
+
+  const onDisable = async () => {
+    if (!account) return
+    setAccountBusy(true)
+    try {
+      const res = await disableStaffLogin(account.id)
+      setLoginStatus(res.status as 'Active' | 'Disabled')
+      push('Login disabled - their sessions have been revoked')
+    } catch (err) {
+      push(err instanceof Error ? err.message : 'Action failed', 'error')
+    } finally {
+      setAccountBusy(false)
+    }
+  }
+
+  const onEnable = async () => {
+    if (!account) return
+    setAccountBusy(true)
+    try {
+      const res = await enableStaffLogin(account.id)
+      setLoginStatus(res.status as 'Active' | 'Disabled')
+      push('Login enabled')
+    } catch (err) {
+      push(err instanceof Error ? err.message : 'Action failed', 'error')
+    } finally {
+      setAccountBusy(false)
+    }
+  }
 
   return (
     <>
@@ -126,12 +184,17 @@ export default function Staff() {
                     <td>{m.department}</td>
                     <td>{m.shift}</td>
                     <td className="muted">{m.joinedAt}</td>
-                    <td>${m.salary.toLocaleString()}/yr</td>
+                    <td>NPR {m.salary.toLocaleString()}/yr</td>
                     <td>
                       <StatusBadge status={m.status} />
                     </td>
                     <td>
                       <div className="cell-actions">
+                        {m.role !== 'PATIENT' && (
+                          <button className="icon-btn" title="Manage account" onClick={() => openAccount(m)}>
+                            <KeyRound size={16} />
+                          </button>
+                        )}
                         <button
                           className="icon-btn"
                           title="Edit"
@@ -175,7 +238,7 @@ export default function Staff() {
             setEditing(null)
             setRefreshKey((k) => k + 1)
             if (saved)
-              push(editing ? 'Staff member updated' : 'Staff member added — login credentials sent to their email')
+              push(editing ? 'Staff member updated' : 'Staff member added - login credentials sent to their email')
           }}
         />
       </Modal>
@@ -193,6 +256,56 @@ export default function Staff() {
           push('Staff member removed')
         }}
       />
+
+      <Modal
+        open={!!account}
+        title="Manage Login Account"
+        size="sm"
+        onClose={() => setAccount(null)}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              loading={accountBusy}
+              onClick={onReset}
+            >
+              Reset Password
+            </Button>
+            {loginStatus === 'Disabled' ? (
+              <Button variant="primary" loading={accountBusy} onClick={onEnable}>
+                Enable Login
+              </Button>
+            ) : (
+              <Button variant="danger" loading={accountBusy} onClick={onDisable}>
+                Disable Login
+              </Button>
+            )}
+          </>
+        }
+      >
+        {account && (
+          <>
+            <p className="confirm-message">
+              {account.name} <span className="muted">({account.email})</span> signs in with their
+              login username and password.
+            </p>
+            {loginStatus === 'Disabled' && (
+              <p className="muted text-sm" style={{ marginTop: 8 }}>
+                Login is currently disabled.
+              </p>
+            )}
+            {tempPassword && (
+              <div className="field" style={{ marginTop: 12 }}>
+                <span className="field-label">Temporary password</span>
+                <code className="credential-code">{tempPassword}</code>
+                <span className="field-hint">
+                  They must change it at their next sign-in. A copy has been emailed to them.
+                </span>
+              </div>
+            )}
+          </>
+        )}
+      </Modal>
     </>
   )
 }

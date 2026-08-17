@@ -1,6 +1,6 @@
 /* ============================================================
-   Medicore HMS — Landing / Marketing Website
-   Standalone CSS — does NOT inherit admin design system
+   Medicore HMS - Landing / Marketing Website
+   Standalone CSS - does NOT inherit admin design system
    ============================================================ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -126,7 +126,7 @@
 .lp-nav-drawer a:hover { color: var(--lp-primary); background: var(--lp-soft); }
 .lp-nav-drawer .lp-btn { width: 100%; margin-top: 8px; justify-content: center; }
 
-/* ---------- Hero — photo split layout ---------- */
+/* ---------- Hero - photo split layout ---------- */
 .lp-hero {
   display: grid;
   grid-template-columns: 1fr 1fr;

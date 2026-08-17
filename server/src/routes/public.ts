@@ -11,7 +11,7 @@ import { getTenantConnection, isValidSlug } from '../config/tenants.js'
 import { withTenant, DEFAULT_SLUG } from '../models/registry.js'
 
 // ------------------------------------------------------------
-// Public tenant resolution — the public booking page is not
+// Public tenant resolution - the public booking page is not
 // logged in, so the visitor picks a listed hospital and we
 // route the request into that hospital's database. No hospital
 // given -> the default (first) hospital, as before.
@@ -31,16 +31,16 @@ async function withPublicTenant<T>(
 }
 
 // ============================================================
-// Public endpoints — no auth. Used by the public booking page:
+// Public endpoints - no auth. Used by the public booking page:
 // GET /public/doctors, GET /public/doctors/:id/availability.
 // Creating a booking goes through the eSewa payment flow
-// (POST /public/payment/initiate → callback) in routes/esewa.ts —
+// (POST /public/payment/initiate → callback) in routes/esewa.ts -
 // an appointment is never created without a verified payment.
 // ============================================================
 
 export const publicRouter = Router()
 
-// GET /public/doctors — doctors currently available for booking.
+// GET /public/doctors - doctors currently available for booking.
 // ?hospital=slug scopes the listing to that hospital's database
 // (the public visitor picks the hospital they want to book at).
 publicRouter.get('/doctors', async (req, res, next) => {
@@ -65,7 +65,7 @@ publicRouter.get('/doctors', async (req, res, next) => {
 })
 
 // GET /public/doctors/:id/availability?date=YYYY-MM-DD
-// Centralized slot generation — same rules as the admin calendar.
+// Centralized slot generation - same rules as the admin calendar.
 publicRouter.get(
   '/doctors/:id/availability',
   validate({
@@ -155,7 +155,7 @@ publicRouter.get(
   },
 )
 
-// GET /public/hospitals — the public hospital directory: every approved
+// GET /public/hospitals - the public hospital directory: every approved
 // hospital that is active and has been listed by the master admin,
 // ordered by the master-set display order (then name).
 publicRouter.get('/hospitals', async (_req, res, next) => {
@@ -179,7 +179,7 @@ publicRouter.get('/hospitals', async (_req, res, next) => {
   }
 })
 
-// POST /public/contact — contact form submissions from the landing page.
+// POST /public/contact - contact form submissions from the landing page.
 // Messages land in the master admin's contact inbox.
 publicRouter.post(
   '/contact',
@@ -200,14 +200,14 @@ publicRouter.post(
         message: string
       }
       await contactMessageModel().create({ name, email, hospital: hospital ?? '', message })
-      res.status(201).json({ message: 'Message received — we will get back to you shortly.' })
+      res.status(201).json({ message: 'Message received - we will get back to you shortly.' })
     } catch (err) {
       next(err)
     }
   },
 )
 
-// GET /public/platform — platform-level info shown to the public
+// GET /public/platform - platform-level info shown to the public
 // (site name, tagline, contact details, registration fee).
 publicRouter.get('/platform', async (_req, res, next) => {
   try {

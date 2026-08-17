@@ -9,10 +9,10 @@ import { emailLayout, paragraph } from './emailTemplate.js'
 // EMAIL_TRANSPORT=log is an explicit, test-only escape hatch:
 // messages are captured in memory and printed to the console so
 // local flows and the smoke suite can run without SMTP. It must
-// never be enabled in production — a production boot refuses to
+// never be enabled in production - a production boot refuses to
 // start if SMTP is not configured.
 //
-// If SMTP is not configured, sendMail throws — a message is never
+// If SMTP is not configured, sendMail throws - a message is never
 // silently dropped or "demo-delivered".
 // ============================================================
 
@@ -33,7 +33,7 @@ export function capturedEmails(): readonly MailMessage[] {
 function requireSmtp(): nodemailer.Transporter {
   if (!env.SMTP_HOST) {
     throw new Error(
-      'SMTP is not configured — set SMTP_HOST (and SMTP_USER/SMTP_PASS) in server/.env. ' +
+      'SMTP is not configured - set SMTP_HOST (and SMTP_USER/SMTP_PASS) in server/.env. ' +
         'No email was sent. Real email delivery is mandatory; see .env.example.',
     )
   }
@@ -63,7 +63,7 @@ export async function sendMail(message: MailMessage): Promise<void> {
 export async function sendOtpEmail(to: string, otp: string): Promise<void> {
   await sendMail({
     to,
-    subject: 'Medicore HMS — Password reset code',
+    subject: 'Medicore HMS - Password reset code',
     text: `Your Medicore HMS password reset code is: ${otp}\nIt expires in 15 minutes. If you did not request this, you can safely ignore this email.`,
     html: emailLayout({
       title: 'Password reset code',

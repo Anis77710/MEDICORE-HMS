@@ -69,7 +69,7 @@ export default function Register() {
               <h2>Register your hospital</h2>
               <p>
                 One platform for doctors, nurses, patients, administrators and hospital staff to
-                run daily operations smoothly. Your team members are added by you — the admin —
+                run daily operations smoothly. Your team members are added by you - the admin -
                 after registration.
               </p>
             </div>
@@ -84,7 +84,7 @@ export default function Register() {
                 <h2 className="auth-title">Register Your Hospital</h2>
                 <p className="auth-subtitle">
                   This creates the hospital profile and the first administrator account. Doctors,
-                  nurses and staff are added by you after registration — their login credentials
+                  nurses and staff are added by you after registration - their login credentials
                   are sent to each member's email automatically.
                 </p>
 

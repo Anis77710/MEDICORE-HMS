@@ -1,5 +1,5 @@
 // ============================================================
-// Medicore HMS — shared branded email templates
+// Medicore HMS - shared branded email templates
 // ------------------------------------------------------------
 // One visual shell for every transactional email so the inbox
 // looks consistent and professional:
@@ -8,8 +8,8 @@
 //   - "Dear <name>," greeting, structured body,
 //   - neutral footer.
 // Receipts reuse the printable eSewa receipt design from the
-// master panel — Georgia serif, teal rules, dashed separators,
-// light-blue total row — so the emailed receipt and the
+// master panel - Georgia serif, teal rules, dashed separators,
+// light-blue total row - so the emailed receipt and the
 // printable receipt are the same receipt.
 // ============================================================
 
@@ -25,9 +25,9 @@ export function formatNpr(amount: number): string {
   return `NPR ${amount.toLocaleString('en-US')}`
 }
 
-/** Paid-on timestamp — same shape as the printable receipt. */
+/** Paid-on timestamp - same shape as the printable receipt. */
 export function formatPaidAt(paidAt?: Date): string {
-  if (!paidAt) return '—'
+  if (!paidAt) return '-'
   return new Date(paidAt).toLocaleString('en-GB', {
     day: 'numeric',
     month: 'short',
@@ -66,7 +66,7 @@ const LOGO_SVG = [
 ].join('')
 const LOGO_DATA_URI = `data:image/svg+xml;base64,${Buffer.from(LOGO_SVG).toString('base64')}`
 
-/** "Dear <name>," — the standard greeting that opens every email. */
+/** "Dear <name>," - the standard greeting that opens every email. */
 export function greeting(name: string): string {
   return `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${BRAND.ink};">Dear <strong>${escHtml(name)}</strong>,</p>`
 }
@@ -117,7 +117,7 @@ export interface ReceiptRow {
 }
 
 /**
- * The official eSewa receipt card — identical in format and colour
+ * The official eSewa receipt card - identical in format and colour
  * to the printable receipt in the master panel (Georgia serif,
  * teal rule under the brand header, dashed separators, light-blue
  * total row, serif footer).
@@ -130,7 +130,7 @@ export function receiptCard(
     footer?: string
   } = {},
 ): string {
-  const subtitle = opts.subtitle ?? 'Hospital Registration Fee — Official Receipt'
+  const subtitle = opts.subtitle ?? 'Hospital Registration Fee - Official Receipt'
   const footer =
     opts.footer ??
     'This is a computer-generated receipt for the Medicore HMS hospital registration fee.<br/>Thank you for choosing Medicore HMS.'
@@ -186,7 +186,7 @@ export function emailLayout(opts: { title: string; body: string }): string {
     `</td></tr>` +
     `<tr><td style="padding:16px 10px 4px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:${BRAND.muted};line-height:1.7;">` +
     `This is an automated message from Medicore HMS. Please do not reply to this email.<br/>` +
-    `&copy; ${new Date().getFullYear()} Medicore HMS — Hospital Management Platform` +
+    `&copy; ${new Date().getFullYear()} Medicore HMS - Hospital Management Platform` +
     `</td></tr>` +
     `</table></td></tr></table>` +
     `</body></html>`

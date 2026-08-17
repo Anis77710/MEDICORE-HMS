@@ -374,16 +374,21 @@ export function Field({
   label,
   hint,
   error,
+  action,
   children,
 }: {
   label: string
   hint?: string
   error?: string
+  action?: ReactNode
   children: ReactNode
 }) {
   return (
     <div className="field">
-      <label className="field-label">{label}</label>
+      <div className="field-label-row">
+        <label className="field-label">{label}</label>
+        {action}
+      </div>
       {children}
       {hint && !error && <span className="field-hint">{hint}</span>}
       {error && <span className="error-text">{error}</span>}

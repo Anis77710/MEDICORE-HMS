@@ -22,7 +22,7 @@ export function requireErrorHandler(
     (err as { code?: number }).code === 11000
   ) {
     res.status(409).json({
-      message: 'A record with these details already exists — check for duplicates and try again',
+      message: 'A record with these details already exists - check for duplicates and try again',
     })
     return
   }

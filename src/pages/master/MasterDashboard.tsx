@@ -41,7 +41,7 @@ export default function MasterDashboard() {
   }
   const loadAnalytics = (r: AnalyticsRange) => {
     masterApi.analytics(r).then(setAnalytics).catch(() => {
-      /* charts are secondary — dashboard still renders with stats */
+      /* charts are secondary - dashboard still renders with stats */
     })
   }
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function MasterDashboard() {
   return (
     <>
       <PageHeader
-        title={`${stats.siteName} — Platform Overview`}
+        title={`${stats.siteName} - Platform Overview`}
         subtitle="Every hospital on the Medicore platform, at a glance."
         actions={
           <>
