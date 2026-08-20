@@ -65,4 +65,21 @@ export const env = {
   HOSPITAL_REGISTRATION_FEE: num('HOSPITAL_REGISTRATION_FEE', 2000),
 } as const
 
+// A production deployment must have real, publicly reachable origins for the
+// eSewa callback URLs (APP_API_URL) and the post-payment browser redirect
+// (APP_BASE_URL). Defaulting to localhost here silently hands eSewa a callback
+// that dies on the buyer's machine - refuse to boot instead.
+if (env.NODE_ENV === 'production') {
+  if (/localhost|127\.0\.0\.1|:\d{2,5}\b/.test(env.APP_API_URL)) {
+    throw new Error(
+      'APP_API_URL must be a public HTTPS URL in production (eSewa callback target). Set it in server/.env, e.g. APP_API_URL=https://api.example.com',
+    )
+  }
+  if (/localhost|127\.0\.0\.1|:\d{2,5}\b/.test(env.APP_BASE_URL)) {
+    throw new Error(
+      'APP_BASE_URL must be a public HTTPS URL in production (post-payment redirect target). Set it in server/.env, e.g. APP_BASE_URL=https://app.example.com',
+    )
+  }
+}
+
 export const isProd = env.NODE_ENV === 'production'
