@@ -139,20 +139,6 @@ cp .env.example .env
 
 ---
 
-## Seeded Accounts
-
-After seeding the backend (`npm run seed`), log in with:
-
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | `admin@medicore.health` | `admin123` |
-
-The seed wipes the database completely (tenant + registry collections and any
-`medicore_*` tenant databases) and creates only this admin account - no demo
-data. The master admin (`master@medicore.health` / `master@2026`) is
-provisioned automatically from the server environment on first boot.
-
----
 
 ## Available Scripts
 
